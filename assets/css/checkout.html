@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إتمام الدفع | منصة العلم والإيمان</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        input:focus { transform: scale(1.005); }
+        .tab-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast-container {
+            position: fixed; top: 1rem; right: 1rem; left: auto;
+            display: flex; flex-direction: column; gap: 0.85rem; align-items: flex-end;
+            pointer-events: none; z-index: 60;
+        }
+        .toast {
+            pointer-events: auto; display: flex; align-items: flex-start; gap: 0.85rem;
+            max-width: 24rem; width: min(100%, 24rem); padding: 1rem 1rem 1rem 0.85rem;
+            border-radius: 1.35rem; border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12); backdrop-filter: blur(14px);
+            background: rgba(255, 255, 255, 0.93); opacity: 0; transform: translateX(18px);
+            transition: transform 0.35s ease, opacity 0.35s ease;
+        }
+        .toast-visible { opacity: 1; transform: translateX(0); }
+        .toast-hide { opacity: 0; transform: translateX(24px); transition: transform 0.25s ease, opacity 0.25s ease; }
+        .toast-icon {
+            width: 2.2rem; min-width: 2.2rem; height: 2.2rem; border-radius: 1rem;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem;
+        }
+        .toast-message { flex: 1; color: #0f172a; font-size: 0.85rem; line-height: 1.5; font-weight: 700; text-align: right; }
+        .toast-success { border-color: rgba(16, 185, 129, 0.22); background: rgba(236, 253, 245, 0.95); }
+        .toast-success .toast-icon { background: rgba(22, 163, 74, 0.15); color: #16a34a; }
+        .toast-error { border-color: rgba(239, 68, 68, 0.2); background: rgba(254, 226, 226, 0.95); }
+        .toast-error .toast-icon { background: rgba(248, 113, 113, 0.16); color: #dc2626; }
+        .toast-info { border-color: rgba(148, 163, 184, 0.22); background: rgba(226, 232, 240, 0.95); }
+        .toast-info .toast-icon { background: rgba(148, 163, 184, 0.16); color: #475569; }
+    </style>
+</head>
+<body class="font-cairo bg-gray-50/60 text-gray-800 antialiased min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-50 py-3 sm:py-4 transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <a href="student-dashboard.html" class="flex items-center gap-2 group">
+                <div class="bg-emerald-600 text-white p-2 rounded-xl shadow-sm group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-book-open text-xs sm:text-base"></i>
+                </div>
+                <span class="text-sm sm:text-base md:text-lg font-black text-slate-900">منصة <span class="text-emerald-600">العلم والإيمان</span></span>
+            </a>
+            <a href="student-dashboard.html" class="text-[11px] sm:text-xs font-bold text-gray-500 hover:text-emerald-600 transition-all flex items-center gap-1 hover:-translate-x-1">
+                <i class="fa-solid fa-arrow-right"></i> مستواي التعليمي
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-5 md:py-12 w-full flex-grow">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+            
+            <div class="lg:col-span-7 space-y-4 sm:space-y-6">
+                <div class="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-md p-4 xs:p-5 sm:p-8 space-y-5 sm:space-y-6 transition-all duration-300">
+                    <div class="space-y-0.5 sm:space-y-1">
+                        <h1 class="text-base sm:text-lg md:text-xl font-black text-slate-950">اختر طريقة تفعيل الاشتراك</h1>
+                        <p class="text-[11px] sm:text-xs text-gray-400 font-semibold">يرجى اختيار الوسيلة المناسبة لك لتفعيل المحتوى فوراً</p>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-1.5 sm:gap-2 bg-gray-100/70 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-gray-200/50">
+                        <button id="tab-vodafone" type="button" onclick="switchPaymentTab('vodafone')" 
+                            class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black bg-white text-red-600 shadow-sm border border-gray-200/40 active:scale-95">
+                            <i class="fa-solid fa-mobile-screen-button text-xs sm:text-sm"></i>
+                            <span class="tracking-tight">فودافون كاش</span>
+                        </button>
+                        <button id="tab-etisalat" type="button" onclick="switchPaymentTab('etisalat')" 
+                            class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black text-gray-500 hover:text-gray-950 active:scale-95">
+                            <i class="fa-solid fa-mobile-screen-button text-xs sm:text-sm"></i>
+                            <span class="tracking-tight">اتصالات كاش</span>
+                        </button>
+                        <button id="tab-center" type="button" onclick="switchPaymentTab('center')" 
+                            class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black text-gray-500 hover:text-gray-950 active:scale-95">
+                            <i class="fa-solid fa-qrcode text-xs sm:text-sm"></i>
+                            <span class="tracking-tight">كود السنتر</span>
+                        </button>
+                    </div>
+
+                    <form onsubmit="handleSubmitReceipt(event)" class="space-y-5">
+                        
+                        <!-- فودافون كاش -->
+                        <div id="content-vodafone" class="space-y-4 transition-all duration-300 block">
+                            <div class="p-3.5 bg-red-50/50 rounded-xl sm:rounded-2xl border border-red-500/10 space-y-1">
+                                <h3 class="text-[11px] sm:text-xs font-black text-red-900 flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-info text-red-600"></i> رقم تحويل فودافون كاش:
+                                </h3>
+                                <p class="text-[11px] sm:text-xs text-red-800 leading-relaxed font-semibold">
+                                    برجاء تحويل القيمة للرقم التالي: <span class="block sm:inline-block mt-1 sm:mt-0 bg-red-100/80 px-2.5 py-1 rounded-lg text-red-950 font-black tracking-wider select-all text-xs sm:text-sm transition-transform hover:scale-105">01118528677</span>
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">رقم فودافون المحوّل منه</label>
+                                    <input type="tel" id="vodafone-phone" placeholder="010xxxxxxxxx" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 focus:bg-white transition-all">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">المبلغ المحول (جنيه)</label>
+                                    <input type="number" id="vodafone-amount" placeholder="150" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 focus:bg-white transition-all">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- اتصالات كاش -->
+                        <div id="content-etisalat" class="space-y-4 transition-all duration-300 hidden">
+                            <div class="p-3.5 bg-lime-50/60 rounded-xl sm:rounded-2xl border border-lime-500/10 space-y-1">
+                                <h3 class="text-[11px] sm:text-xs font-black text-lime-900 flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-info text-lime-600"></i> رقم تحويل اتصالات كاش:
+                                </h3>
+                                <p class="text-[11px] sm:text-xs text-lime-800 leading-relaxed font-semibold">
+                                    برجاء تحويل القيمة للرقم التالي: <span class="block sm:inline-block mt-1 sm:mt-0 bg-lime-100 px-2.5 py-1 rounded-lg text-lime-950 font-black tracking-wider select-all text-xs sm:text-sm transition-transform hover:scale-105">01118528677</span>
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">رقم اتصالات المحوّل منه</label>
+                                    <input type="tel" id="etisalat-phone" placeholder="011xxxxxxxxx" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-500/10 focus:bg-white transition-all">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">المبلغ المحول (جنيه)</label>
+                                    <input type="number" id="etisalat-amount" placeholder="150" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-500/10 focus:bg-white transition-all">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- قسم إرفاق الإيصال (تم إضافته ليعالج المشكلة) -->
+                        <div id="upload-section" class="space-y-2 transition-all duration-300">
+                            <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">إرفاق صورة الإيصال (سكرين شوت من التحويل)</label>
+                            <div class="relative border-2 border-dashed border-gray-300 rounded-xl bg-gray-50/50 hover:bg-gray-100 transition-colors p-1">
+                                <input type="file" id="receipt-file" accept="image/*" onchange="previewFile(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                <div id="upload-placeholder" class="p-4 text-center space-y-1">
+                                    <i class="fa-solid fa-cloud-arrow-up text-2xl sm:text-3xl text-gray-400"></i>
+                                    <p class="text-[10px] sm:text-xs text-gray-500 font-bold">اضغط هنا لاختيار الصورة أو اسحبها للداخل</p>
+                                </div>
+                                <div id="upload-preview" class="hidden p-4 text-center space-y-1">
+                                    <i class="fa-solid fa-circle-check text-2xl sm:text-3xl text-emerald-500"></i>
+                                    <p id="file-name" class="text-[10px] sm:text-xs text-emerald-600 font-bold break-all"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- كود السنتر -->
+                        <div id="content-center" class="space-y-4 transition-all duration-300 hidden">
+                            <div class="p-4 bg-amber-50/70 rounded-xl sm:rounded-2xl border border-amber-500/20 space-y-1">
+                                <h3 class="text-[11px] sm:text-xs font-black text-amber-900 flex items-center gap-1">
+                                    <i class="fa-solid fa-qrcode text-amber-600"></i> التفعيل الفوري بكروت السناتر:
+                                </h3>
+                                <p class="text-[11px] sm:text-xs text-amber-800 leading-relaxed font-semibold">
+                                    اكتب الكود المطبوع على كارت المنصة الورقي ليتم تفعيل الكورس في ثانية واحدة بدون انتظار مراجعة سكرتارية.
+                                </p>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">ادخل كود الشحن الموجود على الكارت</label>
+                                <div class="relative flex items-center">
+                                    <input type="text" id="center_code_input" placeholder="مثال: ELM-XXXX-XXXX" class="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-xs sm:text-sm font-black tracking-wider text-gray-900 uppercase focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:bg-white transition-all placeholder:font-sans placeholder:tracking-normal pl-10 sm:pl-12">
+                                    <i class="fa-solid fa-ticket absolute left-3 sm:left-4 text-gray-300 text-sm sm:text-base"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-btn" class="w-full mt-5 sm:mt-6 bg-slate-900 hover:bg-slate-950 text-white font-black py-3.5 sm:py-4 rounded-xl shadow-md transition-all text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-[0.98]">
+                            <i id="btn-icon" class="fa-solid fa-paper-plane text-[10px] sm:text-xs"></i>
+                            <span id="submit-btn-text">تأكيد التحويل وإرسال الطلب للأدمن</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- قسم تفاصيل الطلب الأيمن -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24">
+                <div class="bg-slate-900 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-xl relative overflow-hidden transition-all duration-300">
+                    <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-600/10 blur-2xl rounded-full"></div>
+                    
+                    <h2 class="text-sm sm:text-base font-black border-b border-white/10 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-basket-shopping text-emerald-400"></i>
+                        ملخص تفاصيل الطلب
+                    </h2>
+
+                    <div class="flex items-start gap-3 sm:gap-4 bg-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 transition-transform hover:scale-[1.02]">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-base sm:text-lg shrink-0 shadow-md shadow-emerald-900/35">📚</div>
+                        <div class="space-y-0.5">
+                            <h3 id="course-summary-title" class="text-[11px] sm:text-xs md:text-sm font-black leading-snug">جاري تحميل الكورس...</h3>
+                            <p id="course-summary-subtitle" class="text-[9px] sm:text-[10px] text-emerald-400 font-bold">يرجى الانتظار</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2.5 pt-1 text-[11px] sm:text-xs font-semibold text-gray-300">
+                        <div class="flex justify-between">
+                            <span>سعر المنهج والمحاضرات</span>
+                            <span id="course-price-base" class="text-white font-bold">0 ج.م</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>المرفقات والاختبارات الإجبارية</span>
+                            <span class="text-emerald-400 font-bold">مجاناً بالكامل</span>
+                        </div>
+                        <div class="flex justify-between border-t border-white/10 pt-3 text-xs sm:text-sm font-black text-white">
+                            <span>إجمالي المبلغ المطلوب تحويله</span>
+                            <span id="course-price-total" class="text-emerald-400 text-sm sm:text-base">0 ج.م</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-1 flex items-start gap-2 text-[9px] sm:text-[10px] text-gray-400 font-medium leading-relaxed">
+                        <i class="fa-solid fa-shield-halved text-emerald-500 text-xs shrink-0 mt-0.5"></i>
+                        <p>بمجرد إرسال طلبك، يطابق الدعم الفني الحوالة البنكية ويتم تفعيل الحساب فوراً لفتح المحتوى في غضون دقائق.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-100 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-gray-400 w-full">
+        بوابة السداد الآمنة لمنصة العلم والإيمان © 2026
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+        const SUPABASE_URL = 'https://equefefnimfaqkyckbep.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentPaymentType = 'vodafone';
+        let isCourseLoaded = false;
+
+        function getCourseIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const courseId = params.get('course_id');
+            if (!courseId) return null;
+            const parsedCourseId = Number(courseId);
+            return Number.isNaN(parsedCourseId) ? null : parsedCourseId;
+        }
+
+        async function fetchAndShowCourseDetails() {
+            const courseId = getCourseIdFromUrl();
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (!courseId) {
+                document.getElementById('course-summary-title').innerText = 'خطأ في تحديد الكورس';
+                document.getElementById('course-summary-subtitle').innerText = 'معرّف الكورس غير صالح';
+                if(submitBtn) submitBtn.disabled = true;
+                showNotification('لم يتم تحديد الكورس المطلوب بشكل صحيح.', 'error');
+                return;
+            }
+
+            try {
+                const { data: course, error } = await _supabase
+                    .from('courses')
+                    .select('*')
+                    .eq('id', courseId)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (course) {
+                    isCourseLoaded = true;
+                    document.getElementById('course-summary-title').innerText = course.title || 'كورس غير مسمى';
+                    document.getElementById('course-summary-subtitle').innerText = `${course.stage || 'المرحلة التعليمية'}`;
+                    
+                    const priceText = `${course.price || 0} ج.م`;
+                    document.getElementById('course-price-base').innerText = priceText;
+                    document.getElementById('course-price-total').innerText = priceText;
+                    
+                    if(document.getElementById('vodafone-amount')) document.getElementById('vodafone-amount').value = course.price || '';
+                    if(document.getElementById('etisalat-amount')) document.getElementById('etisalat-amount').value = course.price || '';
+                } else {
+                    document.getElementById('course-summary-title').innerText = 'الكورس غير موجود';
+                    document.getElementById('course-summary-subtitle').innerText = 'يرجى التأكد من الرابط';
+                    if(submitBtn) submitBtn.disabled = true;
+                }
+            } catch (err) {
+                console.error('Error fetching course:', err);
+                document.getElementById('course-summary-title').innerText = 'فشل تحميل بيانات الكورس';
+                document.getElementById('course-summary-subtitle').innerText = 'حاول تحديث الصفحة';
+                showNotification('حدث خطأ أثناء تحميل بيانات الكورس. حاول إعادة تحميل الصفحة.', 'error');
+            }
+        }
+
+        function switchPaymentTab(type) {
+            currentPaymentType = type;
+            
+            const tabVodafone = document.getElementById('tab-vodafone');
+            const tabEtisalat = document.getElementById('tab-etisalat');
+            const tabCenter = document.getElementById('tab-center');
+            
+            const contentVodafone = document.getElementById('content-vodafone');
+            const contentEtisalat = document.getElementById('content-etisalat');
+            const contentCenter = document.getElementById('content-center');
+            
+            const uploadSection = document.getElementById('upload-section');
+            const receiptFile = document.getElementById('receipt-file');
+            const submitBtnText = document.getElementById('submit-btn-text');
+
+            const defaultBtnClasses = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black text-gray-500 hover:text-gray-950 active:scale-95";
+            tabVodafone.className = defaultBtnClasses;
+            tabEtisalat.className = defaultBtnClasses;
+            tabCenter.className = defaultBtnClasses;
+
+            contentVodafone.classList.add('hidden');
+            contentEtisalat.classList.add('hidden');
+            contentCenter.classList.add('hidden');
+            
+            contentVodafone.classList.remove('animate-fade-in-up');
+            contentEtisalat.classList.remove('animate-fade-in-up');
+            contentCenter.classList.remove('animate-fade-in-up');
+
+            const vPhone = document.getElementById('vodafone-phone');
+            const vAmount = document.getElementById('vodafone-amount');
+            const ePhone = document.getElementById('etisalat-phone');
+            const eAmount = document.getElementById('etisalat-amount');
+            const cCode = document.getElementById('center_code_input');
+
+            if (type === 'vodafone') {
+                tabVodafone.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black bg-white text-red-600 shadow-md border border-red-200/40 active:scale-95";
+                contentVodafone.classList.remove('hidden');
+                void contentVodafone.offsetWidth; 
+                contentVodafone.classList.add('animate-fade-in-up');
+                
+                vPhone.required = vAmount.required = true;
+                ePhone.required = eAmount.required = cCode.required = false;
+                
+                if (uploadSection && receiptFile) {
+                    receiptFile.required = true;
+                    uploadSection.classList.remove('hidden');
+                }
+                submitBtnText.innerText = "تأكيد التحويل وإرسال الطلب للأدمن";
+
+            } else if (type === 'etisalat') {
+                tabEtisalat.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black bg-white text-lime-600 shadow-md border border-lime-200/40 active:scale-95";
+                contentEtisalat.classList.remove('hidden');
+                void contentEtisalat.offsetWidth; 
+                contentEtisalat.classList.add('animate-fade-in-up');
+                
+                ePhone.required = eAmount.required = true;
+                vPhone.required = vAmount.required = cCode.required = false;
+                
+                if (uploadSection && receiptFile) {
+                    receiptFile.required = true;
+                    uploadSection.classList.remove('hidden');
+                }
+                submitBtnText.innerText = "تأكيد التحويل وإرسال الطلب للأدمن";
+
+            } else if (type === 'center') {
+                tabCenter.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-1 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black bg-white text-amber-600 shadow-md border border-amber-200/40 active:scale-95";
+                contentCenter.classList.remove('hidden');
+                void contentCenter.offsetWidth; 
+                contentCenter.classList.add('animate-fade-in-up');
+                
+                cCode.required = true;
+                vPhone.required = vAmount.required = ePhone.required = eAmount.required = false;
+                
+                if (uploadSection && receiptFile) {
+                    receiptFile.required = false;
+                    uploadSection.classList.add('hidden');
+                }
+                submitBtnText.innerText = "شحن الكارت وتفعيل الكورس فوراً";
+            }
+        }
+
+        function previewFile(input) {
+            const placeholder = document.getElementById('upload-placeholder');
+            const preview = document.getElementById('upload-preview');
+            const fileNameSpan = document.getElementById('file-name');
+
+            if (input.files && input.files[0]) {
+                placeholder.classList.add('hidden');
+                preview.classList.remove('hidden');
+                fileNameSpan.innerText = "تم إرفاق: " + input.files[0].name;
+            } else {
+                placeholder.classList.remove('hidden');
+                preview.classList.add('hidden');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.classList.add(type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : 'toast-info');
+
+            const iconWrapper = document.createElement('div');
+            iconWrapper.className = 'toast-icon';
+            const icon = document.createElement('i');
+            icon.className = `fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle'}`;
+            iconWrapper.appendChild(icon);
+
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = 'toast-message';
+            messageWrapper.textContent = message;
+
+            toast.appendChild(iconWrapper);
+            toast.appendChild(messageWrapper);
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => toast.classList.add('toast-visible'));
+
+            const hideTimer = setTimeout(() => toast.classList.add('toast-hide'), 4800);
+            toast.addEventListener('transitionend', () => {
+                if (toast.classList.contains('toast-hide')) {
+                    clearTimeout(hideTimer);
+                    toast.remove();
+                }
+            });
+            toast.addEventListener('click', () => toast.classList.add('toast-hide'));
+        }
+
+        function validateEgyptianPhone(phone) {
+            const regex = /^01[0125]\d{8}$/;
+            return regex.test(phone);
+        }
+
+        async function handleSubmitReceipt(event) {
+            event.preventDefault();
+            
+            if (!isCourseLoaded) {
+                showNotification('يرجى الانتظار حتى يتم تحميل بيانات الكورس بالكامل.', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            const btnIcon = document.getElementById('btn-icon');
+            const submitBtnText = document.getElementById('submit-btn-text');
+
+            const originalText = submitBtnText.innerText;
+            const originalIconClass = btnIcon.className;
+
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+            btnIcon.className = "fa-solid fa-spinner fa-spin text-[10px] sm:text-xs";
+            submitBtnText.innerText = "جاري معالجة طلبك...";
+
+            try {
+                const { data: { user }, error: userError } = await _supabase.auth.getUser();
+                if (userError || !user) throw new Error('برجاء تسجيل الدخول أولاً للحفظ.');
+
+                const courseId = getCourseIdFromUrl();
+                if (!courseId) throw new Error('لم يتم تحديد الكورس المطلوب بشكل صحيح.');
+
+                const { data: existingSub, error: checkErr } = await _supabase
+                    .from('course_subscriptions')
+                    .select('id')
+                    .eq('student_id', user.id)
+                    .eq('course_id', courseId)
+                    .maybeSingle();
+
+                if (checkErr) throw checkErr;
+                if (existingSub) throw new Error('أنت مشترك بالفعل في هذا الكورس!');
+
+                if (currentPaymentType === 'center') {
+                    const centerCode = document.getElementById('center_code_input').value.trim();
+                    if(!centerCode) throw new Error('يرجى إدخال كود الشحن.');
+                    await handleCenterCodeActivation(user.id, courseId, centerCode);
+                } else {
+                    const phone = currentPaymentType === 'vodafone' ? 
+                        document.getElementById('vodafone-phone').value.trim() : 
+                        document.getElementById('etisalat-phone').value.trim();
+
+                    if (!validateEgyptianPhone(phone)) {
+                        throw new Error('يرجى إدخال رقم هاتف مصري صحيح مكون من 11 رقم (مثل: 01012345678)');
+                    }
+
+                    await handleWalletSubscription(user.id, courseId, phone);
+                }
+
+            } catch (error) {
+                showNotification(error.message || 'حدث خطأ أثناء معالجة طلبك.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                btnIcon.className = originalIconClass;
+                submitBtnText.innerText = originalText;
+            }
+        }
+
+        async function handleCenterCodeActivation(studentId, courseId, centerCode) {
+            const cleanCode = centerCode.trim().toUpperCase();
+
+            const { data: codeData, error: codeErr } = await _supabase
+                .from('center_codes')
+                .select('*')
+                .eq('code', cleanCode)
+                .maybeSingle();
+
+            if (codeErr) {
+                console.error("Error fetching code:", codeErr);
+                throw new Error('حدث خطأ أثناء التحقق من الكود، حاول مرة أخرى.');
+            }
+            
+            if (!codeData) throw new Error('كود السنتر غير صحيح، يرجى إعادة كتابته بدقة.');
+            if (codeData.is_used === true) throw new Error('هذا الكود تم استخدامه مسبقاً من قِبل طالب آخر!');
+            if (Number(codeData.course_id) !== Number(courseId)) throw new Error('هذا الكود غير مخصص لهذا الكورس، يرجى التأكد من الكورس المحدد.');
+
+            const { data: updatedCodes, error: updateErr } = await _supabase
+                .from('center_codes')
+                .update({ is_used: true })
+                .eq('id', codeData.id)
+                .select(); 
+
+            if (updateErr) {
+                console.error("Database Update Error:", updateErr);
+                throw new Error('فشل تحديث الكود في السيرفر، يرجى المحاولة لاحقاً.');
+            }
+
+            if (!updatedCodes || updatedCodes.length === 0) {
+                throw new Error('فشل شحن كود التفعيل، قد يكون تم استخدامه في نفس اللحظة.');
+            }
+
+            const { error: subErr } = await _supabase
+                .from('course_subscriptions')
+                .insert({
+                    student_id: studentId,
+                    course_id: Number(courseId),
+                    status: 'active'
+                });
+
+            if (subErr) {
+                await _supabase
+                    .from('center_codes')
+                    .update({ is_used: false })
+                    .eq('id', codeData.id);
+                
+                console.error("Subscription Insertion Error:", subErr);
+                throw new Error('فشل تفعيل الكورس، يرجى التواصل مع الدعم الفني فوراً لحل المشكلة.');
+            }
+
+            showNotification('🎉 تم شحن الكارت وتفعيل الكورس لك بنجاح! بالتوفيق يا بطل.', 'success');
+            setTimeout(() => window.location.href = 'student-dashboard.html', 1500);
+        }
+
+        async function handleWalletSubscription(studentId, courseId, phone) {
+            const receiptFileInput = document.getElementById('receipt-file');
+            if (!receiptFileInput.files || receiptFileInput.files.length === 0) {
+                throw new Error('برجاء رفع لقطة شاشة لإيصال تحويل المبلغ أولاً.');
+            }
+
+            const file = receiptFileInput.files[0];
+            const fileExt = file.name.split('.').pop();
+            const cleanFileName = `${studentId}_c${courseId}_${Date.now()}.${fileExt}`;
+            const filePath = `receipts/${cleanFileName}`;
+
+            const { error: uploadError } = await _supabase.storage
+                .from('receipts')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (uploadError) throw new Error('فشل رفع صورة الإيصال، برجاء المحاولة مرة أخرى.');
+
+            const { data: { publicUrl } } = _supabase.storage.from('receipts').getPublicUrl(filePath);
+
+            const amount = currentPaymentType === 'vodafone' ? 
+                document.getElementById('vodafone-amount').value.trim() : 
+                document.getElementById('etisalat-amount').value.trim();
+
+            if(!amount || Number(amount) <= 0) throw new Error('يرجى إدخال مبلغ تحويل صحيح.');
+
+            const { error: insertError } = await _supabase
+                .from('subscription_requests')
+                .insert({
+                    student_id: studentId,
+                    course_id: courseId,
+                    payment_method: currentPaymentType,
+                    sender_phone: phone,
+                    amount_paid: Number(amount),
+                    receipt_url: publicUrl,
+                    status: 'pending'
+                });
+
+            if (insertError) throw insertError;
+
+            showNotification('✅ تم إرسال بيانات التحويل بنجاح! سيقوم الدعم الفني بمطابقتها وتفعيل حسابك.', 'success');
+            setTimeout(() => window.location.href = 'student-dashboard.html', 2000);
+        }
+
+        window.onload = function() {
+            switchPaymentTab('vodafone');
+            fetchAndShowCourseDetails();
+        };
+    </script>
+</body>
+</html>

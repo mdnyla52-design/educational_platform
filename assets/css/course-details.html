@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل المحاضرة | منصة العلم والإيمان</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #059669;
+            border-radius: 10px;
+        }
+        .disabled-action {
+            opacity: 0.5;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="font-cairo bg-gray-50 text-gray-800 antialiased">
+
+    <!-- نافذة التنبيه المودرن المخصصة -->
+    <div id="custom-alert-modal" class="fixed inset-0 bg-gray-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 transform scale-95 transition-all duration-300 space-y-4 text-center">
+            <div id="modal-icon-container" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl">
+                <i id="modal-icon" class="fa-solid"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 id="modal-title" class="text-lg font-black text-gray-950">تنبيه</h3>
+                <p id="modal-message" class="text-sm text-gray-600 font-medium leading-relaxed">رسالة التنبيه الافتراضية</p>
+            </div>
+            <button id="modal-close-btn" class="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/10 active:scale-[0.98]">
+                حسناً، مفهوم
+            </button>
+        </div>
+    </div>
+
+    <!-- الهيدر وشريط التنقل -->
+    <nav class="bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <div class="flex items-center gap-4">
+                    <a href="student-dashboard.html" class="flex items-center gap-2.5 group">
+                        <div class="bg-emerald-600 text-white p-2 rounded-xl shadow-md">
+                            <i class="fa-solid fa-book-open text-xl"></i>
+                        </div>
+                        <span class="text-lg font-black text-gray-950">منصة <span class="text-emerald-600">العلم والإيمان</span></span>
+                    </a>
+                    <span class="hidden md:inline text-gray-300">|</span>
+                    <span id="nav-course-context" class="hidden md:inline text-sm font-bold text-gray-500">جاري تحميل المحاضرة...</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="student-dashboard.html" class="text-sm font-bold text-gray-600 hover:text-emerald-600 transition-colors"><i class="fa-solid fa-arrow-right ml-1"></i> العودة للوحة التحكم</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- الجزء الأيمن (الفيديو والتبويبات) -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <div class="relative bg-black rounded-3xl overflow-hidden shadow-xl shadow-emerald-950/5 aspect-video border border-gray-800 group">
+                    <div id="video-placeholder" class="absolute inset-0 bg-gradient-to-tr from-emerald-950 via-gray-900 to-teal-950 flex flex-col items-center justify-center text-white p-6 transition-all duration-500 z-20">
+                        <button onclick="startVideoEngine()" class="w-20 h-20 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full flex items-center justify-center text-3xl shadow-lg shadow-emerald-600/30 transition-all duration-300 transform hover:scale-110 active:scale-95 mb-4 group-hover:bg-gradient-to-r group-hover:from-emerald-500 group-hover:to-teal-600">
+                            <i class="fa-solid fa-play translate-x-[-2px]"></i>
+                        </button>
+                        <h3 id="placeholder-title" class="text-lg sm:text-xl font-bold text-center mb-1">انقر لتشغيل المحاضرة</h3>
+                        <p class="text-xs text-emerald-400 font-medium">مشغل فيديو آمن ومحمي</p>
+                    </div>
+
+                    <div id="actual-video" class="hidden w-full h-full bg-gray-950 relative">
+                        <div id="youtube-player-container" class="w-full h-full hidden"></div>
+                        <div id="native-video-container" class="w-full h-full hidden"></div>
+                        
+                        <div id="video-loading-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2 bg-gray-950 z-10">
+                            <i class="fa-solid fa-circle-notch animate-spin text-4xl text-emerald-500"></i>
+                            <p class="text-sm font-bold">جاري تشغيل الفيديو المحمي...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- شريط أزرار التنقل والامتحان السريع -->
+                <div class="flex flex-wrap items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm gap-4">
+                    <div class="flex items-center gap-3">
+                        <button id="prev-lecture-btn" onclick="navigateLecture(-1)" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 p-2.5 px-4 rounded-xl text-xs font-bold transition-all disabled-action"><i class="fa-solid fa-chevron-right ml-1"></i> الجزء السابق</button>
+                        <button id="next-lecture-btn" onclick="navigateLecture(1)" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 p-2.5 px-4 rounded-xl text-xs font-bold transition-all disabled-action">الجزء التالي <i class="fa-solid fa-chevron-left mr-1"></i></button>
+                    </div>
+                    <button id="exam-main-btn" onclick="handleExamNavigation(event)" class="flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-lg transition-all active:scale-95 cursor-pointer disabled-action">
+                        <i class="fa-solid fa-graduation-cap"></i> دخول الامتحان السريع لهذه الحصة
+                    </button>
+                </div>
+
+                <!-- التبويبات والمرفقات السفلية -->
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="flex border-b border-gray-100 bg-gray-50/50 px-4">
+                        <button onclick="switchTab('about')" id="tab-btn-about" class="tab-btn py-4 px-6 text-sm font-black border-b-2 border-emerald-600 text-emerald-600 transition-all duration-300">عن المحاضرة</button>
+                        <button onclick="switchTab('files')" id="tab-btn-files" class="tab-btn py-4 px-6 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-emerald-600 transition-all duration-300">الملفات والمرفقات</button>
+                        <button onclick="switchTab('faq')" id="tab-btn-faq" class="tab-btn py-4 px-6 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-emerald-600 transition-all duration-300">أسئلة شائعة</button>
+                    </div>
+
+                    <div class="p-6 sm:p-8">
+                        <div id="tab-content-about" class="tab-content block space-y-4">
+                            <h2 id="details-course-name" class="text-xl font-black text-gray-950">---</h2>
+                            <p id="details-course-desc" class="text-sm text-gray-600 leading-relaxed font-medium">لا يوجد وصف متاح لهذه المحاضرة حالياً.</p>
+                        </div>
+
+                        <div id="tab-content-files" class="tab-content hidden space-y-3">
+                            <h3 class="text-sm font-bold text-gray-400 mb-2">اضغط على الملف للتحميل المباشر:</h3>
+                            
+                            <div id="assignment-container" class="flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-emerald-500/30 hover:bg-emerald-50/10 transition-all group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-lg"><i class="fa-solid fa-file-pdf"></i></div>
+                                    <div>
+                                        <h4 id="assignment-title" class="text-sm font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">ملف الواجب المنزلي والمرفقات.pdf</h4>
+                                        <p class="text-xs text-gray-400 mt-0.5">جاهز للتحميل والطباعة</p>
+                                    </div>
+                                </div>
+                                <a id="download-assignment-btn" href="#" target="_blank" download class="p-2 px-4 bg-gray-100 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all disabled-action">📂 تحميل</a>
+                            </div>
+
+                            <p id="no-files-msg" class="hidden text-xs text-gray-400 font-medium p-4 text-center">⚠️ لم يتم رفع ملفات مرفقة لهذا الجزء.</p>
+                        </div>
+
+                        <div id="tab-content-faq" class="tab-content hidden space-y-4">
+                            <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <h4 class="text-sm font-bold text-gray-900 mb-1"><i class="fa-solid fa-circle-question text-emerald-600 ml-1"></i> هل الامتحان السريع إلزامي لفتح الحصة القادمة؟</h4>
+                                <p class="text-xs text-gray-500 leading-relaxed">نعم، يجب عليك أداء امتحان الجزء الحالي لتتمكن من فتح الجزء التالي تلقائياً.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- الجزء الأيسر (قائمة الأجزاء والأقسام) -->
+            <div class="lg:col-span-4 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden sticky top-28">
+                <div class="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-black text-gray-950 flex items-center gap-2 text-base">
+                            <i class="fa-solid fa-list-ol text-emerald-600"></i>
+                            محتويات ومراحل الكورس
+                        </h3>
+                        <p class="text-xs text-gray-400 font-semibold mt-1">تتبع الأجزاء بالترتيب</p>
+                    </div>
+                    <span id="lectures-count-badge" class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-2.5 py-1 rounded-full">0 جزء</span>
+                </div>
+
+                <div id="sections-and-lectures-container" class="divide-y divide-gray-100 max-h-[500px] overflow-y-auto custom-scrollbar">
+                    <div class="p-6 text-center text-gray-400 text-sm font-medium">
+                        <i class="fa-solid fa-spinner animate-spin text-emerald-600 text-xl mb-2"></i>
+                        <p>جاري تحميل أجزاء الكورس...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    
+    <script>
+        const SUPABASE_URL = 'https://equefefnimfaqkyckbep.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk';
+
+        const supabaseGlobal = typeof window !== 'undefined' ? (window.supabase || window.Supabase || null) : null;
+        const createClientFn = typeof window !== 'undefined' ? (window.createClient || supabaseGlobal?.createClient || supabaseGlobal?.default?.createClient) : null;
+        const supabaseClient = createClientFn ? createClientFn(SUPABASE_URL, SUPABASE_KEY) : null;
+
+        let globalCourseData = null;
+        let globalSections = [];
+        let globalLectures = [];
+        let globalExams = [];
+        let currentLectureIndex = 0;
+        let studentUser = null;
+        let studentExamResults = [];
+        let studentProgressList = [];
+
+        let ytPlayer = null;
+        let progressInterval = null;
+        let lastUpdatedPercent = 0;
+        let isYouTubeAPIReady = false;
+
+        function showModernAlert(title, message, type = 'error', redirectUrl = null) {
+            const modal = document.getElementById('custom-alert-modal');
+            const modalBody = modal.querySelector('div');
+            const iconContainer = document.getElementById('modal-icon-container');
+            const icon = document.getElementById('modal-icon');
+            const titleEl = document.getElementById('modal-title');
+            const msgEl = document.getElementById('modal-message');
+            const closeBtn = document.getElementById('modal-close-btn');
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+
+            if (type === 'error') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl bg-red-50 text-red-600";
+                icon.className = "fa-solid fa-shield-halved";
+                closeBtn.className = "w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg shadow-red-600/10 active:scale-[0.98]";
+            } else if (type === 'warning') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl bg-amber-50 text-amber-600";
+                icon.className = "fa-solid fa-lock";
+                closeBtn.className = "w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-lg shadow-amber-600/10 active:scale-[0.98]";
+            } else {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-full flex items-center justify-center text-2xl bg-emerald-50 text-emerald-600";
+                icon.className = "fa-solid fa-circle-check";
+                closeBtn.className = "w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/10 active:scale-[0.98]";
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalBody.classList.remove('scale-95');
+            modalBody.classList.add('scale-100');
+
+            closeBtn.onclick = function() {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                modalBody.classList.remove('scale-100');
+                modalBody.classList.add('scale-95');
+                if (redirectUrl) window.location.href = redirectUrl;
+            };
+        }
+
+        window.onYouTubeIframeAPIReady = function() {
+            isYouTubeAPIReady = true;
+        };
+
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        document.addEventListener('DOMContentLoaded', fetchAndIntegrateCourseDetails);
+
+        async function fetchAndIntegrateCourseDetails() {
+            if (!supabaseClient) return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseId = urlParams.get('course_id');
+
+            if (!courseId) {
+                showModernAlert('خطأ بالوصول', 'لم يتم تحديد معرف الكورس بـ URL الصفحة.', 'error', 'student-dashboard.html');
+                return;
+            }
+
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            studentUser = user;
+
+            const { data: subscription, error: subError } = await supabaseClient
+                .from('course_subscriptions')
+                .select('*')
+                .eq('student_id', user.id)
+                .eq('course_id', courseId)
+                .maybeSingle();
+
+            if (subError || !subscription) {
+                showModernAlert('تنبيه أمني', 'عذراً، أنت غير مشترك في هذا الكورس أو بانتظار تفعيل الأدمن لحسابك.', 'error', 'student-dashboard.html');
+                return;
+            }
+
+            const { data: course, error: courseError } = await supabaseClient
+                .from('courses')
+                .select('*')
+                .eq('id', courseId)
+                .maybeSingle();
+
+            if (courseError || !course) {
+                showModernAlert('فشل السيرفر', 'فشل في جلب تفاصيل الكورس من خادم البيانات.', 'error');
+                return;
+            }
+            globalCourseData = course;
+
+            const { data: sections } = await supabaseClient
+                .from('course_sections')
+                .select('*')
+                .eq('course_id', courseId)
+                .order('sort_order', { ascending: true });
+
+            globalSections = sections || [];
+
+            let lecturesQuery = supabaseClient
+                .from('lectures')
+                .select('*')
+                .eq('is_visible', true)
+                .order('sort_order', { ascending: true });
+
+            if (globalSections.length > 0) {
+                const sectionIds = globalSections.map(s => s.id);
+                lecturesQuery = lecturesQuery.in('section_id', sectionIds);
+            }
+
+            const { data: lectures } = await lecturesQuery;
+            globalLectures = lectures || [];
+
+            if (globalLectures.length === 0 && course.video_url) {
+                globalLectures.push({
+                    id: 'main-course-video',
+                    title: course.title,
+                    description: course.description,
+                    video_url: course.video_url,
+                    pdf_url: course.homework_url,
+                    section_id: null
+                });
+            }
+
+            const { data: results } = await supabaseClient
+                .from('student_results')
+                .select('*')
+                .eq('student_id', user.id);
+            studentExamResults = results || [];
+
+            // ==========================================
+            // جلب الامتحانات بدقة (الكورس + كل محاضرة فرعية)
+            // ==========================================
+            const lectureIds = globalLectures.map(l => l.id).filter(id => id && id !== 'main-course-video');
+            let fetchedExams = [];
+
+            // 1. جلب الامتحانات المرتبطة مباشرة بالكورس
+            const { data: courseExams } = await supabaseClient
+                .from('exams')
+                .select('*')
+                .eq('course_id', courseId);
+
+            if (courseExams) fetchedExams.push(...courseExams);
+
+            // 2. جلب الامتحانات المرتبطة بالأجزاء مباشرة (lecture_id)
+            if (lectureIds.length > 0) {
+                const { data: lectureExams } = await supabaseClient
+                    .from('exams')
+                    .select('*')
+                    .in('lecture_id', lectureIds);
+
+                if (lectureExams) {
+                    lectureExams.forEach(le => {
+                        if (!fetchedExams.some(e => e.id === le.id)) {
+                            fetchedExams.push(le);
+                        }
+                    });
+                }
+            }
+            globalExams = fetchedExams;
+
+            const { data: progress } = await supabaseClient
+                .from('student_progress')
+                .select('*')
+                .eq('student_id', user.id);
+            studentProgressList = progress || [];
+
+            document.getElementById('nav-course-context').textContent = course.title;
+            document.getElementById('lectures-count-badge').textContent = `${globalLectures.length} جزء`;
+
+            renderSidebarLectures();
+
+            if (globalLectures.length > 0) {
+                selectLecture(0);
+            } else {
+                document.getElementById('sections-and-lectures-container').innerHTML = `
+                    <div class="p-6 text-center text-gray-400 text-sm font-medium">
+                        ⚠️ لا توجد أجزاء أو فيديوهات مرفوعة لهذا الكورس حالياً.
+                    </div>`;
+            }
+        }
+
+        // ==========================================
+        //  دالة جلب امتحان المحاضرة المحددة
+        // ==========================================
+        function getExamForLecture(lecture) {
+            if (!lecture) return null;
+
+            // 1. بحث بالـ lecture_id المباشر
+            let exam = globalExams.find(e => e.lecture_id === lecture.id);
+            if (exam) return exam;
+
+            // 2. بحث بالـ prerequisite_exam_id
+            if (lecture.prerequisite_exam_id) {
+                exam = globalExams.find(e => e.id === lecture.prerequisite_exam_id);
+                if (exam) return exam;
+            }
+
+            // 3. حالة الكورس المفرد (فيديو رئيسي بدون أجزاء)
+            if (lecture.id === 'main-course-video') {
+                return globalExams.find(e => e.course_id == globalCourseData?.id) || globalExams[0] || null;
+            }
+
+            return null;
+        }
+
+        // ==========================================
+        //  دالة التحقق من فتح/قفل الجزء
+        // ==========================================
+        function isLectureUnlocked(index) {
+            // الجزء الأول مفتوح دائماً
+            if (index === 0) return true;
+
+            // جلب الجزء السابق
+            const prevLecture = globalLectures[index - 1];
+            if (!prevLecture) return true;
+
+            // التحقق من وجود امتحان للمحاضرة السابقة
+            const prevExam = getExamForLecture(prevLecture);
+            
+            if (prevExam) {
+                // التحقق مما إذا كان الطالب قد أدى الامتحان الخاص بالجزء السابق
+                const hasTakenExam = studentExamResults.some(r => r.exam_id === prevExam.id);
+                if (!hasTakenExam) {
+                    return false; 
+                }
+            }
+
+            return true;
+        }
+
+        function renderSidebarLectures() {
+            const container = document.getElementById('sections-and-lectures-container');
+            container.innerHTML = '';
+
+            if (globalLectures.length === 0) return;
+
+            if (globalSections.length > 0) {
+                globalSections.forEach(section => {
+                    const sectionLectures = globalLectures.filter(l => l.section_id === section.id);
+                    if (sectionLectures.length === 0) return;
+
+                    const sectionHeader = document.createElement('div');
+                    sectionHeader.className = "bg-gray-100/80 px-4 py-2.5 text-xs font-black text-gray-700 border-y border-gray-200 flex items-center justify-between";
+                    sectionHeader.innerHTML = `<span><i class="fa-solid fa-folder-open ml-1 text-emerald-600"></i> ${section.title}</span>`;
+                    container.appendChild(sectionHeader);
+
+                    sectionLectures.forEach(lecture => {
+                        const globalIndex = globalLectures.findIndex(l => l.id === lecture.id);
+                        container.appendChild(createLectureRowElement(lecture, globalIndex));
+                    });
+                });
+
+                const orphanLectures = globalLectures.filter(l => !l.section_id);
+                if (orphanLectures.length > 0) {
+                    orphanLectures.forEach(lecture => {
+                        const globalIndex = globalLectures.findIndex(l => l.id === lecture.id);
+                        container.appendChild(createLectureRowElement(lecture, globalIndex));
+                    });
+                }
+            } else {
+                globalLectures.forEach((lecture, index) => {
+                    container.appendChild(createLectureRowElement(lecture, index));
+                });
+            }
+        }
+
+        function createLectureRowElement(lecture, index) {
+            const row = document.createElement('div');
+            const unlocked = isLectureUnlocked(index);
+            const lectureExam = getExamForLecture(lecture);
+            const hasTakenExam = lectureExam ? studentExamResults.some(r => r.exam_id === lectureExam.id) : false;
+            const isCurrent = index === currentLectureIndex;
+
+            row.id = `lecture-item-${index}`;
+            row.onclick = () => {
+                if (!unlocked) {
+                    showModernAlert(
+                        'الجزء مغلق 🔒', 
+                        'عذراً، يجب عليك أداء امتحان الجزء السابق لتتمكن من فتح هذا الجزء.', 
+                        'warning'
+                    );
+                    return;
+                }
+                selectLecture(index);
+            };
+
+            row.className = `p-4 flex items-start gap-3 transition-all border-r-4 ${
+                !unlocked 
+                ? 'bg-gray-50/80 opacity-60 cursor-not-allowed border-transparent' 
+                : (isCurrent ? 'bg-emerald-50/50 border-emerald-600 cursor-pointer' : 'hover:bg-gray-50 border-transparent cursor-pointer')
+            }`;
+
+            let iconMarkup = index + 1;
+            if (!unlocked) {
+                iconMarkup = '<i class="fa-solid fa-lock text-xs text-gray-400"></i>';
+            } else if (hasTakenExam) {
+                iconMarkup = '<i class="fa-solid fa-check text-xs text-emerald-600"></i>';
+            }
+
+            row.innerHTML = `
+                <div class="w-7 h-7 ${!unlocked ? 'bg-gray-200 text-gray-400' : (isCurrent ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500')} rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    ${iconMarkup}
+                </div>
+                <div class="space-y-1 flex-1">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-bold ${isCurrent ? 'text-emerald-950' : 'text-gray-800'} leading-tight">${lecture.title}</h4>
+                        ${!unlocked ? '<span class="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full">مغلق 🔒</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400 font-semibold">
+                        <span><i class="fa-regular fa-circle-play ml-0.5"></i> ${lecture.video_url ? 'فيديو الشرح' : 'ملف فقط'}</span>
+                        ${lecture.pdf_url ? '<span>•</span><span class="text-emerald-600"><i class="fa-solid fa-paperclip"></i> ملزمة</span>' : ''}
+                    </div>
+                </div>
+            `;
+            return row;
+        }
+
+        function selectLecture(index) {
+            if (index < 0 || index >= globalLectures.length) return;
+
+            if (!isLectureUnlocked(index)) {
+                showModernAlert('الجزء مغلق 🔒', 'يجب أداء امتحان الجزء السابق لتتمكن من فتح هذا الجزء.', 'warning');
+                return;
+            }
+
+            currentLectureIndex = index;
+            const lecture = globalLectures[index];
+
+            renderSidebarLectures();
+
+            document.getElementById('placeholder-title').textContent = lecture.title;
+            document.getElementById('details-course-name').textContent = lecture.title;
+            document.getElementById('details-course-desc').textContent = lecture.description || globalCourseData.description || 'لا يوجد وصف متاح لهذا الجزء حالياً.';
+
+            const fileUrl = lecture.pdf_url || globalCourseData.homework_url;
+            const assignmentContainer = document.getElementById('assignment-container');
+            const downloadBtn = document.getElementById('download-assignment-btn');
+            const noFilesMsg = document.getElementById('no-files-msg');
+
+            if (fileUrl) {
+                downloadBtn.href = fileUrl;
+                downloadBtn.classList.remove('disabled-action');
+                assignmentContainer.classList.remove('hidden');
+                noFilesMsg.classList.add('hidden');
+            } else {
+                assignmentContainer.classList.add('hidden');
+                noFilesMsg.classList.remove('hidden');
+            }
+
+            const prevBtn = document.getElementById('prev-lecture-btn');
+            const nextBtn = document.getElementById('next-lecture-btn');
+
+            if (index > 0 && isLectureUnlocked(index - 1)) prevBtn.classList.remove('disabled-action');
+            else prevBtn.classList.add('disabled-action');
+
+            if (index < globalLectures.length - 1 && isLectureUnlocked(index + 1)) nextBtn.classList.remove('disabled-action');
+            else nextBtn.classList.add('disabled-action');
+
+            setupExamButtonForLecture(lecture);
+            resetVideoPlayerUI();
+        }
+
+        function navigateLecture(direction) {
+            const newIndex = currentLectureIndex + direction;
+            if (newIndex >= 0 && newIndex < globalLectures.length) {
+                if (!isLectureUnlocked(newIndex)) {
+                    showModernAlert('الجزء التالي مغلق 🔒', 'يجب أداء الامتحان الخاص بهذا الجزء أولاً لتتمكن من الانتقال للجزء التالي.', 'warning');
+                    return;
+                }
+                selectLecture(newIndex);
+            }
+        }
+
+        function setupExamButtonForLecture(lecture) {
+            const examBtn = document.getElementById('exam-main-btn');
+            const linkedExam = getExamForLecture(lecture);
+
+            if (!linkedExam) {
+                examBtn.classList.add('disabled-action');
+                examBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> لا يوجد كويز لهذا الجزء`;
+                examBtn.onclick = (e) => e.preventDefault();
+                return;
+            }
+
+            const userResult = studentExamResults.find(r => r.exam_id === linkedExam.id);
+
+            examBtn.classList.remove('disabled-action');
+            if (userResult) {
+                const totalMarks = userResult.total_marks || linkedExam.total_marks || 100;
+                const score = userResult.score || 0;
+                const percent = userResult.percentage !== undefined ? userResult.percentage : (totalMarks > 0 ? ((score / totalMarks) * 100) : 0);
+
+                if (percent >= 50) {
+                    examBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> تم اجتياز الاختبار بنجاح (${Math.round(percent)}%)`;
+                    examBtn.className = "flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-none cursor-default transition-all";
+                    examBtn.onclick = (e) => e.preventDefault();
+                } else {
+                    examBtn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> إعادة الامتحان (درجتك: ${Math.round(percent)}%)`;
+                    examBtn.className = "flex items-center gap-2 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg transition-all active:scale-95 cursor-pointer";
+                    examBtn.onclick = () => {
+                        window.location.href = `exam.html?exam_id=${linkedExam.id}&course_id=${globalCourseData.id}`;
+                    };
+                }
+            } else {
+                examBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> دخول الامتحان السريع لهذه الحصة`;
+                examBtn.className = "flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-lg transition-all active:scale-95 cursor-pointer";
+                examBtn.onclick = () => {
+                    window.location.href = `exam.html?exam_id=${linkedExam.id}&course_id=${globalCourseData.id}`;
+                };
+            }
+        }
+
+        function handleExamNavigation(event) {
+            event.preventDefault();
+            const lecture = globalLectures[currentLectureIndex];
+            setupExamButtonForLecture(lecture);
+        }
+
+        function resetVideoPlayerUI() {
+            const placeholder = document.getElementById('video-placeholder');
+            const videoArea = document.getElementById('actual-video');
+            
+            if (progressInterval) clearInterval(progressInterval);
+            if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
+                try { ytPlayer.stopVideo(); } catch(e){}
+            }
+
+            videoArea.classList.add('hidden');
+            placeholder.style.display = 'flex';
+            placeholder.style.opacity = '1';
+            placeholder.style.pointerEvents = 'auto';
+        }
+
+        function startVideoEngine() {
+            const lecture = globalLectures[currentLectureIndex];
+            if (!lecture) return;
+
+            const videoUrl = lecture.video_url || globalCourseData.video_url;
+            if (!videoUrl) {
+                showModernAlert('فيديو غير متوفر', '⚠️ لم يقم المستر برفع فيديو لهذا الجزء بعد.', 'warning');
+                return;
+            }
+
+            const placeholder = document.getElementById('video-placeholder');
+            const videoArea = document.getElementById('actual-video');
+            const ytContainer = document.getElementById('youtube-player-container');
+            const nativeContainer = document.getElementById('native-video-container');
+            const loadingState = document.getElementById('video-loading-state');
+
+            placeholder.style.opacity = '0';
+            placeholder.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                placeholder.style.display = 'none';
+                videoArea.classList.remove('hidden');
+                loadingState.classList.remove('hidden');
+
+                if (progressInterval) clearInterval(progressInterval);
+
+                if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                    nativeContainer.classList.add('hidden');
+                    ytContainer.classList.remove('hidden');
+
+                    let videoId = '';
+                    if (videoUrl.includes('v=')) {
+                        videoId = videoUrl.split('v=')[1].split('&')[0];
+                    } else if (videoUrl.includes('embed/')) {
+                        videoId = videoUrl.split('embed/')[1].split('?')[0];
+                    } else {
+                        videoId = videoUrl.split('/').pop().split('?')[0];
+                    }
+
+                    function initYoutubePlayer() {
+                        if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+                            try { ytPlayer.destroy(); } catch(e) {}
+                        }
+                        
+                        ytPlayer = new YT.Player('youtube-player-container', {
+                            height: '100%',
+                            width: '100%',
+                            videoId: videoId,
+                            playerVars: {
+                                'autoplay': 1,
+                                'rel': 0,
+                                'modestbranding': 1,
+                                'controls': 1,
+                                'origin': window.location.origin
+                            },
+                            events: {
+                                'onReady': (event) => {
+                                    loadingState.classList.add('hidden');
+                                    event.target.playVideo();
+                                },
+                                'onStateChange': onPlayerStateChange,
+                                'onError': (e) => {
+                                    console.error("YouTube Player Error:", e.data);
+                                    loadingState.innerHTML = '<p class="text-xs text-red-500 p-4">حدث خطأ أثناء تشغيل يوتيوب.</p>';
+                                }
+                            }
+                        });
+                    }
+
+                    if (isYouTubeAPIReady && window.YT && window.YT.Player) {
+                        initYoutubePlayer();
+                    } else {
+                        const checkAPIInterval = setInterval(() => {
+                            if (window.YT && window.YT.Player) {
+                                clearInterval(checkAPIInterval);
+                                isYouTubeAPIReady = true;
+                                initYoutubePlayer();
+                            }
+                        }, 200);
+                    }
+
+                } else {
+                    ytContainer.classList.add('hidden');
+                    nativeContainer.classList.remove('hidden');
+                    loadingState.classList.add('hidden');
+
+                    nativeContainer.innerHTML = `
+                        <video id="html5-video-player" class="w-full h-full object-cover rounded-3xl" controls autoplay controlsList="nodownload" oncontextmenu="return false;">
+                            <source src="${videoUrl}" type="video/mp4">
+                            متصفحك لا يدعم تشغيل هذا الفيديو.
+                        </video>`;
+
+                    const player = document.getElementById('html5-video-player');
+                    
+                    player.onended = () => {
+                        updateProgressInSupabase(100);
+                    };
+
+                    player.ontimeupdate = () => {
+                        if (player.duration) {
+                            const currentPercent = Math.round((player.currentTime / player.duration) * 100);
+                            if (currentPercent > lastUpdatedPercent && currentPercent % 5 === 0) {
+                                lastUpdatedPercent = currentPercent;
+                                updateProgressInSupabase(currentPercent);
+                            }
+                        }
+                    };
+                }
+            }, 400);
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING) {
+                progressInterval = setInterval(() => {
+                    if (ytPlayer && ytPlayer.getDuration) {
+                        const duration = ytPlayer.getDuration();
+                        const currentTime = ytPlayer.getCurrentTime();
+                        if (duration > 0) {
+                            const currentPercent = Math.round((currentTime / duration) * 100);
+                            if (currentPercent > lastUpdatedPercent && currentPercent % 5 === 0) {
+                                lastUpdatedPercent = currentPercent;
+                                updateProgressInSupabase(currentPercent);
+                            }
+                        }
+                    }
+                }, 1000);
+            } else if (event.data == YT.PlayerState.ENDED) {
+                if (progressInterval) clearInterval(progressInterval);
+                updateProgressInSupabase(100);
+            } else {
+                if (progressInterval) clearInterval(progressInterval);
+            }
+        }
+
+        async function updateProgressInSupabase(percent) {
+            if (!studentUser || !globalCourseData) return;
+            const currentLecture = globalLectures[currentLectureIndex];
+
+            await supabaseClient
+                .from('video_progress')
+                .upsert({
+                    student_id: studentUser.id,
+                    course_id: globalCourseData.id,
+                    progress_percent: percent
+                }, { onConflict: 'student_id, course_id' });
+
+            if (percent >= 90 && currentLecture && currentLecture.id !== 'main-course-video') {
+                const { data } = await supabaseClient
+                    .from('student_progress')
+                    .upsert({
+                        student_id: studentUser.id,
+                        lecture_id: currentLecture.id,
+                        is_watched: true
+                    }, { onConflict: 'student_id, lecture_id' })
+                    .select();
+
+                if (data) {
+                    const existingIndex = studentProgressList.findIndex(p => p.lecture_id === currentLecture.id);
+                    if (existingIndex >= 0) {
+                        studentProgressList[existingIndex].is_watched = true;
+                    } else {
+                        studentProgressList.push({ student_id: studentUser.id, lecture_id: currentLecture.id, is_watched: true });
+                    }
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => { content.style.display = 'none'; });
+
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                btn.className = "tab-btn py-4 px-6 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-emerald-600 transition-all duration-300";
+            });
+
+            const activeContent = document.getElementById(`tab-content-${tabId}`);
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            
+            if (activeContent && activeBtn) {
+                activeContent.style.display = 'block';
+                activeBtn.className = "tab-btn py-4 px-6 text-sm font-black border-b-2 border-emerald-600 text-emerald-600 transition-all duration-300";
+            }
+        }
+    </script>
+</body>
+</html>

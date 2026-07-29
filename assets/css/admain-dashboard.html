@@ -1,0 +1,2446 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>لوحة التحكم الاحترافية | منصة العلم والإيمان</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght=300;400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- مكتبة Jitsi Meet للبث المباشر -->
+<script src="https://meet.jit.si/external_api.js"></script>
+
+<script>
+tailwind.config = {
+theme: {
+extend: {
+fontFamily: {
+cairo: ['Cairo', 'sans-serif'],
+},
+animation: {
+'spin-slow': 'spin 3s linear infinite',
+}
+}
+}
+}
+</script>
+<style>
+@keyframes fadeInUp {
+from { opacity: 0; transform: translateY(12px); }
+to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleUp {
+from { opacity: 0; transform: scale(0.97); }
+to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+animation: fadeInUp 0.4s ease-out forwards;
+}
+.animate-scale-up {
+animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+::-webkit-scrollbar {
+width: 5px;
+height: 5px;
+}
+::-webkit-scrollbar-track {
+background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+background: #cbd5e1;
+border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+background: #94a3b8;
+}
+
+button, input, select, textarea {
+-webkit-tap-highlight-color: transparent;
+}
+</style>
+</head>
+<body class="font-cairo bg-gray-50 text-gray-800 antialiased flex flex-col min-h-screen selection:bg-emerald-200 selection:text-emerald-900 overflow-x-hidden">
+
+<!-- شاشة التحميل الاحترافية -->
+<div id="loader-screen" class="fixed inset-0 bg-slate-900 z-[99999] flex flex-col items-center justify-center transition-opacity duration-500">
+    <div class="relative w-20 h-20 flex items-center justify-center mb-4">
+        <div class="absolute inset-0 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+        <i class="fa-solid fa-layer-group text-2xl text-emerald-500 animate-pulse"></i>
+    </div>
+    <h2 class="text-white font-black text-xl tracking-wider font-cairo">منصة العلم والإيمان</h2>
+    <p class="text-emerald-400 text-xs font-bold mt-2">جاري تهيئة لوحة التحكم والأرشيف...</p>
+</div>
+
+<!-- نظام الإشعارات العائم المطور -->
+<div id="toast-container" class="fixed top-5 left-5 right-5 sm:right-auto sm:left-5 z-[9999] flex flex-col gap-3 max-w-sm w-auto pointer-events-none"></div>
+
+<!-- النافذة المنبثقة لتعطيل / تفعيل الكورس -->
+<div id="disable-course-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col my-auto">
+        <div class="bg-slate-900 text-white p-5 flex justify-between items-center border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center text-lg font-black">
+                    <i class="fa-solid fa-ban"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-white">إدارة تعطيل / تفعيل الكورس</h3>
+                    <p class="text-xs text-emerald-400 font-bold mt-0.5">التحكم في وصول الطلاب بالكورس</p>
+                </div>
+            </div>
+            <button onclick="closeDisableCourseModal()" class="w-8 h-8 bg-slate-800 hover:bg-red-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="p-5 space-y-4 bg-slate-50/50">
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-gray-700 block pr-1">اختر الكورس المراد تعديل حالته</label>
+                <select id="disableModalCourseSelect" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all cursor-pointer">
+                    <option value="">-- اختر الكورس --</option>
+                </select>
+            </div>
+
+            <div class="space-y-2 bg-white p-4 rounded-2xl border border-gray-200">
+                <label class="text-xs font-black text-gray-800 block">🎯 نطاق التعطيل / التفعيل</label>
+                <div class="flex flex-col sm:flex-row gap-3 mt-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold bg-gray-50 p-2.5 rounded-xl border border-gray-200 hover:border-red-500 transition-colors w-full">
+                        <input type="radio" name="disable_scope" value="all" checked onchange="toggleDisableScope()" class="w-4 h-4 text-red-600 focus:ring-red-500">
+                        التعطيل للجميع (جميع المشتركين)
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold bg-gray-50 p-2.5 rounded-xl border border-gray-200 hover:border-red-500 transition-colors w-full">
+                        <input type="radio" name="disable_scope" value="specific" onchange="toggleDisableScope()" class="w-4 h-4 text-red-600 focus:ring-red-500">
+                        طالب معين فقط
+                    </label>
+                </div>
+            </div>
+
+            <div id="disable-student-box" class="space-y-2 hidden animate-fade-in relative bg-white p-4 rounded-2xl border border-gray-200">
+                <label class="text-xs font-bold text-gray-700 block">ابحث عن الطالب (بالاسم أو كود الطالب)</label>
+                <div class="relative">
+                    <input type="text" id="disableStudentSearchInput" oninput="handleDisableStudentSearch(this.value)" placeholder="اكتب أول حروف من الاسم أو الكود..."
+                           class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all">
+                    <div id="disableStudentDropdown" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden z-50 divide-y divide-gray-50"></div>
+                </div>
+
+                <div id="selectedDisableStudentBadge" class="hidden items-center justify-between bg-red-50 border border-red-200 rounded-xl p-3 text-xs font-bold text-red-800 mt-2">
+                    <span id="selectedDisableStudentName">الطالب المحدد: </span>
+                    <button type="button" onclick="clearSelectedDisableStudent()" class="text-red-600 hover:text-red-800"><i class="fa-solid fa-xmark"></i> إلغاء</button>
+                </div>
+                <input type="hidden" id="targetDisableStudentUuid" value="">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="executeDisableCourseAction('disabled')" class="w-full bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md">
+                    <i class="fa-solid fa-ban"></i> تعطيل الكورس الآن
+                </button>
+                <button type="button" onclick="executeDisableCourseAction('active')" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md">
+                    <i class="fa-solid fa-circle-check"></i> إعادة تفعيل الكورس
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- النافذة المنبثقة لتقرير الطالب الشامل -->
+<div id="student-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
+    <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] my-auto">
+        <div class="bg-slate-900 text-white p-5 sm:p-6 flex justify-between items-center border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xl font-black">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <div>
+                    <h3 id="modal-student-name" class="text-base sm:text-lg font-black text-white">جاري تحميل البيانات...</h3>
+                    <p id="modal-student-subtitle" class="text-xs text-emerald-400 font-bold mt-0.5">...</p>
+                </div>
+            </div>
+            <button onclick="closeStudentModal()" class="w-9 h-9 bg-slate-800 hover:bg-red-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all text-sm">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-grow bg-slate-50/50" id="modal-student-content">
+            <div class="flex flex-col items-center justify-center py-12 gap-3 text-emerald-600">
+                <i class="fa-solid fa-circle-notch animate-spin text-3xl"></i>
+                <span class="text-xs font-bold text-gray-500">جاري تجميع بيانات واستعلامات الطالب من الأنظمة...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<nav class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between h-20 items-center">
+<div class="flex items-center gap-3 hover:scale-105 transition-transform cursor-pointer">
+<div class="bg-emerald-600 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center">
+<i class="fa-solid fa-layer-group text-lg"></i>
+</div>
+<div>
+<span class="text-sm sm:text-base font-black block leading-none tracking-wide">لوحة تحكم المنصة</span>
+<span class="text-[10px] sm:text-xs text-emerald-400 font-bold mt-1 block">نظام إدارة المحتوى والمسؤولين والأرشيف V3.5</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+    <div class="hidden md:flex flex-col items-end justify-center pr-4 border-r border-white/10">
+        <span id="live-clock" class="text-sm font-bold text-emerald-400">00:00:00</span>
+        <span id="live-date" class="text-[10px] text-gray-400">جاري التحميل...</span>
+    </div>
+    <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-emerald-500/50 shadow-lg cursor-pointer hover:bg-emerald-600 transition-colors hidden sm:flex">
+        <i class="fa-solid fa-user-tie text-emerald-400 hover:text-white text-sm transition-colors"></i>
+    </div>
+    <a href="index.html" target="_blank" class="bg-white/10 hover:bg-white/20 active:scale-95 p-2.5 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 border border-white/5">
+    <i class="fa-solid fa-eye text-[11px]"></i> <span class="hidden sm:inline">عرض الموقع</span>
+    </a>
+</div>
+</div>
+</div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-grow w-full">
+
+<!-- كروت الإحصائيات -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-10">
+<div onclick="switchPanel('student')" class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-emerald-500/40 hover:shadow-md hover:-translate-y-1 active:scale-95 cursor-pointer transition-all duration-300 select-none">
+<div class="space-y-1">
+<span class="text-[10px] sm:text-xs font-bold text-gray-400 block">إجمالي الطلاب</span>
+<span id="stats-students-count" class="text-lg sm:text-xl md:text-2xl font-black text-slate-900 block group-hover:text-emerald-600 transition-colors">.. طالب</span>
+<span class="text-[9px] sm:text-[10px] text-emerald-600 font-bold block"><i class="fa-solid fa-users text-[9px]"></i> مسجلة بالأنظمة</span>
+</div>
+<div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 group-hover:rotate-6"><i class="fa-solid fa-users"></i></div>
+</div>
+
+<div onclick="switchPanel('student')" class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-teal-500/40 hover:shadow-md hover:-translate-y-1 active:scale-95 cursor-pointer transition-all duration-300 select-none">
+<div class="space-y-1">
+<span class="text-[10px] sm:text-xs font-bold text-gray-400 block">اشتراكات معلقة</span>
+<span id="stats-pending-count" class="text-lg sm:text-xl md:text-2xl font-black text-amber-600 block">.. طلب</span>
+<span class="text-[9px] sm:text-[10px] text-teal-600 font-bold block"><i class="fa-solid fa-clock text-[9px]"></i> بانتظار الموافقة</span>
+</div>
+<div class="w-10 h-10 sm:w-12 sm:h-12 bg-teal-50 text-teal-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-inner group-hover:bg-teal-600 group-hover:text-white transition-all duration-300 group-hover:-rotate-6"><i class="fa-solid fa-wallet"></i></div>
+</div>
+
+<div onclick="switchPanel('course')" class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-500/40 hover:shadow-md hover:-translate-y-1 active:scale-95 cursor-pointer transition-all duration-300 select-none">
+<div class="space-y-1">
+<span class="text-[10px] sm:text-xs font-bold text-gray-400 block">الكورسات النشطة</span>
+<span id="stats-count" class="text-lg sm:text-xl md:text-2xl font-black text-slate-900 block group-hover:text-blue-600 transition-colors">.. كورس</span>
+<span class="text-[9px] sm:text-[10px] text-blue-600 font-bold block"><i class="fa-solid fa-sliders text-[9px]"></i> إدارة المحتوى</span>
+</div>
+<div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 group-hover:scale-110"><i class="fa-solid fa-graduation-cap"></i></div>
+</div>
+
+<div onclick="switchPanel('coupon')" class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-amber-500/40 hover:shadow-md hover:-translate-y-1 active:scale-95 cursor-pointer transition-all duration-300 select-none">
+<div class="space-y-1">
+<span class="text-[10px] sm:text-xs font-bold text-gray-400 block">الأكواد المتوفرة</span>
+<span id="stats-codes-count" class="text-lg sm:text-xl md:text-2xl font-black text-amber-600 block">.. كود</span>
+<span class="text-[9px] sm:text-[10px] text-amber-600 font-bold block"><i class="fa-solid fa-qrcode"></i> كروت السناتر</span>
+</div>
+<div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-inner group-hover:bg-amber-600 group-hover:text-white transition-all duration-300 group-hover:rotate-12"><i class="fa-solid fa-ticket"></i></div>
+</div>
+
+<div onclick="switchPanel('admin')" class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-purple-500/40 hover:shadow-md hover:-translate-y-1 active:scale-95 cursor-pointer transition-all duration-300 select-none col-span-2 sm:col-span-1">
+<div class="space-y-1">
+<span class="text-[10px] sm:text-xs font-bold text-gray-400 block">عدد الأدمن</span>
+<span id="stats-admins-count" class="text-lg sm:text-xl md:text-2xl font-black text-purple-600 block">.. أدمن</span>
+<span class="text-[9px] sm:text-[10px] text-purple-600 font-bold block"><i class="fa-solid fa-user-shield text-[9px]"></i> صلاحية الإدارة</span>
+</div>
+<div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 text-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-inner group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 group-hover:rotate-6"><i class="fa-solid fa-user-shield"></i></div>
+</div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+<div class="lg:col-span-12 space-y-6">
+
+<!-- أزرار التبديل العلوي شاملة زر الأرشيف -->
+<div class="bg-white p-1.5 sm:p-2 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-1.5 sm:gap-2">
+<button id="tab-course-btn" onclick="switchPanel('course')" class="flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow-sm active:scale-95">
+<i class="fa-solid fa-cloud-arrow-up"></i> رفع المحاضرات والأجزاء
+</button>
+<button id="tab-student-btn" onclick="switchPanel('student')" class="flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95">
+<i class="fa-solid fa-user-graduate"></i> الطلاب والاشتراكات
+</button>
+<button id="tab-coupon-btn" onclick="switchPanel('coupon')" class="flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95">
+<i class="fa-solid fa-ticket"></i> أكواد الكروت
+</button>
+<button id="tab-notification-btn" onclick="switchPanel('notification')" class="flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95">
+<i class="fa-solid fa-bell"></i> التنبيهات
+</button>
+<button id="tab-admin-btn" onclick="switchPanel('admin')" class="flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95">
+<i class="fa-solid fa-user-shield"></i> إدارة الأدمن
+</button>
+<button id="tab-archive-btn" onclick="switchPanel('archive')" class="flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95">
+<i class="fa-solid fa-box-archive text-amber-500"></i> الأرشيف الأكاديمي
+</button>
+<button id="tab-live-btn" onclick="switchPanel('live')" class="flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-700 active:scale-95">
+<i class="fa-solid fa-video animate-pulse"></i> البث المباشر
+</button>
+</div>
+
+<!-- 1. لوحة رفع الكورسات وتجزيء المحاضرات -->
+<div id="panel-course" class="space-y-6 block animate-scale-up">
+<div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-6">
+<div class="border-b border-gray-100 pb-4">
+<h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+<i class="fa-solid fa-cubes-stacked text-emerald-600"></i> إنشاء كورس وتقسيم المحاضرة إلى أجزاء مشروطة
+</h2>
+<p class="text-xs text-gray-500 font-semibold mt-1">يتيح لك هذا النظام إجبار الطالب على إنهاء كل جزء واختباره قبل الانتقال للجزء التالي تلقائياً.</p>
+</div>
+
+<form id="courseForm" class="space-y-5 sm:space-y-6" onsubmit="handleCourseUpload(event)">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50/50 p-4 sm:p-5 rounded-2xl border border-gray-100">
+<div class="space-y-1.5 sm:col-span-2">
+<label class="text-xs font-bold text-gray-700 block pr-1">اسم الكورس / المحاضرة الرئيسية</label>
+<input type="text" id="titleInput" required placeholder="مثال: المحاضرة الأولى - شرح الاستثناء بالكامل"
+class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+</div>
+
+<div class="space-y-1.5 sm:col-span-2">
+<label class="text-xs font-bold text-gray-700 block pr-1">🖼️ رابط صورة الكورس (Image URL)</label>
+<div class="flex flex-col sm:flex-row gap-3 items-center">
+<input type="url" id="imageUrlInput" placeholder="https://example.com/course-banner.jpg" dir="ltr" oninput="updateImagePreview(this.value)"
+class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-left">
+<div class="w-full sm:w-24 h-16 rounded-xl border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner relative">
+<img id="courseImagePreview" src="" alt="معاينة" class="w-full h-full object-cover hidden">
+<span id="courseImagePlaceholder" class="text-[10px] text-gray-400 font-bold flex flex-col items-center gap-1">
+<i class="fa-solid fa-image text-base"></i> المعاينة
+</span>
+</div>
+</div>
+</div>
+
+<div class="space-y-1.5 sm:col-span-2">
+<label class="text-xs font-bold text-gray-700 block pr-1">وصف شامل وتوجيهات الكورس</label>
+<textarea id="descInput" rows="2" required placeholder="اكتب تعليمات المذاكرة للطالب..."
+class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"></textarea>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-gray-700 block pr-1">💵 سعر الكورس (بالجنيه)</label>
+<input type="number" id="priceInput" required placeholder="مثال: 80 (ضع 0 للمجاني)" min="0"
+class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-gray-700 block pr-1">الصف الدراسي</label>
+<select id="stageInput" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
+<option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+<option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+<option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+</select>
+</div>
+<div class="space-y-1.5 sm:col-span-2">
+<label class="text-xs font-bold text-gray-700 block pr-1">الترم الدراسي</label>
+<select id="termInput" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
+<option value="الترم الأول">الترم الأول</option>
+<option value="الترم الثاني">الترم الثاني</option>
+</select>
+</div>
+</div>
+
+<div class="bg-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 space-y-5 shadow-xl">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-4">
+<div>
+<h3 class="text-sm sm:text-base font-black text-emerald-400 flex items-center gap-2">
+<i class="fa-solid fa-list-ol text-emerald-400"></i> أجزاء المحاضرة والترتيب الشرطي (Lectures Builder)
+</h3>
+<p class="text-[11px] text-slate-400 font-bold mt-1">أضف مقاطع المحاضرة بالترتيب. لن يُفتح الجزء الحالي للطالب حتى يكمل الجزء السابق واختباره.</p>
+</div>
+<button type="button" onclick="addNewLecturePart()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/30">
+<i class="fa-solid fa-plus"></i> إضافة جزء جديد (+)
+</button>
+</div>
+
+<div id="lecture-parts-container" class="space-y-4"></div>
+</div>
+
+<button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-600/20 transition-all text-sm flex items-center justify-center gap-2 active:scale-95 hover:-translate-y-0.5">
+<i class="fa-solid fa-cloud-arrow-up"></i> <span>نشر المحاضرة وربط جميع الأجزاء والامتحانات</span>
+</button>
+</form>
+</div>
+
+<div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-6 space-y-4">
+<div class="flex justify-between items-center border-b border-gray-50 pb-3">
+<h3 class="font-black text-slate-950 text-xs sm:text-sm flex items-center gap-1.5"><i class="fa-solid fa-list-check text-emerald-600"></i> الكورسات النشطة بالمنصة</h3>
+<div class="flex items-center gap-2">
+    <button onclick="openDisableCourseModal()" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white text-xs font-black px-3 py-1.5 rounded-xl border border-red-200 transition-all active:scale-95 flex items-center gap-1">
+        <i class="fa-solid fa-ban"></i> تعطيل / تفعيل كورس
+    </button>
+    <span id="table-count" class="text-[10px] bg-emerald-50 text-emerald-700 font-bold p-1 px-3 rounded-full border border-emerald-100">إجمالي: ..</span>
+</div>
+</div>
+<div class="overflow-x-auto w-full rounded-2xl border border-gray-100">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[600px]">
+<thead class="bg-gray-50 text-slate-700">
+<tr>
+<th class="p-4 px-5 font-black">اسم الكورس والصورة</th>
+<th class="p-4 font-black">المرحلة الدراسية</th>
+<th class="p-4 font-black">الترم</th>
+<th class="p-4 font-black text-center">السعر</th>
+<th class="p-4 font-black text-center">إدارة الصلاحية والأرشفة</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 text-gray-600" id="course-list-table"></tbody>
+</table>
+</div>
+</div>
+</div>
+
+<!-- 2. لوحة الطلاب والاشتراكات -->
+<div id="panel-student" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-6 sm:space-y-8 hidden animate-scale-up">
+<div>
+<div class="border-b border-gray-100 pb-4 mb-5 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div>
+<h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+<i class="fa-solid fa-circle-check text-amber-500"></i> طلبات تفعيل الكورسات المعلقة
+</h2>
+</div>
+<button type="button" onclick="loadPendingSubscriptions()" class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black px-4 py-2.5 rounded-xl shadow-sm transition-all text-[11px] w-full sm:w-auto">
+<i class="fa-solid fa-rotate hover:animate-spin"></i> تحديث الطلبات
+</button>
+</div>
+<div class="overflow-x-auto w-full rounded-2xl border border-gray-100 shadow-sm">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[700px]">
+<thead class="bg-slate-900 text-white">
+<tr>
+<th class="p-4 px-5 font-black">اسم الطالب</th>
+<th class="p-4 font-black">كود الطالب</th>
+<th class="p-4 font-black">الكورس المطلوب</th>
+<th class="p-4 font-black">رقم الهاتف</th>
+<th class="p-4 font-black text-center">الإجراء</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 bg-white text-gray-600" id="pending-subscriptions-table">
+<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">جاري تحميل طلبات التفعيل...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="pt-4 border-t border-gray-100">
+<div class="border-b border-gray-100 pb-4 mb-4">
+<h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+<i class="fa-solid fa-magnifying-glass text-emerald-600"></i> دليل الطلاب وفحص الحسابات والتقرير التفصيلي
+</h2>
+</div>
+
+<form onsubmit="handleStudentSearch(event)" class="space-y-3 bg-gray-50/70 p-4 sm:p-5 rounded-2xl border border-gray-100">
+<label class="text-xs font-bold text-gray-700 block pr-1">ابحث عن الطالب بكتابة اسمه الكامل أو كوده الخاص</label>
+<div class="flex flex-col sm:flex-row gap-3">
+<input type="text" id="studentSearchQuery" required placeholder="مثال: محمود عبد الرؤوف أو كود الطالب..."
+class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+<button type="submit" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+<i class="fa-solid fa-magnifying-glass text-xs"></i> استعلام
+</button>
+</div>
+</form>
+
+<div id="student-search-loader" class="hidden flex-col items-center justify-center py-10 gap-3">
+<i class="fa-solid fa-circle-notch animate-spin text-3xl text-emerald-600"></i>
+<span class="text-xs text-gray-500 font-bold">جاري البحث والمطابقة في قاعدة البيانات...</span>
+</div>
+
+<div id="student-results-area" class="hidden space-y-4 mt-6">
+<div class="overflow-x-auto w-full rounded-2xl border border-gray-100 shadow-inner">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[600px]">
+<thead class="bg-gray-50 text-gray-700">
+<tr>
+<th class="p-3 px-4 font-black">اسم الطالب</th>
+<th class="p-3 font-black">الكود</th>
+<th class="p-3 font-black">المرحلة</th>
+<th class="p-3 font-black text-center">هاتف الطالب</th>
+<th class="p-3 font-black text-center">عرض الداتا الشاملة والعمليات</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 bg-white text-gray-600" id="students-results-table"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 3. لوحة الأكواد (Coupons) -->
+<div id="panel-coupon" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-6 hidden animate-scale-up">
+<div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
+<h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+<i class="fa-solid fa-ticket text-emerald-600"></i> منظومة توليد أكواد كروت السناتر
+</h2>
+<button type="button" onclick="exportCouponsToTXT()" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-emerald-200 active:scale-95 w-full sm:w-auto">
+<i class="fa-solid fa-file-export"></i> تصدير الأكواد كملف (.txt)
+</button>
+</div>
+
+<div class="bg-gray-50 p-5 sm:p-6 rounded-2xl border border-gray-100 space-y-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-gray-700 block pr-1">تحديد القيمة السعرية (جنيه)</label>
+<input type="number" id="couponPriceInput" placeholder="مثال: 80" min="1" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-gray-700 block pr-1">عدد الأكواد المراد توليدها</label>
+<input type="number" id="couponCountInput" value="1" min="1" max="500" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+</div>
+<div class="space-y-1.5 sm:col-span-2 md:col-span-1">
+<label class="text-xs font-bold text-gray-700 block pr-1">الكورس المرتبط بالكود</label>
+<select id="couponCourseSelect" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
+<option value="">جاري تحميل الكورسات...</option>
+</select>
+</div>
+<div class="flex items-end sm:col-span-2 md:col-span-1 mt-2 md:mt-0">
+<button type="button" onclick="handleGenerateCoupon()" class="w-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-sm flex items-center justify-center gap-2 shadow-sm">
+<i class="fa-solid fa-gears"></i> توليد فوراً
+</button>
+</div>
+</div>
+</div>
+
+<div class="overflow-x-auto w-full rounded-2xl border border-gray-100">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[500px]">
+<thead class="bg-gray-50 text-gray-700">
+<tr>
+<th class="p-4 px-5 font-black">الكود (Code)</th>
+<th class="p-4 font-black">القيمة المالية</th>
+<th class="p-4 font-black">الكورس المرتبط</th>
+<th class="p-4 font-black text-center">الحالة</th>
+<th class="p-4 font-black text-center">نسخ</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 text-gray-600" id="coupons-list-table"></tbody>
+</table>
+</div>
+</div>
+
+<!-- 4. مركز التنبيهات والرسائل -->
+<div id="panel-notification" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-6 hidden animate-scale-up">
+<div class="border-b border-gray-100 pb-4">
+<h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+<i class="fa-solid fa-bell text-emerald-600"></i> إدارة التنبيهات والرسائل المباشرة
+</h2>
+</div>
+
+<form id="notificationForm" class="space-y-5" onsubmit="handleSendNotification(event)">
+<div class="bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-200/70 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+<div class="space-y-3">
+<label class="text-xs font-black text-gray-800 block">🎯 الجمهور المستهدف</label>
+<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2">
+<label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold bg-white p-2.5 rounded-xl border border-gray-200 hover:border-emerald-500 transition-colors w-full sm:w-auto">
+<input type="radio" name="target_audience" value="all" checked onchange="toggleNotificationTarget()" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+عام لجميع الطلاب
+</label>
+<label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold bg-white p-2.5 rounded-xl border border-gray-200 hover:border-emerald-500 transition-colors w-full sm:w-auto">
+<input type="radio" name="target_audience" value="specific" onchange="toggleNotificationTarget()" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+طالب معين (تنبيه خاص)
+</label>
+</div>
+</div>
+
+<div id="specific-student-box" class="space-y-2 hidden animate-fade-in relative">
+<label class="text-xs font-bold text-gray-700 block">ابحث عن الطالب (بالاسم أو كود الطالب)</label>
+<div class="relative">
+<input type="text" id="notifStudentSearchInput" oninput="handleNotifStudentSearch(this.value)" placeholder="اكتب أول حروف من الاسم أو الكود..."
+class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all">
+
+<div id="notifStudentDropdown" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden z-50 divide-y divide-gray-50"></div>
+</div>
+
+<div id="selectedStudentBadge" class="hidden items-center justify-between bg-blue-50 border border-blue-200 rounded-xl p-3 px-4 text-[11px] sm:text-xs font-bold text-blue-800 mt-2 animate-fade-in flex-wrap gap-2">
+<span id="selectedStudentName">الطالب المحدد: </span>
+<button type="button" onclick="clearSelectedNotifStudent()" class="text-red-500 hover:text-red-700 text-xs bg-white/50 px-2 py-1 rounded-lg"><i class="fa-solid fa-xmark"></i> إلغاء</button>
+</div>
+
+<input type="hidden" id="targetStudentUuid" value="">
+</div>
+</div>
+
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-gray-700 block pr-1">نص الرسالة أو التنبيه</label>
+<textarea id="notificationMessage" rows="4" required placeholder="اكتب نص الرسالة هنا..."
+class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"></textarea>
+</div>
+
+<button type="submit" id="notifBtn" class="w-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-sm flex items-center justify-center gap-2 shadow-sm">
+<i class="fa-solid fa-paper-plane"></i> إرسال التنبيه الآن
+</button>
+</form>
+
+<div class="space-y-3 pt-5 border-t border-gray-50">
+<h3 class="text-xs font-black text-slate-900"><i class="fa-solid fa-clock-rotate-left text-emerald-600 ml-1"></i> أحدث التنبيهات المرسلة</h3>
+<div class="overflow-x-auto w-full rounded-2xl border border-gray-100">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[500px]">
+<thead class="bg-gray-50 text-gray-700">
+<tr>
+<th class="p-4 px-5 font-black">نص التنبيه</th>
+<th class="p-4 font-black">النوع</th>
+<th class="p-4 font-black">التاريخ</th>
+<th class="p-4 font-black text-center">إدارة</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 text-gray-600" id="notifications-list-table">
+<tr><td colspan="4" class="text-center p-4 text-gray-400 font-bold">جاري تحميل السجل...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<!-- 5. لوحة التحكم في الأدمن -->
+<div id="panel-admin" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-6 hidden animate-scale-up">
+    <div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
+        <div>
+            <h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+                <i class="fa-solid fa-user-shield text-purple-600"></i> إدارة المسؤولين والأدمن
+            </h2>
+            <p class="text-xs text-gray-500 font-semibold mt-1">إضافة أو حذف صلاحيات الأدمن للمستخدمين بواسطة الاسم أو الكود أو المعرف الرقمي (ID)</p>
+        </div>
+        <button type="button" onclick="fetchAdminsList()" class="bg-purple-50 text-purple-700 hover:bg-purple-600 hover:text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-purple-200 active:scale-95 w-full sm:w-auto">
+            <i class="fa-solid fa-rotate hover:animate-spin"></i> تحديث قائمة الأدمن
+        </button>
+    </div>
+
+    <div class="bg-gray-50/80 p-5 rounded-2xl border border-gray-100 space-y-4">
+        <h3 class="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-plus text-purple-600"></i> البحث عن مستخدم وترقيته إلى أدمن
+        </h3>
+        <form onsubmit="handleAdminSearch(event)" class="space-y-3">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="adminSearchInput" required placeholder="ابحث بالاسم الكامل أو كود الطالب أو الـ ID (UUID)..."
+                       class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+                <button type="submit" class="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i> بحث عن مستخدم
+                </button>
+            </div>
+        </form>
+
+        <div id="admin-search-loader" class="hidden flex-col items-center justify-center py-6 gap-2">
+            <i class="fa-solid fa-circle-notch animate-spin text-2xl text-purple-600"></i>
+            <span class="text-xs text-gray-500 font-bold">جاري البحث في المستخدمين...</span>
+        </div>
+
+        <div id="admin-search-results" class="hidden space-y-3 pt-2">
+            <h4 class="text-xs font-bold text-gray-600">نتائج البحث المتاحة للترقية:</h4>
+            <div class="overflow-x-auto w-full rounded-xl border border-gray-200 bg-white shadow-inner">
+                <table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[500px]">
+                    <thead class="bg-purple-50/50 text-purple-900">
+                        <tr>
+                            <th class="p-3 px-4 font-black">اسم المستخدم</th>
+                            <th class="p-3 font-black">كود الطالب</th>
+                            <th class="p-3 font-black">البريد الإلكتروني</th>
+                            <th class="p-3 font-black text-center">المعرف (ID)</th>
+                            <th class="p-3 font-black text-center">الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-gray-700" id="admin-search-results-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        <h3 class="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-users-gear text-purple-600"></i> قائمة الأدمن الحاليين بالمنصة
+        </h3>
+        <div class="overflow-x-auto w-full rounded-2xl border border-gray-100 shadow-sm">
+            <table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[600px]">
+                <thead class="bg-slate-900 text-white">
+                    <tr>
+                        <th class="p-4 px-5 font-black">اسم الأدمن</th>
+                        <th class="p-4 font-black">الكود / الهواتف</th>
+                        <th class="p-4 font-black">البريد الإلكتروني</th>
+                        <th class="p-4 font-black font-mono">المعرف الرقمي (ID)</th>
+                        <th class="p-4 font-black text-center">إدارة الصلاحية</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white text-gray-600" id="admins-list-table">
+                    <tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">جاري تحميل قائمة الأدمن...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 6. لوحة الأرشيف الأكاديمي المطور (الميزة المضافة) -->
+<div id="panel-archive" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-8 hidden animate-scale-up">
+    <!-- رأس لوحة الأرشيف -->
+    <div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+                <i class="fa-solid fa-box-archive text-amber-500"></i> مركز الأرشيف والسجلات التراكمية (Supabase Archive)
+            </h2>
+            <p class="text-xs text-gray-500 font-semibold mt-1">إدارة وأرشفة لوحة الشرف الأسبوعية (`honor_roll_archives`)، الكورسات غير النشطة، وسجل الاشتراكات المكتملة.</p>
+        </div>
+        <button onclick="loadArchivePanelData()" class="bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-amber-200 active:scale-95 w-full sm:w-auto">
+            <i class="fa-solid fa-rotate hover:animate-spin"></i> تحديث بيانات الأرشيف
+        </button>
+    </div>
+
+    <!-- قسم أرشفة لوحة الشرف للأوائل -->
+    <div class="space-y-4 bg-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-4">
+            <div>
+                <h3 class="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy"></i> أرشيف أوائل الأسبوع (`honor_roll_archives`)
+                </h3>
+                <p class="text-[11px] text-slate-400 font-bold mt-1">توثيق مراكز ونقاط الطلاب المتفوقين في قاعدة البيانات مع تصفير النقاط لبدء أسبوع جديد.</p>
+            </div>
+            <button onclick="archiveCurrentWeekHonorRoll()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20">
+                <i class="fa-solid fa-box-archive"></i> أرشفة لقطة الأسبوع الحالي
+            </button>
+        </div>
+
+        <div class="overflow-x-auto w-full rounded-2xl border border-slate-800 bg-slate-950">
+            <table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[650px]">
+                <thead class="bg-slate-800 text-amber-300">
+                    <tr>
+                        <th class="p-3.5 px-4 font-black">المركز (Rank)</th>
+                        <th class="p-3.5 font-black">اسم الطالب</th>
+                        <th class="p-3.5 font-black">النقاط الأسبوعية</th>
+                        <th class="p-3.5 font-black">الأسبوع / السنة</th>
+                        <th class="p-3.5 font-black">المرحلة</th>
+                        <th class="p-3.5 font-black">تاريخ الأرشفة</th>
+                        <th class="p-3.5 font-black text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800 text-slate-300" id="honor-roll-archives-table">
+                    <tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold">جاري تحميل أرشيف المتفوقين...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- قسم الكورسات المؤرشفة (Soft Delete / Hidden Courses) -->
+    <div class="space-y-4">
+        <div class="border-b border-gray-100 pb-3 flex justify-between items-center">
+            <h3 class="font-black text-slate-950 text-xs sm:text-sm flex items-center gap-2">
+                <i class="fa-solid fa-folder-closed text-amber-600"></i> الكورسات المؤرشفة / غير المعروضة
+            </h3>
+            <span id="archived-courses-count" class="text-[10px] bg-amber-50 text-amber-700 font-bold p-1 px-3 rounded-full border border-amber-100">0 كورس</span>
+        </div>
+        <div class="overflow-x-auto w-full rounded-2xl border border-gray-100">
+            <table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[600px]">
+                <thead class="bg-gray-50 text-slate-700">
+                    <tr>
+                        <th class="p-4 px-5 font-black">عنوان الكورس</th>
+                        <th class="p-4 font-black">المرحلة</th>
+                        <th class="p-4 font-black">الترم</th>
+                        <th class="p-4 font-black text-center">السعر</th>
+                        <th class="p-4 font-black text-center">استعادة / حذف نهائي</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-gray-600" id="archived-courses-table">
+                    <tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">جاري التحميل...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- قسم أرشيف طلبات الاشتراك المكتملة والمرفوضة -->
+    <div class="space-y-4">
+        <div class="border-b border-gray-100 pb-3">
+            <h3 class="font-black text-slate-950 text-xs sm:text-sm flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> أرشيف طلبات الاشتراكات المعالجة (مقبولة / مرفوضة)
+            </h3>
+        </div>
+        <div class="overflow-x-auto w-full rounded-2xl border border-gray-100">
+            <table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[700px]">
+                <thead class="bg-gray-50 text-gray-700">
+                    <tr>
+                        <th class="p-3.5 px-4 font-black">الطالب</th>
+                        <th class="p-3.5 font-black">الكورس</th>
+                        <th class="p-3.5 font-black text-center">المبلغ</th>
+                        <th class="p-3.5 font-black text-center">طريقة الدفع</th>
+                        <th class="p-3.5 font-black text-center">الحالة النهائية</th>
+                        <th class="p-3.5 font-black text-center">تاريخ الطلب</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-gray-600" id="subscription-history-archive-table">
+                    <tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">جاري تحميل السجل...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 7. لوحة البث المباشر -->
+<div id="panel-live" class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 hidden animate-scale-up w-full">
+    <div class="lg:col-span-8 space-y-6">
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
+            <div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+                    <i class="fa-solid fa-video text-red-600 animate-pulse"></i> ستوديو البث المباشر (Jitsi)
+                </h2>
+                <span id="liveStatusBadge" class="bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200">
+                    <span class="w-2 h-2 rounded-full bg-gray-400"></span> مغلق حالياً
+                </span>
+            </div>
+
+            <div class="relative w-full h-[350px] sm:h-[450px] lg:h-[500px] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-xl group">
+                <div id="jitsiContainer" class="absolute inset-0 w-full h-full"></div>
+                <div id="noVideoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 z-10 transition-all duration-300">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-slate-600 shadow-inner">
+                        <i class="fa-solid fa-video-slash text-2xl sm:text-3xl"></i>
+                    </div>
+                    <h3 class="text-sm sm:text-base font-bold text-slate-300">نافذة البث المباشر متوقفة</h3>
+                    <p class="text-[10px] sm:text-xs text-slate-500 mt-2 max-w-xs text-center px-4">اضغط على زر (بدء البث) لتفعيل الكاميرا وتهيئة الغرفة للطلاب.</p>
+                </div>
+            </div>
+
+            <form id="liveSettingsForm" class="space-y-4" onsubmit="handleUpdateLiveDetails(event)">
+                <div class="grid grid-cols-1 gap-4 bg-gray-50/50 p-4 sm:p-5 rounded-2xl border border-gray-100">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">عنوان الحصة المباشرة</label>
+                        <input type="text" id="liveTitleInput" required placeholder="مثال: مراجعة ليلة الامتحان الشاملة"
+                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">توجيهات ومحاور الحصة</label>
+                        <textarea id="liveDescInput" rows="2" required placeholder="اكتب تفاصيل ومحاور هذه الحصة..."
+                                  class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"></textarea>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">معرف غرفة Jitsi (إنجليزي بدون مسافات)</label>
+                        <input type="text" id="liveChannelInput" required value="MagdyLiveClass2026"
+                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-left font-mono" dir="ltr">
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-sm order-2 sm:order-1">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ البيانات فقط
+                    </button>
+                    <button type="button" id="startLiveBtn" onclick="toggleLiveStatus()" class="flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20 order-1 sm:order-2">
+                        <i class="fa-solid fa-play"></i> بدء البث المباشر (تفعيل الآن)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="lg:col-span-4 flex flex-col h-[450px] lg:h-auto lg:min-h-[750px] bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in relative">
+        <div class="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between bg-slate-900 text-white shadow-sm z-10 relative">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-comments text-red-500 animate-bounce"></i>
+                <span class="font-bold text-[11px] sm:text-xs tracking-wide">الدردشة التفاعلية المباشرة</span>
+            </div>
+            
+            <div class="flex items-center gap-1.5 sm:gap-2 bg-slate-800 p-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-700">
+                <label class="text-[9px] sm:text-[10px] font-bold text-slate-300 hidden sm:block">التعليقات:</label>
+                <label class="relative inline-flex items-center cursor-pointer select-none">
+                    <input type="checkbox" id="chatStatusToggle" onchange="toggleChatStatus()" class="sr-only peer" checked>
+                    <div class="w-7 h-4 sm:w-8 sm:h-4 bg-gray-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+                <span id="chatStatusLabel" class="text-[9px] sm:text-[10px] text-emerald-400 font-bold w-6 text-center">مفتوحة</span>
+            </div>
+        </div>
+
+        <div id="liveChatMessages" class="flex-grow p-4 overflow-y-auto flex flex-col gap-3 bg-slate-50/50 scroll-smooth pb-20 lg:pb-24">
+            <div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">مرحباً بك في الدردشة المباشرة 👋</div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 p-3 sm:p-4 border-t border-gray-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+            <form id="liveAdminChatForm" class="flex gap-2" onsubmit="sendAdminLiveMessage(event)">
+                <input type="text" id="liveAdminChatInput" placeholder="اكتب رد الأستاذ للطلاب هنا..." required autocomplete="off"
+                       class="flex-grow bg-gray-50 border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-[11px] sm:text-xs font-semibold rounded-xl px-4 py-3 outline-none transition-all placeholder:text-gray-400">
+                <button type="submit" class="bg-red-600 hover:bg-red-700 active:scale-95 text-white w-12 h-auto rounded-xl flex items-center justify-center shadow-md shadow-red-600/20 transition-all flex-shrink-0">
+                    <i class="fa-solid fa-paper-plane transform rotate-180 text-sm"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+</main>
+
+<script>
+// ==========================================
+// وظائف التحميل وتحديث الساعة الديناميكية
+// ==========================================
+function updateClock() {
+    const now = new Date();
+    document.getElementById('live-clock').innerText = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('live-date').innerText = now.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const loader = document.getElementById('loader-screen');
+        if(loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
+        }
+    }, 800);
+});
+
+// ==========================================
+// الإعدادات وقاعدة البيانات Supabase
+// ==========================================
+const SUPABASE_URL = 'https://equefefnimfaqkyckbep.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk';
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// مصفوفة تخزين أجزاء المحاضرة المتتابعة
+let lectureParts = [];
+
+let jitsiAPI = null;
+let isLiveActive = false;
+const LIVE_ROOM_ID = "00000000-0000-0000-0000-000000000001"; 
+
+document.addEventListener("DOMContentLoaded", () => {
+loadDashboardStats();
+fetchCoursesList();
+loadPendingSubscriptions();
+fetchCouponsList();
+fetchAdminsList();
+
+if(lectureParts.length === 0) addNewLecturePart();
+
+document.addEventListener('click', (e) => {
+const dropdown = document.getElementById('notifStudentDropdown');
+const searchInput = document.getElementById('notifStudentSearchInput');
+if (dropdown && e.target !== dropdown && e.target !== searchInput) {
+dropdown.classList.add('hidden');
+}
+
+const disableDropdown = document.getElementById('disableStudentDropdown');
+const disableSearchInput = document.getElementById('disableStudentSearchInput');
+if (disableDropdown && e.target !== disableDropdown && e.target !== disableSearchInput) {
+disableDropdown.classList.add('hidden');
+}
+});
+});
+
+// دالة المعاينة الحية لرابط الصورة
+function updateImagePreview(url) {
+    const img = document.getElementById('courseImagePreview');
+    const placeholder = document.getElementById('courseImagePlaceholder');
+    if (url && url.trim().length > 5) {
+        img.src = url;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        img.onerror = () => {
+            img.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+        };
+    } else {
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+    }
+}
+
+function showNotification(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = "p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xl border text-[11px] sm:text-xs font-black flex items-center justify-between gap-3 pointer-events-auto transform translate-y-[-20px] opacity-0 transition-all duration-400 ease-out";
+    
+    let icon = '';
+    if (type === 'success') {
+        toast.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+        icon = '<i class="fa-solid fa-circle-check text-emerald-600 text-sm sm:text-base"></i>';
+    } else if (type === 'error') {
+        toast.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+        icon = '<i class="fa-solid fa-circle-exclamation text-red-600 text-sm sm:text-base"></i>';
+    } else {
+        toast.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
+        icon = '<i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm sm:text-base"></i>';
+    }
+    
+    toast.innerHTML = `
+        <div class="flex items-center gap-2.5">
+            ${icon}
+            <span class="leading-relaxed">${message}</span>
+        </div>
+        <button onclick="this.parentElement.style.opacity='0'; setTimeout(()=>this.parentElement.remove(),300)" class="text-gray-400 hover:text-gray-700 transition-colors p-1">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+    
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+    });
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 4500);
+}
+
+async function loadDashboardStats() {
+try {
+const { count: studentCount } = await _supabase.from('profiles').select('*', { count: 'exact', head: true });
+if (studentCount !== null) document.getElementById('stats-students-count').innerText = `${studentCount} طالب`;
+
+const { count: courseCount } = await _supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_visible', true);
+if (courseCount !== null) {
+document.getElementById('stats-count').innerText = `${courseCount} كورس`;
+document.getElementById('table-count').innerText = `إجمالي: ${courseCount}`;
+}
+
+const { count: pendingCount } = await _supabase.from('subscription_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+if (pendingCount !== null) document.getElementById('stats-pending-count').innerText = `${pendingCount} طلب`;
+
+const { count: codeCount } = await _supabase.from('center_codes').select('*', { count: 'exact', head: true }).eq('is_used', false);
+if (codeCount !== null) document.getElementById('stats-codes-count').innerText = `${codeCount} كود`;
+
+const { count: adminCount } = await _supabase.from('admins').select('*', { count: 'exact', head: true });
+if (adminCount !== null) {
+    const el = document.getElementById('stats-admins-count');
+    if(el) el.innerText = `${adminCount} أدمن`;
+}
+} catch (err) { console.error(err); }
+}
+
+window.switchPanel = function(panelName) {
+const panels = ['course', 'student', 'coupon', 'notification', 'admin', 'archive', 'live'];
+panels.forEach(p => {
+const element = document.getElementById(`panel-${p}`);
+const btn = document.getElementById(`tab-${p}-btn`);
+if (!element || !btn) return;
+
+if (p === panelName) {
+element.classList.remove('hidden');
+if (p === 'live') {
+    element.classList.add('grid');
+} else {
+    element.classList.add('block');
+}
+element.classList.remove('animate-scale-up');
+void element.offsetWidth;
+element.classList.add('animate-scale-up');
+
+if(p === 'live') {
+    btn.className = "flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-red-600 text-white shadow-md active:scale-95";
+} else if(p === 'admin') {
+    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-md active:scale-95";
+} else if(p === 'archive') {
+    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-amber-600 text-white shadow-md active:scale-95";
+} else {
+    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow-md active:scale-95";
+}
+
+} else {
+element.classList.remove('block', 'grid');
+element.classList.add('hidden');
+if(p === 'live') {
+    btn.className = "flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-700 active:scale-95";
+} else if(p === 'archive') {
+    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-amber-600 hover:bg-amber-50 active:scale-95";
+} else {
+    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95";
+}
+}
+});
+
+if (panelName === 'student') loadPendingSubscriptions();
+else if (panelName === 'coupon') fetchCouponsList();
+else if (panelName === 'notification') fetchNotificationsList();
+else if (panelName === 'admin') fetchAdminsList();
+else if (panelName === 'archive') loadArchivePanelData();
+else if (panelName === 'live') {
+    loadLiveStreamDetails();
+    loadLivePreviousMessages();
+    subscribeToLiveMessages();
+}
+}
+
+// =========================================================================
+// نظام تجزيء المحاضرة إلى أجزاء متتابعة وقفل المحتوى الشرطي
+// =========================================================================
+
+window.addNewLecturePart = function() {
+const partIndex = lectureParts.length + 1;
+lectureParts.push({
+title: `الجزء ${partIndex}: الشرح والتطبيق`,
+description: '',
+video_url: '',
+pdfFileId: `pdf-file-input-${Date.now()}-${Math.random().toString(36).substring(2,5)}`,
+hasExam: false,
+examTitle: `اختبار تقييمي على الجزء ${partIndex}`,
+examDuration: 15,
+questions: []
+});
+renderLectureParts();
+}
+
+window.removeLecturePart = function(index) {
+if(lectureParts.length <= 1) {
+showNotification("يجب أن تحتوي المحاضرة على جزء واحد على الأقل!", "warning");
+return;
+}
+lectureParts.splice(index, 1);
+renderLectureParts();
+}
+
+function renderLectureParts() {
+const container = document.getElementById('lecture-parts-container');
+container.innerHTML = '';
+
+lectureParts.forEach((part, pIndex) => {
+const partCard = document.createElement('div');
+partCard.className = "bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700/80 space-y-4 animate-fade-in relative transition-all";
+
+partCard.innerHTML = `
+<div class="flex items-center justify-between border-b border-slate-700 pb-3">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/30">#${pIndex + 1}</span>
+<h4 class="text-xs sm:text-sm font-black text-slate-100">بيانات الجزء المقطّع (الترتيب الشرطي: ${pIndex + 1})</h4>
+${pIndex > 0 ? `<span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-lock text-[8px] ml-1"></i> مغلق بشرط الجزء السابق</span>` : `<span class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-unlock text-[8px] ml-1"></i> الجزء الأول</span>`}
+</div>
+<button type="button" onclick="removeLecturePart(${pIndex})" class="text-red-400 hover:text-white hover:bg-red-500/30 p-1.5 px-3 rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-trash-can"></i> حذف هذا الجزء</button>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-800">
+<div class="space-y-1 sm:col-span-2">
+<label class="text-[11px] font-bold text-slate-300 block">اسم هذا الجزء من المحاضرة</label>
+<input type="text" value="${part.title}" oninput="lectureParts[${pIndex}].title = this.value" required placeholder="مثال: الجزء الأول: الشرح والتأسيس" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500">
+</div>
+
+<div class="space-y-1">
+<label class="text-[11px] font-bold text-slate-300 block">🎥 رابط فيديو هذا الجزء (Vimeo / Bunny / YouTube)</label>
+<input type="url" value="${part.video_url}" oninput="lectureParts[${pIndex}].video_url = this.value" required placeholder="https://player.vimeo.com/video/xxxx" dir="ltr" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 text-left font-mono">
+</div>
+
+<div class="space-y-1">
+<label class="text-[11px] font-bold text-slate-300 block">📚 ملف الـ PDF/الملزمة الخاصة برابط هذا الجزء</label>
+<input type="file" id="${part.pdfFileId}" accept=".pdf,.doc,.docx" class="w-full py-1.5 px-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-300 file:ml-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
+</div>
+</div>
+
+<div class="bg-slate-900/80 p-3 sm:p-4 rounded-xl border border-slate-700/60 space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="fa-solid fa-file-signature text-emerald-400 text-sm"></i>
+<span class="text-xs font-bold text-slate-200">إضافة اختبار اجتاز شرطي لهذا الجزء</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer select-none">
+<input type="checkbox" ${part.hasExam ? 'checked' : ''} onchange="togglePartExam(${pIndex}, this.checked)" class="sr-only peer">
+<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</label>
+</div>
+
+${part.hasExam ? `
+<div class="space-y-3 pt-3 border-t border-slate-800 animate-fade-in">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-800">
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-slate-300">عنوان الامتحان</label>
+<input type="text" value="${part.examTitle}" oninput="lectureParts[${pIndex}].examTitle = this.value" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 text-white rounded-xl text-xs">
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-slate-300">⏱️ مدة الامتحان (دقائق)</label>
+<input type="number" value="${part.examDuration}" min="1" oninput="lectureParts[${pIndex}].examDuration = parseInt(this.value) || 10" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 text-white rounded-xl text-xs font-bold">
+</div>
+</div>
+
+<div class="space-y-2">
+<span class="text-[10px] font-black text-emerald-400 block">أسئلة الاختيارات المخصصة للعبور للجزء التالي:</span>
+<div id="part-${pIndex}-questions" class="space-y-3"></div>
+<button type="button" onclick="addQuestionToPart(${pIndex})" class="w-full py-2 bg-slate-800 border border-dashed border-slate-600 hover:border-emerald-400 text-slate-300 hover:text-emerald-400 font-bold rounded-xl text-[11px] transition-all flex items-center justify-center gap-1.5">
+<i class="fa-solid fa-plus text-[9px]"></i> إضافة سؤال لهذا الاختبار
+</button>
+</div>
+</div>
+` : ''}
+</div>
+`;
+container.appendChild(partCard);
+
+if(part.hasExam) renderPartQuestions(pIndex);
+});
+}
+
+window.togglePartExam = function(pIndex, isChecked) {
+lectureParts[pIndex].hasExam = isChecked;
+if(isChecked && lectureParts[pIndex].questions.length === 0) {
+addQuestionToPart(pIndex);
+} else {
+renderLectureParts();
+}
+}
+
+window.addQuestionToPart = function(pIndex) {
+lectureParts[pIndex].questions.push({
+passage: '',
+text: '',
+points: 1,
+options: [
+{ text: '', isCorrect: true },
+{ text: '', isCorrect: false },
+{ text: '', isCorrect: false },
+{ text: '', isCorrect: false }
+]
+});
+renderLectureParts();
+}
+
+window.removeQuestionFromPart = function(pIndex, qIndex) {
+lectureParts[pIndex].questions.splice(qIndex, 1);
+renderLectureParts();
+}
+
+function renderPartQuestions(pIndex) {
+const qContainer = document.getElementById(`part-${pIndex}-questions`);
+if(!qContainer) return;
+qContainer.innerHTML = '';
+
+lectureParts[pIndex].questions.forEach((q, qIndex) => {
+const qDiv = document.createElement('div');
+qDiv.className = "bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-slate-800";
+qDiv.innerHTML = `
+<div class="flex justify-between items-center text-slate-200">
+<span class="text-[10px] font-black text-emerald-400">السؤال رقم (${qIndex + 1})</span>
+<button type="button" onclick="removeQuestionFromPart(${pIndex}, ${qIndex})" class="text-red-400 text-[10px] hover:underline font-bold">حذف</button>
+</div>
+<textarea rows="1" oninput="lectureParts[${pIndex}].questions[${qIndex}].passage = this.value" placeholder="النص المقروء/القطعة (اختياري)..." class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-[11px]">${q.passage || ''}</textarea>
+<div class="grid grid-cols-12 gap-2">
+<input type="text" value="${q.text}" oninput="lectureParts[${pIndex}].questions[${qIndex}].text = this.value" required placeholder="نص السؤال..." class="col-span-10 px-2.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-[11px]">
+<input type="number" value="${q.points}" min="1" oninput="lectureParts[${pIndex}].questions[${qIndex}].points = parseInt(this.value)||1" required class="col-span-2 px-1 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-[11px] font-bold text-center">
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+${q.options.map((opt, oIndex) => `
+<div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+<input type="text" value="${opt.text}" oninput="lectureParts[${pIndex}].questions[${qIndex}].options[${oIndex}].text = this.value" required placeholder="الخيار ${oIndex + 1}" class="flex-grow bg-transparent px-1.5 text-[11px] text-white outline-none">
+<button type="button" onclick="setPartCorrectOption(${pIndex}, ${qIndex}, ${oIndex})" class="px-2 py-0.5 rounded text-[9px] font-black ${opt.isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}">
+${opt.isCorrect ? 'صح' : 'خطأ'}
+</button>
+</div>
+`).join('')}
+</div>
+`;
+qContainer.appendChild(qDiv);
+});
+}
+
+window.setPartCorrectOption = function(pIndex, qIndex, oIndex) {
+lectureParts[pIndex].questions[qIndex].options.forEach((opt, idx) => {
+opt.isCorrect = (idx === oIndex);
+});
+renderLectureParts();
+}
+
+// ==========================================
+// رفع ومعالجة المحاضرة والأجزاء ورابط الصورة في Supabase
+// ==========================================
+
+window.handleCourseUpload = async function(event) {
+event.preventDefault();
+if(lectureParts.length === 0) {
+showNotification("يرجى إضافة جزء واحد على الأقل للمحاضرة!", "warning");
+return;
+}
+
+const submitBtn = document.getElementById('submitBtn');
+const originalBtnHtml = submitBtn.innerHTML;
+submitBtn.disabled = true;
+submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> جاري حفظ الأجزاء والربط الشرطي...`;
+
+try {
+const courseTitle = document.getElementById('titleInput').value;
+const description = document.getElementById('descInput').value;
+const price = parseFloat(document.getElementById('priceInput').value) || 0;
+const stage = document.getElementById('stageInput').value;
+const term = document.getElementById('termInput').value;
+const imageUrl = document.getElementById('imageUrlInput').value.trim() || null;
+
+const { data: courseData, error: courseError } = await _supabase
+.from('courses')
+.insert([{ title: courseTitle, description, price, stage, term, is_visible: true, image_url: imageUrl }])
+.select();
+
+if(courseError) throw courseError;
+const newCourseId = courseData[0].id;
+
+const { data: sectionData, error: sectionError } = await _supabase
+.from('course_sections')
+.insert([{ course_id: newCourseId, title: `أجزاء: ${courseTitle}`, sort_order: 1 }])
+.select();
+
+if(sectionError) throw sectionError;
+const newSectionId = sectionData[0].id;
+
+let previousPartExamId = null; 
+
+for(let i = 0; i < lectureParts.length; i++) {
+const part = lectureParts[i];
+const sortOrder = i + 1;
+
+let partPdfUrl = null;
+const fileInput = document.getElementById(part.pdfFileId);
+if(fileInput && fileInput.files[0]) {
+const pFile = fileInput.files[0];
+const fileName = `${Date.now()}_part_${sortOrder}.${pFile.name.split('.').pop()}`;
+const { error: upErr } = await _supabase.storage.from('homework').upload(fileName, pFile);
+if(!upErr) {
+const { data: pUrl } = _supabase.storage.from('homework').getPublicUrl(fileName);
+partPdfUrl = pUrl.publicUrl;
+}
+}
+
+const { data: lectData, error: lectError } = await _supabase
+.from('lectures')
+.insert([{
+section_id: newSectionId,
+title: part.title,
+description: `الجزء ${sortOrder} من ${courseTitle}`,
+video_url: part.video_url,
+pdf_url: partPdfUrl,
+sort_order: sortOrder,
+is_visible: true,
+prerequisite_exam_id: previousPartExamId 
+}])
+.select();
+
+if(lectError) throw lectError;
+const currentLectureId = lectData[0].id;
+
+if(part.hasExam && part.questions.length > 0) {
+const { data: examData, error: examErr } = await _supabase
+.from('exams')
+.insert([{
+course_id: newCourseId,
+lecture_id: currentLectureId,
+title: part.examTitle || `اختبار: ${part.title}`,
+duration_minutes: part.examDuration || 15
+}])
+.select();
+
+if(!examErr && examData.length > 0) {
+const createdExamId = examData[0].id;
+previousPartExamId = createdExamId; 
+
+for(let q of part.questions) {
+const { data: qData, error: qErr } = await _supabase
+.from('questions')
+.insert([{ exam_id: createdExamId, passage: q.passage, question_text: q.text, points: q.points }])
+.select();
+
+if(!qErr && qData.length > 0) {
+const optionsToInsert = q.options.map(opt => ({
+question_id: qData[0].id,
+option_text: opt.text,
+is_correct: opt.isCorrect
+}));
+await _supabase.from('options').insert(optionsToInsert);
+}
+}
+}
+}
+}
+
+showNotification("تم رفع الكورس وجميع الأجزاء والامتحانات بنجاح!", "success");
+document.getElementById('courseForm').reset();
+document.getElementById('courseImagePreview').classList.add('hidden');
+document.getElementById('courseImagePlaceholder').classList.remove('hidden');
+lectureParts = [];
+addNewLecturePart();
+fetchCoursesList();
+loadDashboardStats();
+
+} catch (err) {
+console.error("Course Upload Error:", err);
+showNotification(`خطأ أثناء الرفع: ${err.message || 'تعذر حفظ البيانات'}`, "error");
+} finally {
+submitBtn.disabled = false;
+submitBtn.innerHTML = originalBtnHtml;
+}
+}
+
+// ==========================================
+// إدارة جلب وحذف وأرشفة الكورسات
+// ==========================================
+
+async function fetchCoursesList() {
+const tbody = document.getElementById('course-list-table');
+if(!tbody) return;
+
+try {
+const { data: courses, error } = await _supabase
+.from('courses')
+.select('*')
+.eq('is_visible', true)
+.order('created_at', { ascending: false });
+
+if(error) throw error;
+
+if(!courses || courses.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات نشطة حالياً</td></tr>`;
+return;
+}
+
+tbody.innerHTML = courses.map(c => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-4 px-5">
+<div class="flex items-center gap-3">
+<div class="w-12 h-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 flex-shrink-0 flex items-center justify-center">
+${c.image_url ? `<img src="${c.image_url}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-graduation-cap text-gray-400"></i>`}
+</div>
+<div>
+<span class="font-black text-slate-900 block text-xs">${c.title}</span>
+<span class="text-[10px] text-gray-400 font-bold block mt-0.5">${c.description ? c.description.substring(0, 40) + '...' : ''}</span>
+</div>
+</div>
+</td>
+<td class="p-4 font-bold text-gray-700">${c.stage}</td>
+<td class="p-4 font-bold text-emerald-700">${c.term || 'غير محدد'}</td>
+<td class="p-4 text-center font-black text-slate-900">${c.price > 0 ? c.price + ' ج.م' : '<span class="text-emerald-600">مجاني</span>'}</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<button onclick="toggleCourseArchive('${c.id}', true)" class="bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-700 p-2 px-3 rounded-xl border border-amber-200 font-bold text-xs transition-all flex items-center gap-1 active:scale-95">
+<i class="fa-solid fa-box-archive"></i> أرشفة
+</button>
+<button onclick="deleteCourse('${c.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all flex items-center gap-1 active:scale-95">
+<i class="fa-solid fa-trash-can"></i> حذف
+</button>
+</div>
+</td>
+</tr>
+`).join('');
+
+} catch(err) {
+console.error(err);
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">خطأ أثناء جلب الكورسات</td></tr>`;
+}
+}
+
+async function toggleCourseArchive(courseId, shouldArchive) {
+try {
+const { error } = await _supabase
+.from('courses')
+.update({ is_visible: !shouldArchive })
+.eq('id', courseId);
+
+if(error) throw error;
+showNotification(shouldArchive ? "تم نقل الكورس للأرشيف بنجاح!" : "تمت استعادة الكورس للواجهة!", "success");
+fetchCoursesList();
+loadDashboardStats();
+loadArchivePanelData();
+} catch(err) {
+showNotification("فشل تحديث حالة الأرشيف!", "error");
+}
+}
+
+async function deleteCourse(courseId) {
+if(!confirm("هل أنت تأكد من حذف هذا الكورس نهائياً؟ سيتم حذف جميع المحاضرات والأسئلة المرتبطة به!")) return;
+
+try {
+const { error } = await _supabase.from('courses').delete().eq('id', courseId);
+if(error) throw error;
+showNotification("تم حذف الكورس بنجاح!", "success");
+fetchCoursesList();
+loadDashboardStats();
+loadArchivePanelData();
+} catch(err) {
+showNotification("تعذر حذف الكورس!", "error");
+}
+}
+
+// ==========================================
+// إدارة تعطيل / تفعيل الكورس للطلاب
+// ==========================================
+
+async function openDisableCourseModal() {
+const modal = document.getElementById('disable-course-modal');
+const select = document.getElementById('disableModalCourseSelect');
+modal.classList.remove('hidden');
+
+try {
+const { data: courses } = await _supabase.from('courses').select('id, title, stage');
+select.innerHTML = '<option value="">-- اختر الكورس --</option>' + 
+(courses || []).map(c => `<option value="${c.id}">${c.title} (${c.stage})</option>`).join('');
+} catch(err) { console.error(err); }
+}
+
+function closeDisableCourseModal() {
+document.getElementById('disable-course-modal').classList.add('hidden');
+}
+
+function toggleDisableScope() {
+const scope = document.querySelector('input[name="disable_scope"]:checked').value;
+const studentBox = document.getElementById('disable-student-box');
+if(scope === 'specific') {
+studentBox.classList.remove('hidden');
+} else {
+studentBox.classList.add('hidden');
+clearSelectedDisableStudent();
+}
+}
+
+async function handleDisableStudentSearch(query) {
+const dropdown = document.getElementById('disableStudentDropdown');
+if(!query || query.trim().length < 2) {
+dropdown.classList.add('hidden');
+return;
+}
+
+try {
+const { data: students } = await _supabase
+.from('profiles')
+.select('id, full_name, student_code, student_phone')
+.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
+.limit(5);
+
+if(!students || students.length === 0) {
+dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 font-bold text-center">لا يوجد طلاب مطبقون</div>';
+} else {
+dropdown.innerHTML = students.map(s => `
+<div onclick="selectDisableStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-red-50 cursor-pointer text-xs font-bold text-gray-800 transition-colors">
+${s.full_name} (${s.student_code || 'بدون كود'})
+</div>
+`).join('');
+}
+dropdown.classList.remove('hidden');
+} catch(err) { console.error(err); }
+}
+
+function selectDisableStudent(id, name) {
+document.getElementById('targetDisableStudentUuid').value = id;
+document.getElementById('selectedDisableStudentName').innerText = `الطالب المحدد: ${name}`;
+document.getElementById('selectedDisableStudentBadge').classList.remove('hidden');
+document.getElementById('selectedDisableStudentBadge').classList.add('flex');
+document.getElementById('disableStudentDropdown').classList.add('hidden');
+}
+
+function clearSelectedDisableStudent() {
+document.getElementById('targetDisableStudentUuid').value = '';
+document.getElementById('selectedDisableStudentBadge').classList.add('hidden');
+document.getElementById('selectedDisableStudentBadge').classList.remove('flex');
+document.getElementById('disableStudentSearchInput').value = '';
+}
+
+async function executeDisableCourseAction(statusType) {
+const courseId = document.getElementById('disableModalCourseSelect').value;
+if(!courseId) {
+showNotification("يرجى اختيار الكورس أولاً!", "warning");
+return;
+}
+
+const scope = document.querySelector('input[name="disable_scope"]:checked').value;
+
+try {
+if(scope === 'all') {
+const { error } = await _supabase
+.from('course_subscriptions')
+.update({ status: statusType })
+.eq('course_id', courseId);
+if(error) throw error;
+} else {
+const studentUuid = document.getElementById('targetDisableStudentUuid').value;
+if(!studentUuid) {
+showNotification("يرجى تحديد الطالب!", "warning");
+return;
+}
+const { error } = await _supabase
+.from('course_subscriptions')
+.update({ status: statusType })
+.eq('course_id', courseId)
+.eq('student_id', studentUuid);
+if(error) throw error;
+}
+
+showNotification(`تمت العملية وتحديث حالة الاشتراك إلى (${statusType === 'disabled' ? 'معطل' : 'نشط'}) بنجاح!`, "success");
+closeDisableCourseModal();
+} catch(err) {
+showNotification("فشل تغيير حالة تفعيل الكورس!", "error");
+}
+}
+
+// ==========================================
+// إدارة طلبات الاشتراكات المعلقة
+// ==========================================
+
+async function loadPendingSubscriptions() {
+const tbody = document.getElementById('pending-subscriptions-table');
+if(!tbody) return;
+
+try {
+const { data: requests, error } = await _supabase
+.from('subscription_requests')
+.select('*, profiles(full_name, student_code, student_phone), courses(title)')
+.eq('status', 'pending')
+.order('created_at', { ascending: false });
+
+if(error) throw error;
+
+if(!requests || requests.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد طلبات اشتراك معلقة بانتظار الموافقة</td></tr>`;
+return;
+}
+
+tbody.innerHTML = requests.map(req => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-4 px-5 font-black text-slate-900">${req.profiles?.full_name || 'غير معروف'}</td>
+<td class="p-4 font-bold text-amber-600 font-mono">${req.profiles?.student_code || 'بدون كود'}</td>
+<td class="p-4 font-bold text-slate-800">${req.courses?.title || 'كورس غير مسمى'}</td>
+<td class="p-4 font-semibold text-gray-600 font-mono" dir="ltr">${req.sender_phone || req.profiles?.student_phone || '-'}</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<button onclick="approveSubscription('${req.id}', '${req.student_id}', '${req.course_id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 px-3 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-sm">
+<i class="fa-solid fa-check"></i> قبول
+</button>
+<button onclick="rejectSubscription('${req.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all active:scale-95">
+<i class="fa-solid fa-xmark"></i> رفض
+</button>
+</div>
+</td>
+</tr>
+`).join('');
+
+} catch(err) {
+console.error(err);
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">خطأ أثناء تحميل طلبات الاشتراك</td></tr>`;
+}
+}
+
+async function approveSubscription(requestId, studentId, courseId) {
+try {
+const { error: subErr } = await _supabase
+.from('course_subscriptions')
+.insert([{ student_id: studentId, course_id: courseId, status: 'active' }]);
+
+if(subErr) throw subErr;
+
+await _supabase
+.from('subscription_requests')
+.update({ status: 'approved' })
+.eq('id', requestId);
+
+showNotification("تم تفعيل اشتراك الطالب بنجاح!", "success");
+loadPendingSubscriptions();
+loadDashboardStats();
+} catch(err) {
+showNotification("فشل تفعيل الاشتراك!", "error");
+}
+}
+
+async function rejectSubscription(requestId) {
+try {
+await _supabase
+.from('subscription_requests')
+.update({ status: 'rejected' })
+.eq('id', requestId);
+
+showNotification("تم رفض طلب الاشتراك ونقله للأرشيف!", "info");
+loadPendingSubscriptions();
+loadDashboardStats();
+} catch(err) {
+showNotification("فشل رفض الطلب!", "error");
+}
+}
+
+// ==========================================
+// دليل للطلاب واستعلام الداتا الشاملة
+// ==========================================
+
+async function handleStudentSearch(event) {
+event.preventDefault();
+const query = document.getElementById('studentSearchQuery').value.trim();
+const loader = document.getElementById('student-search-loader');
+const resultsArea = document.getElementById('student-results-area');
+const tbody = document.getElementById('students-results-table');
+
+if(!query) return;
+
+loader.classList.remove('hidden');
+loader.classList.add('flex');
+resultsArea.classList.add('hidden');
+
+try {
+const { data: students, error } = await _supabase
+.from('profiles')
+.select('*')
+.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`)
+.limit(10);
+
+if(error) throw error;
+
+if(!students || students.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لم يتم العثور على أي طالب بهذه البيانات</td></tr>`;
+} else {
+tbody.innerHTML = students.map(s => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-3.5 px-4 font-black text-slate-900">${s.full_name}</td>
+<td class="p-3.5 font-mono text-emerald-700 font-bold">${s.student_code || 'غير مخصص'}</td>
+<td class="p-3.5 font-bold text-gray-700">${s.stage || 'غير مخصص'}</td>
+<td class="p-3.5 text-center font-mono text-gray-600">${s.student_phone || '-'}</td>
+<td class="p-3.5 text-center">
+<button onclick="openStudentModal('${s.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5 mx-auto shadow-sm">
+<i class="fa-solid fa-chart-pie text-emerald-400"></i> التقرير الشامل
+</button>
+</td>
+</tr>
+`).join('');
+}
+
+resultsArea.classList.remove('hidden');
+} catch(err) {
+showNotification("حدث خطأ أثناء الاستعلام!", "error");
+} finally {
+loader.classList.add('hidden');
+loader.classList.remove('flex');
+}
+}
+
+async function openStudentModal(studentId) {
+const modal = document.getElementById('student-modal');
+const content = document.getElementById('modal-student-content');
+modal.classList.remove('hidden');
+
+try {
+const { data: student } = await _supabase.from('profiles').select('*').eq('id', studentId).single();
+const { data: subs } = await _supabase.from('course_subscriptions').select('*, courses(title)').eq('student_id', studentId);
+const { data: results } = await _supabase.from('student_results').select('*, exams(title)').eq('student_id', studentId);
+
+document.getElementById('modal-student-name').innerText = student.full_name;
+document.getElementById('modal-student-subtitle').innerText = `كود الطالب: ${student.student_code || 'بدون كود'} | ${student.stage || ''}`;
+
+content.innerHTML = `
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="bg-white p-4 rounded-2xl border border-gray-200">
+<span class="text-xs font-bold text-gray-400 block">نقاط الطالب الأسبوعية</span>
+<span class="text-xl font-black text-emerald-600 block mt-1">${student.weekly_points || 0} نقطة</span>
+</div>
+<div class="bg-white p-4 rounded-2xl border border-gray-200">
+<span class="text-xs font-bold text-gray-400 block">إجمالي النقاط التراكمية</span>
+<span class="text-xl font-black text-blue-600 block mt-1">${student.total_points || 0} نقطة</span>
+</div>
+<div class="bg-white p-4 rounded-2xl border border-gray-200">
+<span class="text-xs font-bold text-gray-400 block">هاتف ولي الأمر</span>
+<span class="text-sm font-black text-slate-800 block mt-1 font-mono">${student.parent_phone || 'غير مسجل'}</span>
+</div>
+</div>
+
+<div class="space-y-4">
+<h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-graduation-cap text-emerald-600"></i> الكورسات المشترك بها:</h4>
+<div class="flex flex-wrap gap-2">
+${subs && subs.length > 0 ? subs.map(s => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 p-2 px-3 rounded-xl text-xs font-bold">${s.courses?.title} (${s.status})</span>`).join('') : '<span class="text-xs text-gray-400 font-bold">غير مشترك في أي كورس</span>'}
+</div>
+</div>
+
+<div class="space-y-4 pt-4 border-t border-gray-200">
+<h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-file-circle-check text-blue-600"></i> درجات الامتحانات والتقييمات:</h4>
+<div class="overflow-x-auto w-full rounded-xl border border-gray-200 bg-white">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap">
+<thead class="bg-gray-50 text-gray-700">
+<tr>
+<th class="p-3">اسم الامتحان</th>
+<th class="p-3 text-center">الدرجة</th>
+<th class="p-3 text-center">تاريخ التقديم</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100">
+${results && results.length > 0 ? results.map(r => `
+<tr>
+<td class="p-3 font-bold">${r.exams?.title || 'اختبار'}</td>
+<td class="p-3 text-center font-black text-emerald-600">${r.score}</td>
+<td class="p-3 text-center text-gray-500">${new Date(r.submission_date).toLocaleDateString('ar-EG')}</td>
+</tr>
+`).join('') : '<tr><td colspan="3" class="text-center p-4 text-gray-400 font-bold">لا توجد درجات مسجلة</td></tr>'}
+</tbody>
+</table>
+</div>
+</div>
+`;
+
+} catch(err) {
+content.innerHTML = `<div class="p-6 text-center text-red-500 font-bold">حدث خطأ أثناء تحميل تقرير الطالب!</div>`;
+}
+}
+
+function closeStudentModal() {
+document.getElementById('student-modal').classList.add('hidden');
+}
+
+// ==========================================
+// منظومة الأكواد والسناتر (Coupons)
+// ==========================================
+
+async function fetchCouponsList() {
+const tbody = document.getElementById('coupons-list-table');
+const select = document.getElementById('couponCourseSelect');
+if(!tbody) return;
+
+try {
+const { data: courses } = await _supabase.from('courses').select('id, title').eq('is_visible', true);
+if(select) {
+select.innerHTML = '<option value="">-- اختر الكورس المرتبط --</option>' + 
+(courses || []).map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+}
+
+const { data: codes, error } = await _supabase
+.from('center_codes')
+.select('*, courses(title)')
+.order('created_at', { ascending: false })
+.limit(20);
+
+if(error) throw error;
+
+if(!codes || codes.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد أكواد مولدة حالياً</td></tr>`;
+return;
+}
+
+tbody.innerHTML = codes.map(c => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-4 px-5 font-mono font-black text-slate-900">${c.code}</td>
+<td class="p-4 font-bold text-emerald-600">${c.price} ج.م</td>
+<td class="p-4 font-bold text-gray-700">${c.courses?.title || 'غير محدد'}</td>
+<td class="p-4 text-center">
+${c.is_used ? '<span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-red-200">مستخدم</span>' : '<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-emerald-200">متاح</span>'}
+</td>
+<td class="p-4 text-center">
+<button onclick="navigator.clipboard.writeText('${c.code}'); showNotification('تم نسخ الكود!', 'success')" class="bg-gray-100 hover:bg-slate-900 hover:text-white p-2 px-3 rounded-xl text-xs font-bold transition-all">
+<i class="fa-solid fa-copy"></i>
+</button>
+</td>
+</tr>
+`).join('');
+
+} catch(err) { console.error(err); }
+}
+
+async function handleGenerateCoupon() {
+const price = parseFloat(document.getElementById('couponPriceInput').value);
+const count = parseInt(document.getElementById('couponCountInput').value) || 1;
+const courseId = document.getElementById('couponCourseSelect').value;
+
+if(!price || !courseId) {
+showNotification("يرجى إدخال السعر واختيار الكورس!", "warning");
+return;
+}
+
+try {
+const codesToInsert = [];
+for(let i = 0; i < count; i++) {
+const randomCode = 'EDU-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+codesToInsert.push({
+code: randomCode,
+price: price,
+course_id: courseId,
+is_used: false
+});
+}
+
+const { error } = await _supabase.from('center_codes').insert(codesToInsert);
+if(error) throw error;
+
+showNotification(`تم توليد ${count} كود بنجاح!`, "success");
+fetchCouponsList();
+loadDashboardStats();
+} catch(err) {
+showNotification("فشل توليد الأكواد!", "error");
+}
+}
+
+async function exportCouponsToTXT() {
+try {
+const { data: codes } = await _supabase.from('center_codes').select('code, price, is_used').eq('is_used', false);
+if(!codes || codes.length === 0) {
+showNotification("لا توجد أكواد متاحة للتصدير!", "warning");
+return;
+}
+
+const textContent = codes.map(c => `الكود: ${c.code} | القيمة: ${c.price} ج.م`).join('\n');
+const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+const link = document.createElement('a');
+link.href = URL.createObjectURL(blob);
+link.download = `أكواد_السناتر_${Date.now()}.txt`;
+link.click();
+} catch(err) { console.error(err); }
+}
+
+// ==========================================
+// إدارة التنبيهات
+// ==========================================
+
+async function fetchNotificationsList() {
+const tbody = document.getElementById('notifications-list-table');
+if(!tbody) return;
+
+try {
+const { data: notifs, error } = await _supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(15);
+if(error) throw error;
+
+if(!notifs || notifs.length === 0) {
+tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-400 font-bold">لا توجد تنبيهات مرسلة</td></tr>`;
+return;
+}
+
+tbody.innerHTML = notifs.map(n => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-4 px-5 font-bold text-slate-900">${n.message}</td>
+<td class="p-4 font-bold">${n.student_id ? '<span class="text-blue-600">خاص</span>' : '<span class="text-emerald-600">عام</span>'}</td>
+<td class="p-4 text-gray-500 font-mono text-[11px]">${new Date(n.created_at).toLocaleDateString('ar-EG')}</td>
+<td class="p-4 text-center">
+<button onclick="deleteNotification('${n.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs"><i class="fa-solid fa-trash"></i></button>
+</td>
+</tr>
+`).join('');
+} catch(err) { console.error(err); }
+}
+
+function toggleNotificationTarget() {
+const target = document.querySelector('input[name="target_audience"]:checked').value;
+const box = document.getElementById('specific-student-box');
+if(target === 'specific') box.classList.remove('hidden');
+else {
+box.classList.add('hidden');
+clearSelectedNotifStudent();
+}
+}
+
+async function handleNotifStudentSearch(query) {
+const dropdown = document.getElementById('notifStudentDropdown');
+if(!query || query.trim().length < 2) {
+dropdown.classList.add('hidden');
+return;
+}
+
+try {
+const { data: students } = await _supabase
+.from('profiles')
+.select('id, full_name, student_code')
+.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
+.limit(5);
+
+if(!students || students.length === 0) {
+dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 font-bold text-center">لا يوجد طلاب</div>';
+} else {
+dropdown.innerHTML = students.map(s => `
+<div onclick="selectNotifStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-emerald-50 cursor-pointer text-xs font-bold text-gray-800 transition-colors">
+${s.full_name} (${s.student_code || 'بدون كود'})
+</div>
+`).join('');
+}
+dropdown.classList.remove('hidden');
+} catch(err) { console.error(err); }
+}
+
+function selectNotifStudent(id, name) {
+document.getElementById('targetStudentUuid').value = id;
+document.getElementById('selectedStudentName').innerText = `الطالب المحدد: ${name}`;
+document.getElementById('selectedStudentBadge').classList.remove('hidden');
+document.getElementById('selectedStudentBadge').classList.add('flex');
+document.getElementById('notifStudentDropdown').classList.add('hidden');
+}
+
+function clearSelectedNotifStudent() {
+document.getElementById('targetStudentUuid').value = '';
+document.getElementById('selectedStudentBadge').classList.add('hidden');
+document.getElementById('selectedStudentBadge').classList.remove('flex');
+document.getElementById('notifStudentSearchInput').value = '';
+}
+
+async function handleSendNotification(event) {
+event.preventDefault();
+const target = document.querySelector('input[name="target_audience"]:checked').value;
+const message = document.getElementById('notificationMessage').value;
+const studentId = target === 'specific' ? document.getElementById('targetStudentUuid').value : null;
+
+if(target === 'specific' && !studentId) {
+showNotification("يرجى اختيار الطالب المستهدف!", "warning");
+return;
+}
+
+try {
+const { error } = await _supabase
+.from('notifications')
+.insert([{ message, student_id: studentId, is_read: false }]);
+
+if(error) throw error;
+showNotification("تم إرسال التنبيه بنجاح!", "success");
+document.getElementById('notificationForm').reset();
+clearSelectedNotifStudent();
+fetchNotificationsList();
+} catch(err) {
+showNotification("فشل إرسال التنبيه!", "error");
+}
+}
+
+async function deleteNotification(id) {
+try {
+await _supabase.from('notifications').delete().eq('id', id);
+fetchNotificationsList();
+showNotification("تم حذف التنبيه!", "info");
+} catch(err) { console.error(err); }
+}
+
+// ==========================================
+// إدارة صلاحيات الأدمن
+// ==========================================
+
+async function fetchAdminsList() {
+const tbody = document.getElementById('admins-list-table');
+if(!tbody) return;
+
+try {
+const { data: admins, error } = await _supabase.from('admins').select('id');
+if(error) throw error;
+
+if(!admins || admins.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد مسؤولي إدارة مسجلين</td></tr>`;
+return;
+}
+
+const adminIds = admins.map(a => a.id);
+const { data: profiles } = await _supabase.from('profiles').select('*').in('id', adminIds);
+
+tbody.innerHTML = (profiles || []).map(p => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-4 px-5 font-black text-slate-900">${p.full_name || 'مسؤول منسق'}</td>
+<td class="p-4 font-mono font-bold text-purple-700">${p.student_code || p.student_phone || '-'}</td>
+<td class="p-4 font-mono text-gray-600">${p.email || 'غير مسجل'}</td>
+<td class="p-4 font-mono text-xs text-gray-400">${p.id}</td>
+<td class="p-4 text-center">
+<button onclick="revokeAdmin('${p.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all active:scale-95">
+<i class="fa-solid fa-user-minus"></i> سحب الصلاحية
+</button>
+</td>
+</tr>
+`).join('');
+
+} catch(err) { console.error(err); }
+}
+
+async function handleAdminSearch(event) {
+event.preventDefault();
+const query = document.getElementById('adminSearchInput').value.trim();
+const loader = document.getElementById('admin-search-loader');
+const resultsBox = document.getElementById('admin-search-results');
+const tbody = document.getElementById('admin-search-results-table');
+
+if(!query) return;
+
+loader.classList.remove('hidden');
+loader.classList.add('flex');
+resultsBox.classList.add('hidden');
+
+try {
+const { data: users } = await _supabase
+.from('profiles')
+.select('*')
+.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,id.eq.${query}`)
+.limit(5);
+
+if(!users || users.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400 font-bold">لم يتم العثور على أي مستخدم بهذه البيانات</td></tr>`;
+} else {
+tbody.innerHTML = users.map(u => `
+<tr class="hover:bg-purple-50/40 transition-colors">
+<td class="p-3 font-bold text-slate-900">${u.full_name}</td>
+<td class="p-3 font-mono font-bold text-purple-700">${u.student_code || '-'}</td>
+<td class="p-3 font-mono text-gray-600 text-xs">${u.email || '-'}</td>
+<td class="p-3 font-mono text-[10px] text-gray-400 text-center">${u.id.substring(0,8)}...</td>
+<td class="p-3 text-center">
+<button onclick="promoteToAdmin('${u.id}')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-sm">
+<i class="fa-solid fa-user-plus"></i> ترقية لأدمن
+</button>
+</td>
+</tr>
+`).join('');
+}
+
+resultsBox.classList.remove('hidden');
+} catch(err) {
+showNotification("حدث خطأ في البحث!", "error");
+} finally {
+loader.classList.add('hidden');
+loader.classList.remove('flex');
+}
+}
+
+async function promoteToAdmin(userId) {
+try {
+const { error } = await _supabase.from('admins').insert([{ id: userId }]);
+if(error) throw error;
+
+showNotification("تم منح صلاحية الأدمن للمستخدم بنجاح!", "success");
+fetchAdminsList();
+loadDashboardStats();
+} catch(err) {
+showNotification("المستخدم يمتلك صلاحية الأدمن بالفعل!", "warning");
+}
+}
+
+async function revokeAdmin(userId) {
+if(!confirm("هل أنت متأكد من سحب صلاحية الأدمن عن هذا المستخدم؟")) return;
+
+try {
+const { error } = await _supabase.from('admins').delete().eq('id', userId);
+if(error) throw error;
+
+showNotification("تم سحب صلاحية الأدمن بنجاح!", "info");
+fetchAdminsList();
+loadDashboardStats();
+} catch(err) {
+showNotification("تعذر سحب الصلاحية!", "error");
+}
+}
+
+// ==========================================
+// وحدة مركز الأرشيف والسجلات التراكمية (ARCHIVE MODULE)
+// ==========================================
+
+async function loadArchivePanelData() {
+fetchHonorRollArchives();
+fetchArchivedCoursesList();
+fetchSubscriptionHistoryArchive();
+}
+
+async function fetchHonorRollArchives() {
+const tbody = document.getElementById('honor-roll-archives-table');
+if(!tbody) return;
+
+try {
+const { data: archives, error } = await _supabase
+.from('honor_roll_archives')
+.select('*, profiles(full_name)')
+.order('archived_at', { ascending: false });
+
+if(error) throw error;
+
+if(!archives || archives.length === 0) {
+tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold">لا يوجد سجل مؤرشف للوحة الشرف حتى الآن</td></tr>`;
+return;
+}
+
+tbody.innerHTML = archives.map(a => `
+<tr class="hover:bg-slate-900/80 transition-colors">
+<td class="p-3.5 px-4 font-black">
+<span class="w-7 h-7 rounded-lg inline-flex items-center justify-center font-black text-xs ${a.rank === 1 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-300'}">
+#${a.rank}
+</span>
+</td>
+<td class="p-3.5 font-black text-slate-100">${a.profiles?.full_name || 'طالب مجهول'}</td>
+<td class="p-3.5 font-bold text-amber-400">${a.weekly_points} نقطة</td>
+<td class="p-3.5 font-mono text-slate-400 text-xs">الأسبوع ${a.week_number} / ${a.year}</td>
+<td class="p-3.5 text-xs text-slate-300 font-bold">${a.stage || 'غير محدد'}</td>
+<td class="p-3.5 font-mono text-[11px] text-slate-500">${new Date(a.archived_at).toLocaleDateString('ar-EG')}</td>
+<td class="p-3.5 text-center">
+<button onclick="deleteHonorRollArchive('${a.id}')" class="text-red-400 hover:text-red-300 p-1.5 px-3 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-all">
+<i class="fa-solid fa-trash-can"></i>
+</button>
+</td>
+</tr>
+`).join('');
+
+} catch(err) {
+console.error("Honor Roll Archive Error:", err);
+tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-red-400 font-bold">خطأ أثناء جلب أرشيف لوحة الشرف</td></tr>`;
+}
+}
+
+async function archiveCurrentWeekHonorRoll() {
+if(!confirm("هل أنت متأكد من حفظ لقطة أسبوعية لأوائل اللوحة وتصفير النقاط الأسبوعية لبدء أسبوع جديد؟")) return;
+
+try {
+const { data: topStudents, error: fetchErr } = await _supabase
+.from('profiles')
+.select('id, weekly_points, stage')
+.gt('weekly_points', 0)
+.order('weekly_points', { ascending: false });
+
+if(fetchErr) throw fetchErr;
+
+if(!topStudents || topStudents.length === 0) {
+showNotification("لا يوجد طلاب لديهم نقاط أسبوعية لأرشفتهم!", "warning");
+return;
+}
+
+const currentDate = new Date();
+const currentYear = currentDate.getFullYear();
+const currentWeek = Math.ceil((((currentDate - new Date(currentYear, 0, 1)) / 86400000) + 1) / 7);
+
+const archiveRecords = topStudents.map((s, index) => ({
+student_id: s.id,
+weekly_points: s.weekly_points,
+rank: index + 1,
+week_number: currentWeek,
+year: currentYear,
+stage: s.stage,
+archived_at: new Date().toISOString()
+}));
+
+const { error: insertErr } = await _supabase.from('honor_roll_archives').insert(archiveRecords);
+if(insertErr) throw insertErr;
+
+await _supabase.from('profiles').update({ weekly_points: 0 }).gt('weekly_points', 0);
+
+showNotification(`تم أرشفة لوحة الشرف بنجاح وتصفير نقاط ${topStudents.length} طالب لبدء الأسبوع الجديد!`, "success");
+fetchHonorRollArchives();
+loadDashboardStats();
+} catch(err) {
+console.error("Archive Execution Error:", err);
+showNotification("تعذر تنفيذ أرشفة الأسبوع!", "error");
+}
+}
+
+async function deleteHonorRollArchive(id) {
+if(!confirm("هل ترغب في حذف القيد المؤرشف؟")) return;
+try {
+await _supabase.from('honor_roll_archives').delete().eq('id', id);
+showNotification("تم حذف سجل الأرشيف!", "info");
+fetchHonorRollArchives();
+} catch(err) { console.error(err); }
+}
+
+async function fetchArchivedCoursesList() {
+const tbody = document.getElementById('archived-courses-table');
+const counter = document.getElementById('archived-courses-count');
+if(!tbody) return;
+
+try {
+const { data: courses, error } = await _supabase
+.from('courses')
+.select('*')
+.eq('is_visible', false)
+.order('created_at', { ascending: false });
+
+if(error) throw error;
+
+if(counter) counter.innerText = `${courses ? courses.length : 0} كورس`;
+
+if(!courses || courses.length === 0) {
+tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات مؤرشفة حالياً</td></tr>`;
+return;
+}
+
+tbody.innerHTML = courses.map(c => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-4 px-5 font-black text-slate-900">${c.title}</td>
+<td class="p-4 font-bold text-gray-700">${c.stage}</td>
+<td class="p-4 font-bold text-amber-700">${c.term || 'غير محدد'}</td>
+<td class="p-4 text-center font-black text-slate-900">${c.price > 0 ? c.price + ' ج.م' : 'مجاني'}</td>
+<td class="p-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<button onclick="toggleCourseArchive('${c.id}', false)" class="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 p-2 px-3 rounded-xl border border-emerald-200 font-bold text-xs transition-all active:scale-95 flex items-center gap-1">
+<i class="fa-solid fa-box-open"></i> استعادة للواجهة
+</button>
+<button onclick="deleteCourse('${c.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all active:scale-95">
+<i class="fa-solid fa-trash-can"></i> حذف نهائي
+</button>
+</div>
+</td>
+</tr>
+`).join('');
+
+} catch(err) { console.error(err); }
+}
+
+async function fetchSubscriptionHistoryArchive() {
+const tbody = document.getElementById('subscription-history-archive-table');
+if(!tbody) return;
+
+try {
+const { data: requests, error } = await _supabase
+.from('subscription_requests')
+.select('*, profiles(full_name), courses(title)')
+.neq('status', 'pending')
+.order('created_at', { ascending: false })
+.limit(20);
+
+if(error) throw error;
+
+if(!requests || requests.length === 0) {
+tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">لا توجد طلبات سابقة مؤرشفة</td></tr>`;
+return;
+}
+
+tbody.innerHTML = requests.map(req => `
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="p-3.5 px-4 font-black text-slate-900">${req.profiles?.full_name || 'غير معروف'}</td>
+<td class="p-3.5 font-bold text-gray-800">${req.courses?.title || 'كورس غير مسمى'}</td>
+<td class="p-3.5 text-center font-black text-emerald-600">${req.amount_paid ? req.amount_paid + ' ج.م' : '-'}</td>
+<td class="p-3.5 text-center font-bold text-gray-600 text-xs">${req.payment_method || 'فودافون كاش / كود'}</td>
+<td class="p-3.5 text-center">
+${req.status === 'approved' ? '<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-emerald-200"><i class="fa-solid fa-check ml-1"></i> مقبول</span>' : '<span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-red-200"><i class="fa-solid fa-xmark ml-1"></i> مرفوض</span>'}
+</td>
+<td class="p-3.5 text-center font-mono text-[11px] text-gray-400">${new Date(req.created_at).toLocaleDateString('ar-EG')}</td>
+</tr>
+`).join('');
+
+} catch(err) { console.error(err); }
+}
+
+// ==========================================
+// البث المباشر (Jitsi Live Studio)
+// ==========================================
+
+async function loadLiveStreamDetails() {
+try {
+const { data: room } = await _supabase.from('live_rooms').select('*').eq('id', LIVE_ROOM_ID).single();
+if(room) {
+document.getElementById('liveTitleInput').value = room.title || '';
+document.getElementById('liveDescInput').value = room.description || '';
+document.getElementById('liveChannelInput').value = room.channel_name || 'MagdyLiveClass2026';
+isLiveActive = (room.status === 'live');
+updateLiveUIStatus();
+}
+} catch(err) { console.error(err); }
+}
+
+function updateLiveUIStatus() {
+const badge = document.getElementById('liveStatusBadge');
+const btn = document.getElementById('startLiveBtn');
+const placeholder = document.getElementById('noVideoPlaceholder');
+
+if(isLiveActive) {
+badge.className = "bg-red-50 text-red-600 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-red-200";
+badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span> مباشر الآن`;
+
+btn.className = "flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md order-1 sm:order-2";
+btn.innerHTML = `<i class="fa-solid fa-stop text-red-500"></i> إنهاء البث المباشر`;
+
+if(placeholder) placeholder.classList.add('hidden');
+if(!jitsiAPI) initJitsiLive();
+} else {
+badge.className = "bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200";
+badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-400"></span> مغلق حالياً`;
+
+btn.className = "flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20 order-1 sm:order-2";
+btn.innerHTML = `<i class="fa-solid fa-play"></i> بدء البث المباشر (تفعيل الآن)`;
+
+if(placeholder) placeholder.classList.remove('hidden');
+if(jitsiAPI) {
+jitsiAPI.dispose();
+jitsiAPI = null;
+}
+}
+}
+
+function initJitsiLive() {
+const domain = "meet.jit.si";
+const roomName = document.getElementById('liveChannelInput').value.trim() || "MagdyLiveClass2026";
+const options = {
+roomName: roomName,
+width: "100%",
+height: "100%",
+parentNode: document.getElementById('jitsiContainer'),
+userInfo: { displayName: "الأستاذ (المُحاضر)" }
+};
+jitsiAPI = new JitsiMeetExternalAPI(domain, options);
+}
+
+async function handleUpdateLiveDetails(e) {
+e.preventDefault();
+const title = document.getElementById('liveTitleInput').value;
+const description = document.getElementById('liveDescInput').value;
+const channel_name = document.getElementById('liveChannelInput').value.trim();
+
+try {
+await _supabase.from('live_rooms').upsert([{
+id: LIVE_ROOM_ID,
+title,
+description,
+channel_name,
+status: isLiveActive ? 'live' : 'ended'
+}]);
+showNotification("تم تفاصيل غرفة البث بنجاح!", "success");
+} catch(err) { showNotification("فشل حفظ إعدادات البث!", "error"); }
+}
+
+async function toggleLiveStatus() {
+isLiveActive = !isLiveActive;
+const statusStr = isLiveActive ? 'live' : 'ended';
+
+try {
+await _supabase.from('live_rooms').upsert([{
+id: LIVE_ROOM_ID,
+status: statusStr,
+started_at: isLiveActive ? new Date().toISOString() : null
+}]);
+
+updateLiveUIStatus();
+showNotification(isLiveActive ? "تم بدء البث المباشر بنجاح!" : "تم إنهاء البث المباشر!", isLiveActive ? "success" : "info");
+} catch(err) { showNotification("فشل تغيير حالة البث!", "error"); }
+}
+
+async function loadLivePreviousMessages() {
+const container = document.getElementById('liveChatMessages');
+if(!container) return;
+
+try {
+const { data: msgs } = await _supabase
+.from('live_messages')
+.select('*')
+.eq('room_id', LIVE_ROOM_ID)
+.order('created_at', { ascending: true })
+.limit(50);
+
+if(msgs) {
+container.innerHTML = '<div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">مرحباً بك في الدردشة المباشرة 👋</div>';
+msgs.forEach(appendLiveChatMessage);
+}
+} catch(err) { console.error(err); }
+}
+
+function appendLiveChatMessage(msg) {
+const container = document.getElementById('liveChatMessages');
+if(!container) return;
+
+const isTeacher = (msg.sender_role === 'teacher' || msg.sender_role === 'admin');
+const msgDiv = document.createElement('div');
+msgDiv.className = `flex flex-col ${isTeacher ? 'items-start' : 'items-end'} animate-fade-in`;
+
+msgDiv.innerHTML = `
+<div class="max-w-[85%] rounded-2xl p-3 text-xs shadow-sm ${isTeacher ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-gray-100 rounded-tl-none'}">
+<div class="flex items-center gap-2 mb-1">
+<span class="font-black ${isTeacher ? 'text-red-400' : 'text-emerald-600'} text-[10px]">${msg.sender_name}</span>
+<span class="text-[9px] opacity-60">${new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+</div>
+<p class="leading-relaxed font-semibold">${msg.message}</p>
+</div>
+`;
+
+container.appendChild(msgDiv);
+container.scrollTop = container.scrollHeight;
+}
+
+async function sendAdminLiveMessage(e) {
+e.preventDefault();
+const input = document.getElementById('liveAdminChatInput');
+const text = input.value.trim();
+if(!text) return;
+
+try {
+const { error } = await _supabase.from('live_messages').insert([{
+room_id: LIVE_ROOM_ID,
+sender_name: 'الأستاذ (المُحاضر)',
+sender_role: 'teacher',
+message: text
+}]);
+
+if(error) throw error;
+input.value = '';
+} catch(err) { showNotification("فشل إرسال التعليق!", "error"); }
+}
+
+function subscribeToLiveMessages() {
+_supabase
+.channel('realtime_live_chat')
+.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages' }, payload => {
+appendLiveChatMessage(payload.new);
+})
+.subscribe();
+}
+
+function toggleChatStatus() {
+const toggle = document.getElementById('chatStatusToggle');
+const label = document.getElementById('chatStatusLabel');
+if(toggle.checked) {
+label.innerText = 'مفتوحة';
+label.className = "text-[9px] sm:text-[10px] text-emerald-400 font-bold w-6 text-center";
+} else {
+label.innerText = 'مغلقة';
+label.className = "text-[9px] sm:text-[10px] text-red-400 font-bold w-6 text-center";
+}
+}
+</script>
+</body>
+</html>

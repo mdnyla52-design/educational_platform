@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الطالب | منصة العلم والإيمان</title>
+    
+    <!-- خط كايرو الاحترافي -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- مكتبة الأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- فريمورك التيلويند -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-cairo bg-gray-50/50 text-gray-800 antialiased relative">
+
+    <style>
+        /* Core utilities */
+        .hover-lift{transition:transform .28s var(--tw-easing), box-shadow .28s var(--tw-easing);}
+        .hover-lift:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 18px 40px rgba(2,6,23,0.12);}
+
+        /* Skeleton */
+        .skeleton{background:linear-gradient(90deg,#f3f4f6 25%, #e9ecef 37%, #f3f4f6 63%);background-size:400% 100%;animation:shimmer 1.2s linear infinite;border-radius:0.5rem}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+        /* Modern notification system - glassmorphism cards */
+        .toast-viewport{position:fixed;inset:auto 1rem 1rem auto;z-index:60;display:flex;flex-direction:column;gap:0.75rem;max-width:calc(100% - 2rem);pointer-events:none}
+        @media (max-width:640px){.toast-viewport{inset:auto 0.75rem 0.75rem 0.75rem;max-width:calc(100% - 1.5rem);}}
+
+        .toast{pointer-events:auto;display:flex;align-items:flex-start;gap:0.75rem;padding:14px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.5));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.5);box-shadow:0 10px 30px rgba(2,6,23,0.08);max-width:420px;width:100%;overflow:hidden}
+        .toast .toast-icon{flex:0 0 44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+        .toast .toast-body{flex:1;min-width:0}
+        .toast .toast-title{font-weight:700;font-size:14px;color:#07232a;line-height:1}
+        .toast .toast-message{font-size:13px;color:#0b3940;opacity:0.95;margin-top:4px;word-break:break-word}
+        .toast .toast-actions{margin-left:8px;display:flex;align-items:center;gap:8px}
+        .toast .toast-close{background:transparent;border:none;color:rgba(11,57,64,.8);width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s, transform .18s}
+        .toast .toast-close:hover{background:rgba(2,6,23,.04);transform:scale(1.03)}
+
+        /* Progress bar */
+        .toast-progress{height:3px;background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));border-radius:2px;margin-top:10px;overflow:hidden}
+        .toast-progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent-start, #10b981),var(--accent-end,#059669));width:100%;transform-origin:left;transition:transform linear}
+
+        /* Types: accent border and icon colors */
+        .toast--success{--accent-start:#34d399;--accent-end:#059669;border-left:6px solid rgba(16,185,129,.12)}
+        .toast--error{--accent-start:#fb7185;--accent-end:#ef4444;border-left:6px solid rgba(239,68,68,.12)}
+        .toast--warning{--accent-start:#fbbf24;--accent-end:#f59e0b;border-left:6px solid rgba(245,158,11,.12)}
+        .toast--info{--accent-start:#60a5fa;--accent-end:#2563eb;border-left:6px solid rgba(59,130,246,.12)}
+
+        /* Small responsive tweaks */
+        @media (max-width:640px){.toast{padding:12px;border-radius:14px;}.toast .toast-icon{flex:0 0 40px;height:40px;border-radius:10px}}
+
+        /* Entry/exit animations */
+        .toast-enter{opacity:0;transform:translateY(10px) translateZ(0) scale(.995)}
+        .toast-enter-active{animation:toastIn .32s cubic-bezier(.22,.9,.36,1) forwards}
+        .toast-exit-active{animation:toastOut .28s cubic-bezier(.65,.05,.36,.95) forwards}
+        @keyframes toastIn{to{opacity:1;transform:none}}
+        @keyframes toastOut{to{opacity:0;transform:translateY(6px) scale(.995);height:0;margin:0;padding:0}}
+
+        /* Accessible reduced motion */
+        @media (prefers-reduced-motion: reduce){
+            .hover-lift,.toast-enter-active,.toast-exit-active,.toast .toast-close{transition:none!important;animation:none!important}
+        }
+
+        /* High contrast support */
+        @media (prefers-contrast: more){
+            .toast{border:2px solid rgba(0,0,0,.9);box-shadow:0 12px 34px rgba(0,0,0,.35)}
+        }
+
+        /* Toast Icon Animations */
+        @keyframes iconBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+        @keyframes iconRotate{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        @keyframes iconCheck{0%{transform:scale(0);opacity:0}50%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+        
+        .toast--success .toast-icon{animation:iconCheck .5s cubic-bezier(.34,1.56,.64,1) forwards;background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#059669}
+        .toast--error .toast-icon{animation:iconBounce .6s ease-out;background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626}
+        .toast--warning .toast-icon{animation:iconRotate .8s ease-out;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#d97706}
+        .toast--info .toast-icon{animation:iconBounce .6s ease-out;background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#2563eb}
+
+        /* إعدادات الطباعة للشهادة الاحترافية */
+        @media print {
+            @page { 
+                size: landscape; 
+                margin: 0; 
+            }
+            body * { 
+                visibility: hidden; 
+            }
+            #certificate-container, #certificate-container * { 
+                visibility: visible; 
+            }
+            #certificate-container { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100vw; 
+                height: 100vh;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                background-color: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+
+    <!-- ==================== حاوية الشهادة المحدثة (تظهر عند الفتح والطباعة) ==================== -->
+    <div id="certificate-container" class="hidden fixed inset-0 z-[100] bg-gray-900/90 backdrop-blur-sm items-center justify-center p-4 md:p-10 print:p-0 print:bg-white">
+        
+        <!-- الإطار الخارجي للشهادة -->
+        <div class="relative w-full max-w-5xl bg-white border-[16px] border-double border-emerald-900 p-8 md:p-12 shadow-[0_0_50px_rgba(0,0,0,0.5)] print:shadow-none mx-auto print:border-[12px] print:w-full print:h-[95vh] print:m-0 flex flex-col justify-between overflow-hidden group">
+            
+            <!-- خلفية مائية (Watermark) -->
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/white-diamond.png')] opacity-60 z-0"></div>
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-[0.03] z-0 flex items-center justify-center pointer-events-none">
+                <i class="fa-solid fa-award text-[35rem] text-emerald-900"></i>
+            </div>
+            
+            <!-- زخارف الزوايا الذهبية -->
+            <div class="absolute top-3 left-3 w-12 h-12 border-t-4 border-l-4 border-amber-500 z-10"></div>
+            <div class="absolute top-3 right-3 w-12 h-12 border-t-4 border-r-4 border-amber-500 z-10"></div>
+            <div class="absolute bottom-3 left-3 w-12 h-12 border-b-4 border-l-4 border-amber-500 z-10"></div>
+            <div class="absolute bottom-3 right-3 w-12 h-12 border-b-4 border-r-4 border-amber-500 z-10"></div>
+
+            <div class="relative z-10 flex flex-col items-center text-center h-full">
+                
+                <!-- الهيدر ومكان اللوجو الاحترافي -->
+                <div class="w-full flex justify-between items-center mb-4">
+                    <!-- اسم الكيان (يمين) -->-
+                    <div class="text-right w-1/3">
+                        <p class="font-black text-emerald-900 text-lg md:text-xl">منصة العلم والإيمان</p>
+                        <p class="text-gray-500 font-bold text-xs md:text-sm border-t border-gray-200 pt-1 mt-1 inline-block">للغه العربيه</p>
+                    </div>
+                    
+                    <!-- اللوجو (المنتصف) -->
+                    <div class="w-1/3 flex justify-center">
+                        <div class="relative w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-dashed border-amber-400 bg-emerald-50 flex flex-col items-center justify-center shadow-inner group-hover:border-solid transition-all duration-300 overflow-hidden ring-4 ring-emerald-900/10 p-1">
+                            <!-- 💡 لإضافة اللوجو: قم بإزالة التعليق عن وسم img وضع رابط اللوجو الخاص بك 💡 -->
+                            <img src="assets\image\اللوجو.jpeg" alt="Logo" class="w-full h-full object-contain rounded-full"> 
+                            <i class="fa-solid fa-image text-amber-500 text-3xl mb-1"></i>
+                            <span class="text-[10px] font-black text-emerald-800 text-center px-1 leading-tight">مكان<br>اللوجو</span>
+                        </div>
+                    </div>
+                    
+                    <!-- الاسم بالإنجليزي (يسار) -->
+                    <div class="text-left w-1/3">
+                        <p class="font-black text-emerald-900 text-lg md:text-xl font-serif"></p>
+                        <p class="font-black text-amber-600 text-lg md:text-2xl tracking-widest uppercase border-t border-gray-200 pt-1 mt-1 inline-block"></p>
+                    </div>
+                </div>
+
+                <!-- عنوان الشهادة -->
+                <div class="mt-2 mb-6">
+                    <h1 class="text-5xl md:text-7xl font-black text-emerald-900 mb-4 drop-shadow-sm leading-tight">شَهَادَةُ تَقْدِيرٍ وَتَفَوُّق</h1>
+                    <div class="flex items-center justify-center gap-4">
+                        <div class="h-0.5 w-16 bg-amber-500"></div>
+                        <i class="fa-solid fa-star text-amber-500 text-sm"></i>
+                        <div class="h-0.5 w-16 bg-amber-500"></div>
+                    </div>
+                </div>
+
+                <!-- نص الشهادة -->
+                <p class="text-xl md:text-2xl font-bold text-gray-700 leading-relaxed max-w-3xl">
+                    تتشرف إدارة <span class="text-emerald-800 font-black">منصة العلم والإيمان</span> بأن تمنح هذه الشهادة للطالب المتميز:
+                </p>
+
+                <!-- اسم الطالب Dynamic -->
+                <h2 id="cert-student-name" class="text-4xl md:text-5xl font-black text-emerald-700 my-6 py-4 px-12 bg-gradient-to-r from-transparent via-emerald-50 to-transparent border-y-2 border-emerald-200 inline-block w-full max-w-2xl">
+                    اسم الطالب
+                </h2>
+
+                <!-- سبب المنح -->
+                <p class="text-lg md:text-xl font-bold text-gray-700 leading-relaxed max-w-2xl mb-auto">
+                    وذلك لجهده المبذول وتفوقه الدراسي وحصوله على 
+                    <span class="inline-block mx-1 bg-amber-100 text-amber-800 px-4 py-1 rounded-full border border-amber-300 shadow-sm">
+                        <span id="cert-points" class="text-2xl font-black px-1">0</span> نقطة تنافسية
+                    </span>
+                    في التقييمات الشاملة، متمنين له دوام التوفيق والنجاح.
+                </p>
+
+                <!-- التوقيعات والأختام -->
+                <div class="w-full flex justify-between items-end mt-8 px-4 md:px-12">
+                    
+                    <!-- التوقيع الأول (المعلم) -->
+                    <div class="text-center w-48 relative">
+                        <div class="h-16 flex items-end justify-center mb-1">
+                            <span class="font-serif text-3xl text-emerald-900/40 italic font-bold transform -rotate-12">Magdy Shaaban</span>
+                        </div>
+                        <div class="border-t-2 border-emerald-900/50 pt-2">
+                            <p class="font-black text-emerald-950 text-lg">أ/ مجدي شعبان شافعي</p>
+                            <p class="font-bold text-gray-500 text-sm mt-0.5">مُعلم المادة</p>
+                        </div>
+                    </div>
+
+                    <!-- الختم الذهبي (الشارة) -->
+                    <div class="relative w-32 h-32 flex items-center justify-center transform hover:scale-105 transition-transform">
+                        <div class="absolute inset-0 border-[6px] border-amber-500 rounded-full border-dashed animate-[spin_20s_linear_infinite] print:animate-none opacity-80"></div>
+                        <div class="absolute inset-2 border-2 border-amber-400 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-50 to-amber-200 shadow-inner">
+                            <i class="fa-solid fa-award text-4xl text-amber-600 drop-shadow-md"></i>
+                        </div>
+                        <span class="absolute -bottom-3 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm text-[10px] font-black text-emerald-800 tracking-wider">ختم الاعتماد</span>
+                    </div>
+
+                    <!-- التوقيع الثاني (التاريخ) -->
+                    <div class="text-center w-48 relative">
+                        <div class="h-16 flex items-end justify-center mb-1">
+                            <p id="cert-date" class="text-gray-800 font-bold text-xl"></p>
+                        </div>
+                        <div class="border-t-2 border-emerald-900/50 pt-2">
+                            <p class="font-black text-emerald-950 text-lg">تاريخ الإصدار</p>
+                            <p class="font-bold text-gray-500 text-sm mt-0.5">Date of Issue</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- أزرار التحكم بالشهادة (تظهر على الشاشة فقط) -->
+            <div class="absolute top-4 right-4 flex items-center gap-2 print:hidden z-20">
+                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg transition-all font-bold text-sm">
+                    <i class="fa-solid fa-print"></i>
+                    <span>طباعة / حفظ PDF</span>
+                </button>
+                <button onclick="closeCertificate()" class="bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all hover:rotate-90">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 1. الهيدر الرئيسي ولوحة الترحيب ==================== -->
+    <header class="bg-gradient-to-r from-emerald-700 to-teal-800 text-white rounded-b-[2.5rem] shadow-xl shadow-emerald-950/10 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 relative z-10">
+            <!-- بار التنقل العلوي -->
+            <div class="flex justify-between items-center border-b border-white/10 pb-6 mb-6 md:mb-8">
+                <a href="index.html" class="flex items-center gap-2.5">
+                    <div class="bg-white text-emerald-700 p-2 rounded-xl shadow-md">
+                        <i class="fa-solid fa-book-open text-lg"></i>
+                    </div>
+                    <span class="text-base md:text-lg font-black tracking-wide">منصة <span class="text-emerald-300">العلم والإيمان</span></span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span id="top-bar-stage" class="text-xs md:text-sm font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10"><i class="fa-solid fa-graduation-cap ml-1"></i> جاري التحميل...</span>
+                    <button onclick="handleLogout()" class="text-xs md:text-sm font-bold text-emerald-200 hover:text-white transition-colors"> الخروج <i class="fa-solid fa-right-from-bracket mr-1"></i></button>
+                </div>
+            </div>
+
+            <!-- بيانات الطالب والترحيب -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 md:w-20 md:h-20 bg-white/10 backdrop-blur-md rounded-2xl border-2 border-emerald-400/30 flex items-center justify-center text-2xl md:text-3xl shadow-inner font-black">👨‍🎓</div>
+                    <div>
+                        <h1 id="profile-name" class="text-xl md:text-2xl font-black mb-1 skeleton w-64 h-10 rounded-xl"></h1>
+                        <p id="profile-stage" class="text-xs md:text-sm text-emerald-200 font-medium skeleton w-48 h-4 rounded-xl"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 bg-emerald-900/30 backdrop-blur-md p-3 px-5 rounded-2xl border border-white/5 self-start md:self-auto">
+                    <div id="account-status-dot" class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></div>
+                    <span id="account-status-text" class="text-xs md:text-sm font-bold text-emerald-100 skeleton w-40 h-4 rounded-xl inline-block">جاري التحميل...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== 2. محتوى لوحة التحكم الرئيسي ==================== -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <!-- صف الإحصائيات الأربعة -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
+            <!-- كارت 1 -->
+            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between card-transition hover:border-emerald-500/20 hover:shadow-xl hover:-translate-y-1">
+                <div class="space-y-1">
+                    <span class="text-xs font-bold text-gray-400 block">كورساتك النشطة</span>
+                    <span id="active-courses-count" class="text-xl md:text-2xl font-black text-gray-900 block skeleton w-20 h-8 rounded-xl"></span>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-graduation-cap"></i></div>
+            </div>
+            <!-- كارت 2 -->
+            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between card-transition hover:border-teal-500/20 hover:shadow-xl hover:-translate-y-1">
+                <div class="space-y-1">
+                    <span class="text-xs font-bold text-gray-400 block">فيديوهات شاهدتها</span>
+                    <span id="watched-videos-count" class="text-xl md:text-2xl font-black text-gray-900 block skeleton w-20 h-8 rounded-xl"></span>
+                </div>
+                <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-circle-play"></i></div>
+            </div>
+            <!-- كارت 3 -->
+            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between card-transition hover:border-amber-500/20 hover:shadow-xl hover:-translate-y-1">
+                <div class="space-y-1">
+                    <span class="text-xs font-bold text-gray-400 block">متوسط درجاتك</span>
+                    <span id="average-score" class="text-xl md:text-2xl font-black text-gray-900 block skeleton w-20 h-8 rounded-xl"></span>
+                </div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-star"></i></div>
+            </div>
+            <!-- كارت 4 -->
+            <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between card-transition hover:border-purple-500/20 hover:shadow-xl hover:-translate-y-1">
+                <div class="space-y-1">
+                    <span class="text-xs font-bold text-gray-400 block">الاختبارات المجتازة</span>
+                    <span id="passed-tests-count" class="text-xl md:text-2xl font-black text-gray-900 block skeleton w-20 h-8 rounded-xl"></span>
+                </div>
+                <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-clipboard-check"></i></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- العمود الأيمن: الكورسات والامتحانات -->
+            <div class="lg:col-span-8 space-y-8">
+                
+                <div class="space-y-1">
+                    <h2 class="text-lg md:text-xl font-black text-gray-950 flex items-center gap-2">
+                        <i class="fa-solid fa-book text-emerald-600 text-base"></i>
+                        محاضراتك وكورساتك الحالية
+                    </h2>
+                    <p class="text-xs text-gray-400 font-medium">تابع تقدمك واستكمل المذاكرة فوراً</p>
+                </div>
+
+                <!-- شبكة الكورسات -->
+                <div id="courses-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 space-y-4 animate-pulse">
+                        <div class="h-4 w-32 rounded-full skeleton"></div>
+                        <div class="h-5 w-3/4 rounded-full skeleton"></div>
+                        <div class="space-y-3 pt-2">
+                            <div class="h-3 rounded-full skeleton"></div>
+                            <div class="h-3 rounded-full skeleton w-2/3"></div>
+                        </div>
+                        <div class="h-10 rounded-full skeleton"></div>
+                    </div>
+                </div>
+
+                <!-- جدول أداء الامتحانات -->
+                <div class="space-y-4 pt-4">
+                    <div class="space-y-1">
+                        <h2 class="text-lg font-black text-gray-950 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-emerald-600 text-base"></i>
+                            جدول كشف درجات اختباراتك الأخيرة
+                        </h2>
+                        <p class="text-xs text-gray-400 font-medium">التقارير يتم إرسالها تلقائياً لولي الأمر فور صدورها</p>
+                    </div>
+
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse text-right text-xs md:text-sm">
+                                <thead class="bg-gray-50 text-gray-500 font-bold border-b border-gray-100">
+                                    <tr>
+                                        <th class="p-4 md:p-5">اسم الاختبار</th>
+                                        <th class="p-4 md:p-5">التاريخ</th>
+                                        <th class="p-4 md:p-5">الدرجة</th>
+                                        <th class="p-4 md:p-5">التقييم</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-table-body" class="divide-y divide-gray-100 text-gray-700 font-semibold">
+                                    <tr class="animate-pulse">
+                                        <td class="p-4 md:p-5"><div class="h-4 bg-gray-100 rounded-full skeleton w-3/4"></div></td>
+                                        <td class="p-4 md:p-5"><div class="h-4 bg-gray-100 rounded-full skeleton w-24"></div></td>
+                                        <td class="p-4 md:p-5"><div class="h-4 bg-gray-100 rounded-full skeleton w-20"></div></td>
+                                        <td class="p-4 md:p-5"><div class="h-4 bg-gray-100 rounded-full skeleton w-28"></div></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- العمود الأيسر: منطقة التحفيز الإستراتيجي (الأداء التنافسي، لوحة الشرف، التنبيهات) -->
+            <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
+                
+                <!-- 🟢 كارت الأداء التنافسي المطور مطابق للصورة -->
+                <div id="gamification-card" class="bg-[#05291e] text-white rounded-3xl p-5 md:p-6 shadow-xl border border-emerald-800/40 relative overflow-hidden">
+                    
+                    <!-- الهيدر: شارة الأيام المتتالية والعنوان -->
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="bg-[#1b3d32] border border-amber-500/30 text-amber-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-inner">
+                            <span>🔥</span>
+                            <span id="streak-display">0 يوم متتالي</span>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-emerald-300 font-black text-base sm:text-lg">
+                            <span>الأداء التنافسي</span>
+                            <span class="text-lg">📊</span>
+                        </div>
+                    </div>
+
+                    <!-- مربع النقاط الكلية ونقاط الأسبوع -->
+                    <div class="grid grid-cols-2 gap-3 mb-5">
+                        <div class="bg-[#0b382a] border border-emerald-800/50 rounded-2xl p-3.5 text-center">
+                            <span class="text-[11px] text-emerald-200/70 font-bold block mb-1">النقاط الكلية</span>
+                            <span id="points-display" class="text-2xl sm:text-3xl font-black text-amber-400">0</span>
+                        </div>
+
+                        <div class="bg-[#0b382a] border border-emerald-800/50 rounded-2xl p-3.5 text-center">
+                            <span class="text-[11px] text-emerald-200/70 font-bold block mb-1">نقاط الأسبوع</span>
+                            <span id="weekly-points-display" class="text-2xl sm:text-3xl font-black text-emerald-400">0</span>
+                        </div>
+                    </div>
+
+                    <!-- النص التوضيحي للشهادة -->
+                    <p class="text-center text-[11px] text-emerald-100/80 mb-3 font-medium leading-relaxed">
+                        جمع 50 نقطة كحد أدنى لفتح شهادة التقدير الرسمية المتفوقة!
+                    </p>
+
+                    <!-- زر / شريط فتح الشهادة -->
+                    <div id="certificate-action" class="relative z-10">
+                        <!-- Rendered dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- 🏆 لوحة شرف الأبطال (مرتبة حسب النقاط الأسبوعية لأعلى 10 طلاب بنفس المرحلة) -->
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4 card-transition hover:shadow-md">
+                    <h3 class="font-black text-slate-800 flex items-center justify-center gap-2 text-base border-b border-gray-100 pb-3">
+                        <span class="text-amber-500 text-lg">👑</span>
+                        <span>لوحة شرف الأبطال الأسبوعية <span id="leaderboard-count">(أعلى 10)</span></span>
+                    </h3>
+                    <div id="leaderboard-list" class="space-y-2.5">
+                        <!-- أنيميشن التحميل الخاص بلوحة الشرف -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-2xl animate-pulse">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-gray-200 rounded-full skeleton"></div>
+                                <div class="h-4 bg-gray-200 rounded-full skeleton w-32"></div>
+                            </div>
+                            <div class="h-6 bg-gray-200 rounded-xl skeleton w-16"></div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-2xl animate-pulse">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-gray-200 rounded-full skeleton"></div>
+                                <div class="h-4 bg-gray-200 rounded-full skeleton w-24"></div>
+                            </div>
+                            <div class="h-6 bg-gray-200 rounded-xl skeleton w-16"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- التنبيهات -->
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
+                    <h3 class="font-black text-gray-950 flex items-center gap-2 text-base border-b border-gray-50 pb-3">
+                        <i class="fa-solid fa-bullhorn text-amber-500 animate-bounce"></i>
+                        تنبيهات هامة من مستر مجدي
+                    </h3>
+                    
+                    <div id="notifications-list" class="space-y-4">
+                        <div class="p-4 bg-gray-100 rounded-2xl animate-pulse">
+                            <div class="h-4 bg-gray-100 rounded-full skeleton w-1/2 mb-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الدعم التقني -->
+                <div class="bg-gradient-to-tr from-gray-900 to-emerald-950 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -bottom-6 -left-6 w-24 h-24 bg-emerald-600/20 blur-xl rounded-full transition-all group-hover:scale-150"></div>
+                    <h4 class="font-black text-sm mb-1"><i class="fa-solid fa-headset text-emerald-400 ml-1"></i> هل واجهتك مشكلة تقنية؟</h4>
+                    <p class="text-[11px] text-gray-300 leading-relaxed mb-4 font-medium">الدعم الفني والتقني متاح لخدمتك طوال اليوم لمساعدتك في حل أي مشكلة تخص تشغيل الفيديوهات أو الأكواد.</p>
+                    <a href="https://wa.me/201125105876" target="_blank" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white p-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20">
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <span>تواصل مع الدعم عبر واتساب</span>
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+        const SUPABASE_URL = 'https://equefefnimfaqkyckbep.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk';
+
+        const supabaseGlobal = typeof window !== 'undefined' ? (window.supabase || window.Supabase || null) : null;
+        const createClientFn = typeof window !== 'undefined'
+            ? (window.createClient || supabaseGlobal?.createClient || supabaseGlobal?.default?.createClient)
+            : null;
+
+        const supabaseClient = createClientFn ? createClientFn(SUPABASE_URL, SUPABASE_KEY) : null;
+
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
+        function formatStage(stage) {
+            if (!stage) return 'الصف الثالث الثانوي';
+            const cleanStage = String(stage).trim().toLowerCase();
+            
+            if (cleanStage.includes('إعدادي') || cleanStage.includes('اعدادي') || cleanStage.includes('prep')) {
+                if (cleanStage.includes('اول') || cleanStage.includes('أول') || cleanStage.includes('1')) return 'الصف الأول الإعدادي';
+                if (cleanStage.includes('ثاني') || cleanStage.includes('تانى') || cleanStage.includes('2')) return 'الصف الثاني الإعدادي';
+                if (cleanStage.includes('ثالث') || cleanStage.includes('تالته') || cleanStage.includes('تالتة') || cleanStage.includes('3')) return 'الصف الثالث الإعدادي';
+                return 'المرحلة الإعدادية';
+            }
+            
+            if (cleanStage.includes('ابتدائي') || cleanStage.includes('ابتدائى') || cleanStage.includes('primary')) {
+                return stage;
+            }
+
+            if (cleanStage.includes('first') || cleanStage.includes('1') || cleanStage.includes('اول') || cleanStage.includes('أول')) {
+                return 'الصف الأول الثانوي';
+            }
+            if (cleanStage.includes('second') || cleanStage.includes('2') || cleanStage.includes('ثاني') || cleanStage.includes('تانى')) {
+                return 'الصف الثاني الثانوي';
+            }
+            if (cleanStage.includes('third') || cleanStage.includes('3') || cleanStage.includes('ثالملث') || cleanStage.includes('ثالث') || cleanStage.includes('تالته') || cleanStage.includes('تالتة')) {
+                return 'الصف الثالث الثانوي';
+            }
+            
+            return stage;
+        }
+
+        async function initDashboard() {
+            if (!supabaseClient) return;
+
+            const profileNameEl = document.getElementById('profile-name');
+            const profileStageEl = document.getElementById('profile-stage');
+            const topBarStageEl = document.getElementById('top-bar-stage');
+            const accountStatusTextEl = document.getElementById('account-status-text');
+            const activeCoursesCountEl = document.getElementById('active-courses-count');
+            const watchedVideosCountEl = document.getElementById('watched-videos-count');
+            const averageScoreEl = document.getElementById('average-score');
+            const passedTestsCountEl = document.getElementById('passed-tests-count');
+            const coursesList = document.getElementById('courses-list');
+            const resultsTableBody = document.getElementById('results-table-body');
+            const notificationsList = document.getElementById('notifications-list');
+
+            try {
+                const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+                if (authError || !user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // 1. مزامنة الـ Daily Streak في الداتابيز بمجرد دخول الطالب
+                try {
+                    await supabaseClient.rpc('sync_student_daily_streak', { p_student_id: user.id });
+                } catch (streakRpcErr) {
+                    console.warn("فشلت مزامنة الـ Streak، ربما لم يتم إنشاء الـ Function بالكامل بعد:", streakRpcErr);
+                }
+
+                // 2. جلب بروفايل الطالب الحالي
+                const profileResponse = await supabaseClient
+                    .from('profiles')
+                    .select('id, full_name, stage, total_points, weekly_points, current_streak')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                const profile = profileResponse?.data;
+                const studentStage = profile?.stage;
+
+                // 3. جلب باقي البيانات بالتوازي + أعلى 10 طلاب بناءً على (weekly_points) النقاط الأسبوعية
+                const [allCoursesResponse, subscriptionsResponse, requestsResponse, resultsResponse, progressResponse, notificationsResponse, leaderboardResponse] = await Promise.all([
+                    supabaseClient.from('courses').select('*'),
+                    supabaseClient.from('course_subscriptions').select('*').eq('student_id', user.id), 
+                    supabaseClient.from('subscription_requests').select('*').eq('student_id', user.id), 
+                    supabaseClient.from('student_results').select('exam_id, score, submission_date, exams(title)').eq('student_id', user.id),
+                    supabaseClient.from('video_progress').select('course_id, progress_percent').eq('student_id', user.id),
+                    supabaseClient.from('notifications').select('message, created_at').or(`student_id.eq.${user.id},student_id.is.null`).order('created_at', { ascending: false }),
+                    
+                    // جلب أعلى 10 طلاب ترتيباً حسـب weekly_points النقاط الأسبوعية في نفس مرحلة الطالب الدراسية
+                    studentStage
+                        ? supabaseClient.from('profiles').select('id, full_name, weekly_points, total_points').eq('stage', studentStage).order('weekly_points', { ascending: false }).limit(10)
+                        : supabaseClient.from('profiles').select('id, full_name, weekly_points, total_points').order('weekly_points', { ascending: false }).limit(10)
+                ]);
+
+                const allCourses = allCoursesResponse?.data || [];
+                const leaderboardData = leaderboardResponse?.data || [];
+                
+                // بناء خريطة لتحديد حالة الكورس
+                const userSubs = {};
+
+                (requestsResponse?.data || []).forEach(req => {
+                    const cId = String(req.course_id);
+                    if (cId && cId !== 'undefined') {
+                        userSubs[cId] = req.status || 'pending';
+                    }
+                });
+
+                (subscriptionsResponse?.data || []).forEach(sub => {
+                    const cId = String(sub.course_id);
+                    if (cId && cId !== 'undefined') {
+                        userSubs[cId] = sub.status;
+                    }
+                });
+                
+                const videoProgressData = progressResponse?.data || [];
+                const progressMap = {};
+                
+                videoProgressData.forEach(p => {
+                    const cId = String(p.course_id);
+                    progressMap[cId] = p.progress_percent || 0;
+                });
+
+                // الكورسات النشطة الحقيقية
+                const activeCourses = allCourses.filter(course => {
+                    const cId = String(course.id);
+                    return userSubs[cId] === 'active' && course.is_visible !== false;
+                });
+                
+                const results = resultsResponse?.data || [];
+                const notifications = notificationsResponse?.data || [];
+
+                // مقارنة الصف الدراسي للطالب مع صف الكورس
+                const stageCourses = allCourses.filter(course => {
+                    if (!profile || !profile.stage) return true; 
+                    if (!course.stage) return true; 
+                    
+                    const studentStandardStage = formatStage(profile.stage);
+                    const courseStandardStage = formatStage(course.stage);
+                    
+                    return studentStandardStage === courseStandardStage;
+                });
+
+                // إعدادات الملف الشخصي والترحيب
+                if (profile && !profileResponse.error) {
+                    const arabicStage = formatStage(profile.stage);
+                    profileNameEl.textContent = `مرحباً بك يا بطل، ${profile.full_name}!`;
+                    profileStageEl.textContent = `الصف الدراسي: ${arabicStage}`;
+                    if (topBarStageEl) topBarStageEl.innerHTML = `<i class="fa-solid fa-graduation-cap ml-1"></i> ${arabicStage}`;
+                } else {
+                    profileNameEl.textContent = 'مرحباً بك يا بطل!';
+                    profileStageEl.textContent = 'الصف الثالث الثانوي';
+                }
+
+                profileNameEl.classList.remove('skeleton', 'w-64', 'h-10');
+                profileStageEl.classList.remove('skeleton', 'w-48', 'h-4');
+                accountStatusTextEl.textContent = 'حالة الحساب: نشط';
+                accountStatusTextEl.classList.remove('skeleton', 'w-40', 'h-4');
+
+                activeCoursesCountEl.textContent = `${activeCourses.length} كورسات`;
+                activeCoursesCountEl.classList.remove('skeleton', 'w-20', 'h-8');
+                
+                watchedVideosCountEl.textContent = `${videoProgressData.filter(p => p.progress_percent > 0).length} فيديو`;
+                watchedVideosCountEl.classList.remove('skeleton', 'w-20', 'h-8');
+                
+                averageScoreEl.textContent = formatAverageScore(results);
+                averageScoreEl.classList.remove('skeleton', 'w-20', 'h-8');
+                
+                passedTestsCountEl.textContent = `${results.length} اختبارات`;
+                passedTestsCountEl.classList.remove('skeleton', 'w-20', 'h-8');
+
+                // رندرة العناصر
+                coursesList.innerHTML = buildCoursesHtml(stageCourses, userSubs, progressMap);
+                resultsTableBody.innerHTML = buildResultsHtml(results);
+                notificationsList.innerHTML = buildNotificationsHtml(notifications);
+                
+                // جلب قيم التنافس من حساب الطالب
+                const realTotalPoints = profile?.total_points || 0;
+                const realWeeklyPoints = profile?.weekly_points || 0;
+                const realStreak = profile?.current_streak || 0;
+
+                // رندرة كارت الأداء التنافسي ولوحة الشرف الأسبوعية
+                setupGamification(realTotalPoints, realWeeklyPoints, realStreak, profile?.full_name || 'طالب متميز');
+                buildLeaderboard(leaderboardData, user?.id, profile?.full_name);
+
+            } catch (globalError) {
+                console.error("حدث خطأ أثناء تحميل لوحة التحكم:", globalError);
+                coursesList.innerHTML = '<div class="text-red-500 font-bold p-4">عذراً، حدث خطأ أثناء تحميل البيانات.</div>';
+                resultsTableBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500 font-bold">فشل تحميل كشف الدرجات.</td></tr>';
+            }
+        }
+
+        function buildCoursesHtml(allCourses = [], userSubs = {}, progressMap = {}) {
+            if (!allCourses.length) {
+                return '<div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 text-center text-gray-500 font-semibold col-span-2">لا توجد كورسات متاحة حالياً لصفك الدراسي في المنصة.</div>';
+            }
+            
+            return allCourses.map(course => {
+                const cId = String(course.id);
+                const status = userSubs[cId];
+                
+                const isGloballyDisabled = course.is_visible === false;
+                const isStudentDisabled = status === 'disabled' || status === 'suspended' || status === 'inactive';
+                const isDisabled = isGloballyDisabled || isStudentDisabled;
+
+                const isUnlocked = status === 'active' && !isDisabled;
+                const isPending = status === 'pending' && !isDisabled;
+                
+                const progress = Math.min(Math.max(Number(progressMap[cId]) || 0, 0), 100);
+                const isFree = Number(course.price) === 0;
+                
+                let badgeHtml = '';
+                if (isDisabled) {
+                    badgeHtml = `<span class="bg-red-50 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-ban ml-0.5"></i> معطل</span>`;
+                } else if (isUnlocked) {
+                    badgeHtml = `<span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-circle-check ml-0.5"></i> مشترك ومفتوح</span>`;
+                } else if (isPending) {
+                    badgeHtml = `<span class="bg-amber-50 text-amber-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-clock ml-0.5"></i> قيد المراجعة</span>`;
+                } else {
+                    badgeHtml = `<span class="bg-gray-100 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-lock ml-0.5"></i> متاح للاشتراك</span>`;
+                }
+                
+                let infoSectionHtml = '';
+                if (isUnlocked) {
+                    infoSectionHtml = `
+                        <div class="space-y-1.5 pt-2">
+                            <div class="flex justify-between text-xs font-bold">
+                                <span class="text-gray-400">نسبة الإنجاز في الفيديو</span>
+                                <span class="text-blue-600">${progress}%</span>
+                            </div>
+                            <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-600 rounded-full transition-all duration-500" style="width: ${progress}%;"></div>
+                            </div>
+                        </div>`;
+                } else {
+                    const priceText = isFree ? "مجاني" : `${course.price || 0} ج.م`;
+                    infoSectionHtml = `
+                        <div class="flex justify-between items-center pt-2 text-xs font-bold">
+                            <span class="text-gray-400">تكلفة تفعيل المحتوى:</span>
+                            <span class="text-slate-900 bg-gray-100 px-2.5 py-1 rounded-lg font-black tracking-wide">${priceText}</span>
+                        </div>`;
+                }
+
+                let actionButtonHtml = '';
+                if (isDisabled) {
+                    const disableReason = isGloballyDisabled ? "الكورس معطل حالياً" : "حسابك معطل لهذا الكورس";
+                    actionButtonHtml = `
+                        <button disabled class="w-full bg-gray-200 text-gray-500 font-bold py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-not-allowed">
+                            <span>${disableReason}</span>
+                            <i class="fa-solid fa-circle-xmark text-[10px]"></i>
+                        </button>`;
+                } else if (isUnlocked) {
+                    actionButtonHtml = `
+                        <a href="course-details.html?course_id=${course.id}" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20">
+                            <span>الدخول للكورس</span>
+                            <i class="fa-solid fa-play text-[10px]"></i>
+                        </a>`;
+                } else if (isPending) {
+                    actionButtonHtml = `
+                        <button disabled class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md opacity-90 cursor-not-allowed">
+                            <span>قيد المراجعة</span>
+                            <i class="fa-solid fa-hourglass-half text-[10px] animate-spin"></i>
+                        </button>`;
+                } else {
+                    if (isFree) {
+                        actionButtonHtml = `
+                            <button onclick="handleFreeSubscription(${course.id})" id="btn-free-${course.id}" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md">
+                                <span>اشترك مجاناً الآن ⚡</span>
+                                <i class="fa-solid fa-bolt text-[10px]"></i>
+                            </button>`;
+                    } else {
+                        actionButtonHtml = `
+                            <a href="checkout.html?course_id=${course.id}" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md">
+                                <span>اشترك الآن</span>
+                                <i class="fa-solid fa-cart-plus text-[10px]"></i>
+                            </a>`;
+                    }
+                }
+
+                const borderClass = isDisabled ? 'border-gray-200 bg-gray-50/50 opacity-80 grayscale-[0.2]' :
+                                    isUnlocked ? 'border-blue-100/50' : 
+                                    (isPending ? 'border-amber-200/60 bg-gradient-to-b from-white to-amber-50/10' : 'border-gray-100');
+
+                const hoverEffect = isDisabled ? '' : 'card-transition hover:shadow-xl hover:-translate-y-1';
+
+                return `
+                    <div class="bg-white rounded-3xl border ${borderClass} shadow-sm p-5 space-y-4 ${hoverEffect} animate-fade-in relative">
+                        <div class="flex justify-between items-start">
+                            ${badgeHtml}
+                            <span class="text-xs font-bold text-gray-400">${escapeHtml(formatStage(course.stage))}</span>
+                        </div>
+                        <h3 class="font-black text-gray-950 text-base leading-tight ${isDisabled ? 'text-gray-500' : ''}">${escapeHtml(course.title)}</h3>
+                        
+                        ${infoSectionHtml}
+                        
+                        <div class="pt-1">
+                            ${actionButtonHtml}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function buildResultsHtml(results = []) {
+            if (!results.length) {
+                return '<tr><td colspan="4" class="p-5 text-center text-gray-400">لا توجد نتائج لعرضها حتى الآن.</td></tr>';
+            }
+            return results.map(result => {
+                const date = formatDate(result.submission_date);
+                const scoreText = typeof result.score === 'number' ? `${result.score}%` : result.score || '-';
+                const examTitle = result.exams?.title || `اختبار رقم (${result.exam_id})`;
+                
+                return `
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="p-4 md:p-5 font-bold text-gray-950">${escapeHtml(examTitle)}</td>
+                        <td class="p-4 md:p-5 text-gray-400">${escapeHtml(date)}</td>
+                        <td class="p-4 md:p-5 text-emerald-600 font-bold">${escapeHtml(scoreText)}</td>
+                        <td class="p-4 md:p-5"><span class="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md">${getBadgeLabel(result.score)}</span></td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function buildNotificationsHtml(notifications = []) {
+            if (!notifications.length) {
+                return '<div class="p-4 bg-gray-50 rounded-2xl text-gray-500 font-semibold text-sm">لا توجد تنبيهات جديدة.</div>';
+            }
+            return notifications.map(item => {
+                const createdAt = formatDate(item.created_at);
+                return `
+                    <div class="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-500/10 space-y-1.5 card-transition animate-fade-in">
+                        <h4 class="text-xs font-black text-emerald-900 flex items-center gap-1"><i class="fa-solid fa-bell"></i> ${createdAt}</h4>
+                        <p class="text-xs text-emerald-800 leading-relaxed font-semibold">${escapeHtml(item.message)}</p>
+                    </div>`;
+            }).join('');
+        }
+
+        // إعداد وتحديث كارت الأداء التنافسي
+        function setupGamification(points, weeklyPoints, streak, studentName) {
+            const threshold = 50; 
+            document.getElementById('points-display').textContent = points;
+            document.getElementById('weekly-points-display').textContent = weeklyPoints;
+            document.getElementById('streak-display').textContent = `${streak} يوم متتالي`;
+            
+            const actionContainer = document.getElementById('certificate-action');
+            
+            // تعيين بيانات الشهادة
+            document.getElementById('cert-student-name').textContent = studentName;
+            document.getElementById('cert-points').textContent = points;
+            document.getElementById('cert-date').textContent = new Date().toLocaleDateString('ar-EG');
+
+            if (points >= threshold) {
+                actionContainer.innerHTML = `
+                    <button onclick="printCertificate()" class="w-full bg-[#0e3f30] hover:bg-[#134d3c] border border-emerald-500/50 text-amber-400 font-black py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm">
+                        <span>🎉 مبروك! اضغط هنا لاستخراج شهادة التقدير</span>
+                        <span>🏆</span>
+                    </button>`;
+            } else {
+                const remaining = threshold - points;
+                actionContainer.innerHTML = `
+                    <div class="bg-[#0e3f30] border border-emerald-700/50 rounded-xl py-3 px-4 text-center font-bold text-xs text-emerald-200 flex items-center justify-center gap-2 shadow-inner">
+                        <span>متبقي لك ${remaining} نقطة لفتح الشهادة</span>
+                        <span>🎯</span>
+                    </div>`;
+            }
+        }
+
+        // بناء لوحة شرف الأبطال (تأخذ أعلى 10 طلاب بناءً على النقاط الأسبوعية weekly_points)
+        function buildLeaderboard(leaderboardData = [], currentUserId, currentUserName) {
+            const leaderboardList = document.getElementById('leaderboard-list');
+            const leaderboardCountEl = document.getElementById('leaderboard-count');
+            
+            if (leaderboardCountEl) {
+                leaderboardCountEl.textContent = `(أعلى ${Math.min(leaderboardData.length, 10)})`;
+            }
+
+            if (!leaderboardData || !leaderboardData.length) {
+                leaderboardList.innerHTML = '<div class="text-xs text-gray-400 text-center py-4 font-semibold">لا توجد بيانات متوفرة للوحة الصدارة حالياً.</div>';
+                return;
+            }
+
+            leaderboardList.innerHTML = leaderboardData.map((student, index) => {
+                const rank = index + 1;
+                const isMe = (student.id && student.id === currentUserId) || (student.full_name === currentUserName);
+                
+                let badgeStyle = "bg-gray-100 text-gray-600 border-gray-200";
+                let badgeIcon = `<span class="text-xs font-black">#${rank}</span>`;
+
+                if (rank === 1) {
+                    badgeStyle = "bg-amber-100 text-amber-700 border-amber-300";
+                    badgeIcon = "🥇";
+                } else if (rank === 2) {
+                    badgeStyle = "bg-slate-100 text-slate-700 border-slate-300";
+                    badgeIcon = "🥈";
+                } else if (rank === 3) {
+                    badgeStyle = "bg-orange-100 text-orange-800 border-orange-200";
+                    badgeIcon = "🥉";
+                }
+
+                const rowStyle = isMe 
+                    ? 'bg-emerald-50 border-2 border-emerald-400 shadow-sm' 
+                    : 'bg-gray-50/80 border border-gray-100/80 hover:bg-gray-100/60';
+
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-2xl ${rowStyle} transition-all">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm border shrink-0 ${badgeStyle}">
+                                ${badgeIcon}
+                            </span>
+                            <span class="font-bold text-xs sm:text-sm truncate ${isMe ? 'text-emerald-950 font-black' : 'text-slate-800'}">
+                                ${escapeHtml(student.full_name)} ${isMe ? '<span class="text-[10px] text-emerald-700 font-bold bg-emerald-200/50 px-1.5 py-0.5 rounded-md mr-1">(أنت)</span>' : ''}
+                            </span>
+                        </div>
+                        <div class="bg-emerald-100/70 border border-emerald-200 rounded-xl px-3 py-1 text-xs font-black text-emerald-900 shadow-2xs shrink-0 mr-2">
+                            ${student.weekly_points || 0} نقطة
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // فتح الشهادة وتفعيل شاشة الطباعة
+        function printCertificate() {
+            const certContainer = document.getElementById('certificate-container');
+            certContainer.classList.remove('hidden');
+            certContainer.classList.add('flex');
+            
+            // تأخير بسيط للسماح للأنيميشن والخطوط بالتحميل قبل فتح نافذة الطباعة
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+
+        // إغلاق الشهادة
+        function closeCertificate() {
+            const certContainer = document.getElementById('certificate-container');
+            certContainer.classList.add('hidden');
+            certContainer.classList.remove('flex');
+        }
+
+        function formatDate(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? '' : date.toLocaleDateString('ar-EG');
+        }
+
+        function formatAverageScore(results = []) {
+            const numericScores = results
+                .map(item => Number(item.score))
+                .filter(score => !Number.isNaN(score));
+            if (!numericScores.length) return '0%';
+            const average = numericScores.reduce((sum, score) => sum + score, 0) / numericScores.length;
+            return `${Math.round(average * 10) / 10}%`;
+        }
+
+        function getBadgeLabel(score) {
+            const numericScore = Number(score);
+            if (!Number.isNaN(numericScore)) {
+                if (numericScore >= 90) return 'ممتاز 👏';
+                if (numericScore >= 75) return 'جيد جداً ⭐';
+                if (numericScore >= 60) return 'جيد';
+                return 'بحاجة لتحسين';
+            }
+            return 'تم الانتهاء';
+        }
+
+        // ==================== نظام الإشعارات المخصص (Toast Notification System) ====================
+        class ToastNotification {
+            constructor() {
+                this.toasts = [];
+                this.container = null;
+                this.initContainer();
+            }
+
+            initContainer() {
+                if (!this.container) {
+                    this.container = document.createElement('div');
+                    this.container.className = 'toast-viewport';
+                    document.body.appendChild(this.container);
+                }
+            }
+
+            show(options = {}) {
+                const {
+                    title = 'إشعار',
+                    message = '',
+                    type = 'success',
+                    duration = 5000,
+                    icon = null
+                } = options;
+
+                const toastId = Math.random().toString(36).substr(2, 9);
+                
+                const iconMap = {
+                    success: 'fa-check-circle',
+                    error: 'fa-exclamation-circle',
+                    warning: 'fa-triangle-exclamation',
+                    info: 'fa-info-circle'
+                };
+
+                const toastEl = document.createElement('div');
+                toastEl.className = `toast toast--${type} toast-enter`;
+                toastEl.setAttribute('data-id', toastId);
+                
+                toastEl.innerHTML = `
+                    <div class="toast-icon">
+                        <i class="fa-solid ${icon || iconMap[type]}"></i>
+                    </div>
+                    <div class="toast-body">
+                        <div class="toast-title">${escapeHtml(title)}</div>
+                        ${message ? `<div class="toast-message">${escapeHtml(message)}</div>` : ''}
+                    </div>
+                    <div class="toast-actions">
+                        <button class="toast-close" onclick="toastSystem.remove('${toastId}')">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="toast-progress">
+                        <i style="animation: toastProgress linear ${duration}ms forwards;"></i>
+                    </div>
+                `;
+
+                this.container.appendChild(toastEl);
+                
+                setTimeout(() => {
+                    toastEl.classList.remove('toast-enter');
+                    toastEl.classList.add('toast-enter-active');
+                }, 10);
+
+                this.toasts.push({ id: toastId, el: toastEl, duration });
+
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.remove(toastId);
+                    }, duration);
+                }
+
+                return toastId;
+            }
+
+            success(title, message = '', duration = 5000) {
+                return this.show({ title, message, type: 'success', duration, icon: 'fa-check-circle' });
+            }
+
+            error(title, message = '', duration = 5000) {
+                return this.show({ title, message, type: 'error', duration, icon: 'fa-exclamation-circle' });
+            }
+
+            warning(title, message = '', duration = 5000) {
+                return this.show({ title, message, type: 'warning', duration, icon: 'fa-triangle-exclamation' });
+            }
+
+            info(title, message = '', duration = 5000) {
+                return this.show({ title, message, type: 'info', duration, icon: 'fa-info-circle' });
+            }
+
+            remove(toastId) {
+                const toastObj = this.toasts.find(t => t.id === toastId);
+                if (toastObj) {
+                    toastObj.el.classList.remove('toast-enter-active');
+                    toastObj.el.classList.add('toast-exit-active');
+                    
+                    setTimeout(() => {
+                        if (toastObj.el.parentNode) {
+                            toastObj.el.parentNode.removeChild(toastObj.el);
+                        }
+                        this.toasts = this.toasts.filter(t => t.id !== toastId);
+                    }, 280);
+                }
+            }
+
+            clear() {
+                this.toasts.forEach(t => this.remove(t.id));
+            }
+        }
+
+        const toastSystem = new ToastNotification();
+
+        function showNotification(type, title, message = '', duration = 5000) {
+            return toastSystem[type](title, message, duration);
+        }
+
+        async function handleFreeSubscription(courseId) {
+            const btn = document.getElementById(`btn-free-${courseId}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>جاري تفعيل الاشتراك...</span> <i class="fa-solid fa-spinner animate-spin text-[10px]"></i>`;
+            }
+            
+            try {
+                const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+                if (authError || !user) {
+                    toastSystem.warning('تنبيه أمان', 'برجاء تسجيل الدخول أولاً لتتمكن من الاشتراك.');
+                    window.location.href = 'auth.html';
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from('course_subscriptions')
+                    .insert([
+                        { 
+                            student_id: user.id,
+                            course_id: courseId,
+                            status: 'active' 
+                        }
+                    ]);
+
+                if (error) {
+                    toastSystem.error('خطأ في التفعيل', `حدث خطأ أثناء تفعيل الاشتراك المجاني: ${error.message}`);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<span>اشترك مجاناً الآن ⚡</span> <i class="fa-solid fa-bolt text-[10px]"></i>`;
+                    }
+                } else {
+                    toastSystem.success('تم الاشتراك بنجاح!', 'تم الاشتراك في الكورس المجاني بنجاح! استمتع بالمشاهدة 🎉', 4000);
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            } catch (err) {
+                console.error("خطأ غير متوقع:", err);
+                toastSystem.error('خطأ غير متوقع', 'يرجى المحاولة لاحقاً.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>اشترك مجاناً الآن ⚡</span> <i class="fa-solid fa-bolt text-[10px]"></i>`;
+                }
+            }
+        }
+
+        async function handleLogout() {
+            if (!supabaseClient) return;
+            await supabaseClient.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>البث المباشر التفاعلي | المنصة التعليمية</title>
+    <!-- Tailwind CSS للتحكم السريع في التصميم والتجاوب -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة الأيقونات FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- مكتبة Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- استدعاء مكتبة Jitsi Meet بدلاً من Agora -->
+    <script src="https://meet.jit.si/external_api.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap');
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0b0f19; /* خلفية ليلية فاخرة */
+        }
+        /* إخفاء شريط التمرير للدردشة مع إبقاء إمكانية التمرير */
+        .chat-container::-webkit-scrollbar {
+            width: 5px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col">
+
+    <!-- الهيدر العلوي للمنصة -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center shadow-lg shadow-red-600/20">
+                <i class="fa-solid fa-graduation-cap text-lg text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide">المنصة التعليمية الذكية</h1>
+                <p class="text-xs text-slate-400">البث المباشر التفاعلي</p>
+            </div>
+        </div>
+        <!-- حالة البث ونبض التنبيه -->
+        <div id="liveBadgeContainer" class="hidden flex items-center gap-2 bg-red-950/50 border border-red-500/30 px-3 py-1.5 rounded-full">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span class="text-xs font-bold text-red-400">مباشر الآن</span>
+        </div>
+    </header>
+
+    <!-- الجسم الرئيسي لغرفة البث -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-4 overflow-hidden">
+        
+        <!-- قسم الفيديو ووصف الدرس (يأخذ 3/4 من المساحة في الشاشات الكبيرة) -->
+        <div class="lg:col-span-3 p-4 lg:p-6 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-80px)]">
+            
+            <!-- مشغل البث (Video Player Container) -->
+            <div class="relative aspect-video w-full bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-2xl group">
+                <!-- هذا العنصر سيتم حقن البث المباشر داخله بواسطة Jitsi -->
+                <div id="remoteVideoPlayer" class="w-full h-full"></div>
+                
+                <!-- واجهة انتظار عند عدم وجود بث -->
+                <div id="offlinePlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-10">
+                    <div id="offlineIcon" class="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-slate-500">
+                        <i class="fa-solid fa-video-slash text-3xl"></i>
+                    </div>
+                    <h3 id="offlineTitle" class="text-xl font-bold text-slate-300">البث المباشر مغلق حالياً</h3>
+                    <p id="offlineDesc" class="text-sm text-slate-500 mt-1">يرجى الانتظار لحين بدء المدرس الحصة المباشرة</p>
+                </div>
+
+                <!-- تراكب البيانات على الفيديو (Overlays) -->
+                <div class="absolute top-4 right-4 z-20 flex gap-2">
+                    <span id="viewerCount" class="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-white/10">
+                        <i class="fa-solid fa-eye text-red-500"></i>
+                        <span id="viewerNum">0</span> مشاهد
+                    </span>
+                </div>
+            </div>
+
+            <!-- معلومات الدرس والوصف -->
+            <div class="bg-slate-900/50 border border-slate-800/80 p-5 rounded-2xl">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 id="streamTitle" class="text-xl font-black text-white">جاري تحميل عنوان الدرس...</h2>
+                        <div class="flex items-center gap-3 mt-2 text-sm text-slate-400">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-user-tie text-red-500"></i> مستر مجدي شافعي</span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                            <span id="streamTime"><i class="fa-solid fa-calendar-day"></i> اليوم</span>
+                        </div>
+                    </div>
+                    <!-- زر الدعم التقني السريع للطالب -->
+                    <button class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 self-start">
+                        <i class="fa-solid fa-circle-question text-amber-500"></i> هل تواجه مشكلة في الصوت أو الصورة؟
+                    </button>
+                </div>
+                <!-- تفاصيل الحصة والوصف -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-300 mb-2">💡 تفاصيل ومحاور هذه الحصة المباشرة:</h4>
+                    <p id="streamDescription" class="text-sm text-slate-400 leading-relaxed">
+                        جاري تحميل تفاصيل ومحاور الحصة المباشرة حالياً...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- قسم المحادثة الفورية (Live Chat) (يأخذ 1/4 المساحة) -->
+        <div class="lg:col-span-1 border-t lg:border-t-0 lg:border-r border-slate-800 bg-slate-900/30 flex flex-col h-[600px] lg:h-[calc(100vh-80px)]">
+            
+            <!-- هيدر الدردشة -->
+            <div class="p-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-red-500"></i>
+                    <span class="font-bold text-sm text-white">الدردشة التفاعلية</span>
+                </div>
+                <span class="bg-red-500/10 text-red-400 text-[10px] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider">مباشر</span>
+            </div>
+
+            <!-- حاوية الرسائل المتدفقة -->
+            <div id="chatMessages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 chat-container">
+                <!-- رسالة ترحيبية افتراضية -->
+                <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800">
+                    <p class="text-xs text-slate-400 leading-relaxed text-center">أهلاً بك في البث! يرجى الالتزام بالآداب العامة أثناء النقاش مع الأستاذ وزملائك.</p>
+                </div>
+            </div>
+
+            <!-- إرسال رسالة جديدة -->
+            <div class="p-4 border-t border-slate-800 bg-slate-900/60">
+                <form id="chatForm" class="flex gap-2">
+                    <input type="text" id="chatInput" placeholder="اكتب سؤالك للأستاذ هنا..." required autocomplete="off"
+                           class="flex-1 bg-slate-950 border border-slate-800 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-slate-200 text-sm rounded-xl px-4 py-3 outline-none transition placeholder:text-slate-600">
+                    <button type="submit" class="bg-red-600 hover:bg-red-500 text-white w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 transition active:scale-95">
+                        <i class="fa-solid fa-paper-plane transform rotate-180 text-sm"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- كود التشغيل والربط البرمجي مع Supabase & Jitsi -->
+    <script>
+        // === 1. إعدادات بيئة العمل الأساسية ===
+        const SUPABASE_URL = "https://equefefnimfaqkyckbep.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk"; 
+        
+        const ROOM_ID = "00000000-0000-0000-0000-000000000001"; // معرف الغرفة الافتراضية
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let jitsiApi = null; // الاحتفاظ بكائن البث المباشر لـ Jitsi
+        let studentName = "طالب مميز " + Math.floor(Math.random() * 1000);
+
+        // === 2. جلب وتحديث حالة البث من قاعدة البيانات ===
+        async function fetchRoomDetails() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('live_rooms')
+                    .select('*')
+                    .eq('id', ROOM_ID)
+                    .single();
+
+                if (error) throw error;
+
+                if (data) {
+                    document.getElementById('streamTitle').innerText = data.title || "لا توجد حصة مفعلة حالياً";
+                    document.getElementById('streamDescription').innerText = data.description || "لا يوجد وصف متوفر.";
+                    
+                    if (data.status === 'live') {
+                        document.getElementById('liveBadgeContainer').classList.remove('hidden');
+                        // الاتصال بـ Jitsi باستخدام اسم القناة (Room Name) القادم من الـ database
+                        joinLiveStream(data.channel_name);
+                    } else {
+                        document.getElementById('liveBadgeContainer').classList.add('hidden');
+                        showOfflineUI("البث المباشر مغلق حالياً", "يرجى الانتظار لحين بدء المدرس الحصة المباشرة", "fa-video-slash");
+                        leaveLiveStream();
+                    }
+                }
+            } catch (err) {
+                console.error("خطأ في جلب بيانات الغرفة:", err);
+            }
+        }
+
+        // === 3. تتبع تحديثات البث مباشرة (Realtime Subscriptions) ===
+        function subscribeToLiveRoomUpdates() {
+            supabaseClient
+                .channel('room-status-changes')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_rooms', filter: `id=eq.${ROOM_ID}` }, payload => {
+                    console.log('تم تحديث حالة البث المباشر في قاعدة البيانات!', payload.new);
+                    fetchRoomDetails(); 
+                })
+                .subscribe();
+        }
+
+        // === 4. دمج الـ Jitsi Meet داخل الصفحة ===
+        async function joinLiveStream(channelName) {
+            if (jitsiApi) return; // متصل بالفعل لتجنب تكرار تحميل البث
+
+            try {
+                // إخفاء واجهة الانتظار
+                document.getElementById('offlinePlaceholder').classList.add('hidden');
+
+                const domain = 'meet.jit.si';
+                const options = {
+                    roomName: channelName, // استخدام اسم الغرفة الديناميكي من الـ Database
+                    width: '100%',
+                    height: '100%',
+                    parentNode: document.querySelector('#remoteVideoPlayer'),
+                    userInfo: {
+                        displayName: studentName // إرسال اسم الطالب تلقائياً للغرفة
+                    },
+                    configOverwrite: {
+                        disableDeepLinking: true, // يمنع إجبار الطالب على الخروج أو تحميل تطبيق خارجي
+                        startWithAudioMuted: true, // يفتح الصوت صامت افتراضياً لتجنب الإزعاج
+                        startWithVideoMuted: true, // يغلق كاميرا الطالب تلقائياً عند الدخول كـ مستمع
+                        prejoinPageEnabled: false // تخطي صفحة الانتظار والاتصال مباشرة
+                    },
+                    interfaceConfigOverwrite: {
+                        // تخصيص الواجهة لتكون مناسبة للطلاب (إخفاء خيارات التحكم الزائدة)
+                        TOOLBAR_BUTTONS: [
+                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                            'factions', 'shareaudio', 'raisehand', 'videoquality', 'filmstrip'
+                        ]
+                    }
+                };
+
+                // إنشاء نافذة البث داخل الـ Div المخصص
+                jitsiApi = new JitsiMeetExternalAPI(domain, options);
+                updateViewerCount(1); // تحديث افتراضي لعداد المشاهدين
+
+                // الاستماع لحدث الخروج من الغرفة
+                jitsiApi.addEventListener('readyToClose', () => {
+                    leaveLiveStream();
+                });
+
+            } catch (err) {
+                console.error("فشل الاتصال بالبث المباشر (Jitsi):", err);
+                showOfflineUI("فشل الاتصال بالبث", "حدث خطأ أثناء تشغيل محرك الفيديو الخاص باللايف.", "fa-circle-exclamation text-rose-500");
+            }
+        }
+
+        async function leaveLiveStream() {
+            if (jitsiApi) {
+                try {
+                    jitsiApi.dispose(); // إغلاق وتهيئة اتصال Jitsi بالكامل
+                    console.log("تم مغادرة قناة البث بنجاح.");
+                } catch (err) {
+                    console.error("خطأ أثناء مغادرة البث:", err);
+                } finally {
+                    jitsiApi = null;
+                    document.getElementById("remoteVideoPlayer").innerHTML = ""; // تصفير مشغل الفيديو
+                    updateViewerCount(0);
+                }
+            }
+        }
+
+        // مساعد لتعديل واجهة الانتظار
+        function showOfflineUI(title, desc, iconClass) {
+            document.getElementById('offlinePlaceholder').classList.remove('hidden');
+            document.getElementById('offlineTitle').innerText = title;
+            document.getElementById('offlineDesc').innerText = desc;
+            
+            const iconContainer = document.getElementById('offlineIcon');
+            iconContainer.className = `w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4`;
+            iconContainer.innerHTML = `<i class="fa-solid ${iconClass} text-3xl"></i>`;
+        }
+
+        function updateViewerCount(num) {
+            document.getElementById('viewerNum').innerText = num;
+        }
+
+        // === 5. نظام المحادثة الفورية (Live Chat System) ===
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const messageText = input.value.trim();
+            if (!messageText) return;
+
+            const { error } = await supabaseClient
+                .from('live_messages')
+                .insert({
+                    room_id: ROOM_ID,
+                    sender_name: studentName,
+                    sender_role: 'student',
+                    message: messageText
+                });
+
+            if (!error) {
+                input.value = '';
+            } else {
+                console.error("خطأ في إرسال الرسالة:", error);
+            }
+        });
+
+        async function loadPreviousMessages() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('live_messages')
+                    .select('*')
+                    .eq('room_id', ROOM_ID)
+                    .order('created_at', { ascending: true })
+                    .limit(50);
+
+                if (error) throw error;
+
+                if (data) {
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800">
+                            <p class="text-xs text-slate-400 leading-relaxed text-center">أهلاً بك في البث! يرجى الالتزام بالآداب العامة أثناء النقاش مع الأستاذ وزملائك.</p>
+                        </div>
+                    `;
+                    data.forEach(msg => appendMessageToChat(msg));
+                }
+            } catch (err) {
+                console.error("خطأ في تحميل الرسائل السابقة:", err);
+            }
+        }
+
+        function subscribeToNewMessages() {
+            supabaseClient
+                .channel('chat-messages')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages', filter: `room_id=eq.${ROOM_ID}` }, payload => {
+                    appendMessageToChat(payload.new);
+                })
+                .subscribe();
+        }
+
+        function appendMessageToChat(msg) {
+            const chatBox = document.getElementById('chatMessages');
+            const isTeacher = msg.sender_role === 'admin';
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = `flex flex-col gap-1 max-w-[85%] rounded-2xl p-3 ${
+                isTeacher 
+                ? 'bg-amber-500/10 border border-amber-500/20 mr-auto text-right' 
+                : 'bg-slate-800/60 border border-slate-700/50 ml-auto text-right'
+            }`;
+
+            messageElement.innerHTML = `
+                <div class="flex items-center gap-1.5 justify-start">
+                    <span class="text-xs font-bold ${isTeacher ? 'text-amber-400' : 'text-slate-300'}">
+                        ${msg.sender_name}
+                    </span>
+                    ${isTeacher ? '<span class="bg-amber-500/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded">المعلم</span>' : ''}
+                </div>
+                <p class="text-sm text-slate-200 leading-relaxed break-words mt-0.5">${msg.message}</p>
+            `;
+
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // === 6. بدء تشغيل الصفحة بالكامل عند التحميل ===
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchRoomDetails();
+            loadPreviousMessages();
+            subscribeToLiveRoomUpdates();
+            subscribeToNewMessages();
+        });
+    </script>
+</body>
+</html>
