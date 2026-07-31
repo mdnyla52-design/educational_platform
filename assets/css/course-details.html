@@ -40,6 +40,51 @@
             pointer-events: none;
             cursor: not-allowed;
         }
+
+        /* تنسيقات شريط التقدم الخاص بمشغل الفيديو */
+        input[type=range].video-progress-bar {
+            -webkit-appearance: none;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            height: 6px;
+            border-radius: 5px;
+            outline: none;
+            transition: 0.2s;
+            cursor: pointer;
+            direction: ltr;
+        }
+        input[type=range].video-progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10b981;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        input[type=range].video-progress-bar::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+        }
+        
+        /* إخفاء إشعارات يوتيوب التي قد تظهر أعلى الفيديو */
+        .ytp-impression-link, .ytp-watermark {
+            display: none !important;
+        }
+
+        /* تنسيق العلامة المائية للحماية */
+        .watermark-text {
+            user-select: none;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
+            animation: floatWatermark 30s infinite alternate ease-in-out;
+        }
+        @keyframes floatWatermark {
+            0% { top: 10%; left: 10%; }
+            25% { top: 15%; left: 60%; }
+            50% { top: 70%; left: 55%; }
+            75% { top: 65%; left: 15%; }
+            100% { top: 30%; left: 40%; }
+        }
     </style>
 </head>
 <body class="font-cairo bg-gray-50 text-gray-800 antialiased">
@@ -96,13 +141,79 @@
                         <p class="text-xs text-emerald-400 font-medium">مشغل فيديو آمن ومحمي</p>
                     </div>
 
-                    <div id="actual-video" class="hidden w-full h-full bg-gray-950 relative">
-                        <div id="youtube-player-container" class="w-full h-full hidden"></div>
-                        <div id="native-video-container" class="w-full h-full hidden"></div>
+                    <!-- الحاوية الرئيسية للفيديو التي سيتم تكبيرها (Fullscreen) -->
+                    <div id="actual-video" class="hidden w-full h-full bg-black relative">
                         
-                        <div id="video-loading-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2 bg-gray-950 z-10">
+                        <!-- إطار يوتيوب مع تعطيل النقر عليه تماماً للحماية -->
+                        <div id="youtube-player-container" class="absolute inset-0 w-full h-full pointer-events-none scale-105"></div>
+                        
+                        <!-- طبقة حماية شفافة لمنع أي تفاعل مباشر مع الفيديو (كليك يمين أو نسخ) -->
+                        <div class="absolute inset-0 w-full h-full z-10 bg-transparent pointer-events-auto" oncontextmenu="return false;"></div>
+
+                        <!-- العلامة المائية (اسم الطالب والقسم) -->
+                        <div id="video-watermark" class="absolute z-20 pointer-events-none opacity-40 watermark-text flex flex-col items-center justify-center transform -rotate-12">
+                            <span id="watermark-student-name" class="text-white font-black text-2xl sm:text-3xl text-center"></span>
+                            <span id="watermark-section-name" class="text-emerald-400 font-bold text-lg sm:text-xl mt-1 text-center"></span>
+                        </div>
+                        
+                        <div id="native-video-container" class="absolute inset-0 w-full h-full hidden"></div>
+                        
+                        <!-- مشغل الفيديو الاحترافي المخصص (الطبقة العازلة) -->
+                        <div id="custom-video-controls" class="absolute inset-0 w-full h-full flex flex-col justify-between opacity-0 hover:opacity-100 transition-opacity duration-300 z-30">
+                            <!-- طبقة تظليل علوية لإخفاء أي تسريب لعنوان يوتيوب -->
+                            <div class="w-full h-24 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"></div>
+                            
+                            <!-- منطقة النقر الوسطى للتشغيل والإيقاف -->
+                            <div id="center-click-area" class="flex-1 w-full h-full cursor-pointer flex items-center justify-center" oncontextmenu="return false;">
+                                <i id="center-play-icon" class="fa-solid fa-play text-6xl text-white/50 hidden"></i>
+                            </div>
+
+                            <!-- شريط التحكم السفلي -->
+                            <div class="w-full bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pt-8" oncontextmenu="return false;">
+                                <input type="range" id="custom-seek-bar" class="video-progress-bar mb-3" value="0" min="0" max="100" step="0.1">
+                                
+                                <div class="flex items-center justify-between text-white" dir="ltr">
+                                    
+                                    <!-- أزرار التشغيل والوقت -->
+                                    <div class="flex items-center gap-4">
+                                        <button id="custom-play-btn" class="text-xl hover:text-emerald-500 transition-colors focus:outline-none w-6 flex justify-center">
+                                            <i class="fa-solid fa-play"></i>
+                                        </button>
+                                        <span id="custom-time-display" class="text-xs font-semibold text-gray-200">00:00 / 00:00</span>
+                                    </div>
+
+                                    <!-- أزرار الإعدادات وتكبير الشاشة -->
+                                    <div class="flex items-center gap-4">
+                                        <!-- زر التحكم بالسرعة -->
+                                        <div class="relative group/speed">
+                                            <button id="custom-speed-btn" class="flex items-center gap-1 text-sm font-bold hover:text-emerald-500 transition-colors focus:outline-none">
+                                                <i class="fa-solid fa-gear"></i> <span id="current-speed">1x</span>
+                                            </button>
+                                            <div class="absolute bottom-full mb-2 right-1/2 translate-x-1/2 bg-gray-900/90 rounded-lg hidden group-hover/speed:flex flex-col overflow-hidden text-xs">
+                                                <button class="speed-option px-4 py-2 hover:bg-emerald-600 transition-colors" data-speed="2">2x</button>
+                                                <button class="speed-option px-4 py-2 hover:bg-emerald-600 transition-colors" data-speed="1.5">1.5x</button>
+                                                <button class="speed-option px-4 py-2 bg-emerald-600 transition-colors" data-speed="1">1x</button>
+                                                <button class="speed-option px-4 py-2 hover:bg-emerald-600 transition-colors" data-speed="0.5">0.5x</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- زر الصوت -->
+                                        <button id="custom-mute-btn" class="text-lg hover:text-emerald-500 transition-colors focus:outline-none w-6 flex justify-center">
+                                            <i class="fa-solid fa-volume-high"></i>
+                                        </button>
+
+                                        <!-- زر التكبير -->
+                                        <button id="custom-fullscreen-btn" class="text-lg hover:text-emerald-500 transition-colors focus:outline-none">
+                                            <i class="fa-solid fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="video-loading-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2 bg-gray-950 z-40">
                             <i class="fa-solid fa-circle-notch animate-spin text-4xl text-emerald-500"></i>
-                            <p class="text-sm font-bold">جاري تشغيل الفيديو المحمي...</p>
+                            <p class="text-sm font-bold">جاري إعداد المشغل الآمن...</p>
                         </div>
                     </div>
                 </div>
@@ -200,13 +311,17 @@
         let globalExams = [];
         let currentLectureIndex = 0;
         let studentUser = null;
+        let studentProfile = null;
         let studentExamResults = [];
         let studentProgressList = [];
 
         let ytPlayer = null;
         let progressInterval = null;
+        let uiUpdateInterval = null;
         let lastUpdatedPercent = 0;
         let isYouTubeAPIReady = false;
+        let isVideoPlaying = false;
+        let isMuted = false;
 
         function showModernAlert(title, message, type = 'error', redirectUrl = null) {
             const modal = document.getElementById('custom-alert-modal');
@@ -275,6 +390,14 @@
             }
             studentUser = user;
 
+            // جلب بيانات الحساب (البروفايل) لعرض الاسم في العلامة المائية
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+            studentProfile = profile;
+
             const { data: subscription, error: subError } = await supabaseClient
                 .from('course_subscriptions')
                 .select('*')
@@ -338,13 +461,9 @@
                 .eq('student_id', user.id);
             studentExamResults = results || [];
 
-            // ==========================================
-            // جلب الامتحانات بدقة (الكورس + كل محاضرة فرعية)
-            // ==========================================
             const lectureIds = globalLectures.map(l => l.id).filter(id => id && id !== 'main-course-video');
             let fetchedExams = [];
 
-            // 1. جلب الامتحانات المرتبطة مباشرة بالكورس
             const { data: courseExams } = await supabaseClient
                 .from('exams')
                 .select('*')
@@ -352,7 +471,6 @@
 
             if (courseExams) fetchedExams.push(...courseExams);
 
-            // 2. جلب الامتحانات المرتبطة بالأجزاء مباشرة (lecture_id)
             if (lectureIds.length > 0) {
                 const { data: lectureExams } = await supabaseClient
                     .from('exams')
@@ -379,6 +497,7 @@
             document.getElementById('lectures-count-badge').textContent = `${globalLectures.length} جزء`;
 
             renderSidebarLectures();
+            setupCustomPlayerControls(); // إعداد المشغل المخصص
 
             if (globalLectures.length > 0) {
                 selectLecture(0);
@@ -390,59 +509,35 @@
             }
         }
 
-        // ==========================================
-        //  دالة جلب امتحان المحاضرة المحددة
-        // ==========================================
         function getExamForLecture(lecture) {
             if (!lecture) return null;
-
-            // 1. بحث بالـ lecture_id المباشر
             let exam = globalExams.find(e => e.lecture_id === lecture.id);
             if (exam) return exam;
-
-            // 2. بحث بالـ prerequisite_exam_id
             if (lecture.prerequisite_exam_id) {
                 exam = globalExams.find(e => e.id === lecture.prerequisite_exam_id);
                 if (exam) return exam;
             }
-
-            // 3. حالة الكورس المفرد (فيديو رئيسي بدون أجزاء)
             if (lecture.id === 'main-course-video') {
                 return globalExams.find(e => e.course_id == globalCourseData?.id) || globalExams[0] || null;
             }
-
             return null;
         }
 
-        // ==========================================
-        //  دالة التحقق من فتح/قفل الجزء
-        // ==========================================
         function isLectureUnlocked(index) {
-            // الجزء الأول مفتوح دائماً
             if (index === 0) return true;
-
-            // جلب الجزء السابق
             const prevLecture = globalLectures[index - 1];
             if (!prevLecture) return true;
-
-            // التحقق من وجود امتحان للمحاضرة السابقة
             const prevExam = getExamForLecture(prevLecture);
-            
             if (prevExam) {
-                // التحقق مما إذا كان الطالب قد أدى الامتحان الخاص بالجزء السابق
                 const hasTakenExam = studentExamResults.some(r => r.exam_id === prevExam.id);
-                if (!hasTakenExam) {
-                    return false; 
-                }
+                if (!hasTakenExam) return false; 
             }
-
             return true;
         }
 
         function renderSidebarLectures() {
             const container = document.getElementById('sections-and-lectures-container');
             container.innerHTML = '';
-
             if (globalLectures.length === 0) return;
 
             if (globalSections.length > 0) {
@@ -460,7 +555,6 @@
                         container.appendChild(createLectureRowElement(lecture, globalIndex));
                     });
                 });
-
                 const orphanLectures = globalLectures.filter(l => !l.section_id);
                 if (orphanLectures.length > 0) {
                     orphanLectures.forEach(lecture => {
@@ -485,11 +579,7 @@
             row.id = `lecture-item-${index}`;
             row.onclick = () => {
                 if (!unlocked) {
-                    showModernAlert(
-                        'الجزء مغلق 🔒', 
-                        'عذراً، يجب عليك أداء امتحان الجزء السابق لتتمكن من فتح هذا الجزء.', 
-                        'warning'
-                    );
+                    showModernAlert('الجزء مغلق 🔒', 'عذراً، يجب عليك أداء امتحان الجزء السابق لتتمكن من فتح هذا الجزء.', 'warning');
                     return;
                 }
                 selectLecture(index);
@@ -528,20 +618,32 @@
 
         function selectLecture(index) {
             if (index < 0 || index >= globalLectures.length) return;
-
-            if (!isLectureUnlocked(index)) {
-                showModernAlert('الجزء مغلق 🔒', 'يجب أداء امتحان الجزء السابق لتتمكن من فتح هذا الجزء.', 'warning');
-                return;
-            }
+            if (!isLectureUnlocked(index)) return;
 
             currentLectureIndex = index;
             const lecture = globalLectures[index];
-
             renderSidebarLectures();
 
             document.getElementById('placeholder-title').textContent = lecture.title;
             document.getElementById('details-course-name').textContent = lecture.title;
             document.getElementById('details-course-desc').textContent = lecture.description || globalCourseData.description || 'لا يوجد وصف متاح لهذا الجزء حالياً.';
+
+            // تحديث العلامة المائية باسم الطالب واسم القسم
+            const watermarkStudent = document.getElementById('watermark-student-name');
+            const watermarkSection = document.getElementById('watermark-section-name');
+            
+            if (watermarkStudent && studentProfile) {
+                watermarkStudent.textContent = studentProfile.full_name || 'طالب المنصة';
+            }
+            
+            if (watermarkSection) {
+                let sectionName = 'عام';
+                if (lecture.section_id) {
+                    const sectionObj = globalSections.find(s => s.id === lecture.section_id);
+                    if (sectionObj) sectionName = sectionObj.title;
+                }
+                watermarkSection.textContent = sectionName;
+            }
 
             const fileUrl = lecture.pdf_url || globalCourseData.homework_url;
             const assignmentContainer = document.getElementById('assignment-container');
@@ -594,8 +696,8 @@
             }
 
             const userResult = studentExamResults.find(r => r.exam_id === linkedExam.id);
-
             examBtn.classList.remove('disabled-action');
+            
             if (userResult) {
                 const totalMarks = userResult.total_marks || linkedExam.total_marks || 100;
                 const score = userResult.score || 0;
@@ -608,38 +710,149 @@
                 } else {
                     examBtn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> إعادة الامتحان (درجتك: ${Math.round(percent)}%)`;
                     examBtn.className = "flex items-center gap-2 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg transition-all active:scale-95 cursor-pointer";
-                    examBtn.onclick = () => {
-                        window.location.href = `exam.html?exam_id=${linkedExam.id}&course_id=${globalCourseData.id}`;
-                    };
+                    examBtn.onclick = () => { window.location.href = `exam.html?exam_id=${linkedExam.id}&course_id=${globalCourseData.id}`; };
                 }
             } else {
                 examBtn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> دخول الامتحان السريع لهذه الحصة`;
                 examBtn.className = "flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-lg transition-all active:scale-95 cursor-pointer";
-                examBtn.onclick = () => {
-                    window.location.href = `exam.html?exam_id=${linkedExam.id}&course_id=${globalCourseData.id}`;
-                };
+                examBtn.onclick = () => { window.location.href = `exam.html?exam_id=${linkedExam.id}&course_id=${globalCourseData.id}`; };
             }
-        }
-
-        function handleExamNavigation(event) {
-            event.preventDefault();
-            const lecture = globalLectures[currentLectureIndex];
-            setupExamButtonForLecture(lecture);
         }
 
         function resetVideoPlayerUI() {
             const placeholder = document.getElementById('video-placeholder');
             const videoArea = document.getElementById('actual-video');
+            const customControls = document.getElementById('custom-video-controls');
             
             if (progressInterval) clearInterval(progressInterval);
+            if (uiUpdateInterval) clearInterval(uiUpdateInterval);
             if (ytPlayer && typeof ytPlayer.stopVideo === 'function') {
                 try { ytPlayer.stopVideo(); } catch(e){}
             }
 
             videoArea.classList.add('hidden');
+            customControls.style.display = 'none';
             placeholder.style.display = 'flex';
             placeholder.style.opacity = '1';
             placeholder.style.pointerEvents = 'auto';
+            
+            document.getElementById('custom-play-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
+            document.getElementById('custom-seek-bar').value = 0;
+            document.getElementById('custom-time-display').textContent = '00:00 / 00:00';
+            isVideoPlaying = false;
+        }
+
+        // ==========================================
+        // برمجة واجهة المستخدم المخصصة للفيديو (الأزرار العازلة)
+        // ==========================================
+        function setupCustomPlayerControls() {
+            const playBtn = document.getElementById('custom-play-btn');
+            const centerClickArea = document.getElementById('center-click-area');
+            const seekBar = document.getElementById('custom-seek-bar');
+            const fullscreenBtn = document.getElementById('custom-fullscreen-btn');
+            const muteBtn = document.getElementById('custom-mute-btn');
+            const speedOptions = document.querySelectorAll('.speed-option');
+            const videoContainer = document.getElementById('actual-video'); // الحاوية التي سيتم تكبيرها
+
+            const togglePlay = () => {
+                if (!ytPlayer || !ytPlayer.getPlayerState) return;
+                const state = ytPlayer.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    ytPlayer.pauseVideo();
+                    playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                    isVideoPlaying = false;
+                } else {
+                    ytPlayer.playVideo();
+                    playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                    isVideoPlaying = true;
+                }
+            };
+
+            playBtn.onclick = togglePlay;
+            centerClickArea.onclick = togglePlay;
+
+            seekBar.addEventListener('input', (e) => {
+                if (ytPlayer && ytPlayer.getDuration) {
+                    const duration = ytPlayer.getDuration();
+                    const newTime = (e.target.value / 100) * duration;
+                    ytPlayer.seekTo(newTime, true);
+                }
+            });
+
+            fullscreenBtn.onclick = () => {
+                if (!document.fullscreenElement) {
+                    if (videoContainer.requestFullscreen) {
+                        videoContainer.requestFullscreen();
+                    } else if (videoContainer.webkitRequestFullscreen) { /* Safari */
+                        videoContainer.webkitRequestFullscreen();
+                    } else if (videoContainer.msRequestFullscreen) { /* IE11 */
+                        videoContainer.msRequestFullscreen();
+                    }
+                    fullscreenBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                    fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                }
+            };
+
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                }
+            });
+
+            muteBtn.onclick = () => {
+                if (!ytPlayer) return;
+                if (isMuted) {
+                    ytPlayer.unMute();
+                    muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                } else {
+                    ytPlayer.mute();
+                    muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                }
+                isMuted = !isMuted;
+            };
+
+            speedOptions.forEach(btn => {
+                btn.onclick = (e) => {
+                    const speed = parseFloat(e.target.dataset.speed);
+                    if (ytPlayer && ytPlayer.setPlaybackRate) {
+                        ytPlayer.setPlaybackRate(speed);
+                        document.getElementById('current-speed').textContent = `${speed}x`;
+                        
+                        speedOptions.forEach(b => {
+                            b.classList.remove('bg-emerald-600');
+                            b.classList.add('hover:bg-emerald-600');
+                        });
+                        e.target.classList.add('bg-emerald-600');
+                        e.target.classList.remove('hover:bg-emerald-600');
+                    }
+                };
+            });
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "00:00";
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function updateCustomUI() {
+            if (ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
+                const currentTime = ytPlayer.getCurrentTime();
+                const duration = ytPlayer.getDuration();
+                
+                if (duration > 0) {
+                    const percent = (currentTime / duration) * 100;
+                    document.getElementById('custom-seek-bar').value = percent;
+                    document.getElementById('custom-time-display').textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+                }
+            }
         }
 
         function startVideoEngine() {
@@ -654,6 +867,7 @@
 
             const placeholder = document.getElementById('video-placeholder');
             const videoArea = document.getElementById('actual-video');
+            const customControls = document.getElementById('custom-video-controls');
             const ytContainer = document.getElementById('youtube-player-container');
             const nativeContainer = document.getElementById('native-video-container');
             const loadingState = document.getElementById('video-loading-state');
@@ -667,10 +881,12 @@
                 loadingState.classList.remove('hidden');
 
                 if (progressInterval) clearInterval(progressInterval);
+                if (uiUpdateInterval) clearInterval(uiUpdateInterval);
 
                 if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
                     nativeContainer.classList.add('hidden');
                     ytContainer.classList.remove('hidden');
+                    customControls.style.display = 'flex'; // إظهار المشغل المخصص
 
                     let videoId = '';
                     if (videoUrl.includes('v=')) {
@@ -692,20 +908,27 @@
                             videoId: videoId,
                             playerVars: {
                                 'autoplay': 1,
-                                'rel': 0,
-                                'modestbranding': 1,
-                                'controls': 1,
+                                'controls': 0, // إخفاء واجهة يوتيوب بالكامل
+                                'disablekb': 1, // تعطيل أزرار الكيبورد الخاصة بيوتيوب
+                                'rel': 0, // إخفاء الفيديوهات المقترحة
+                                'modestbranding': 1, // إخفاء اللوجو
+                                'fs': 0, // تعطيل التكبير الخاص بيوتيوب
+                                'iv_load_policy': 3, // إخفاء التعليقات التوضيحية
+                                'playsinline': 1,
                                 'origin': window.location.origin
                             },
                             events: {
                                 'onReady': (event) => {
                                     loadingState.classList.add('hidden');
                                     event.target.playVideo();
+                                    document.getElementById('custom-play-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+                                    isVideoPlaying = true;
+                                    uiUpdateInterval = setInterval(updateCustomUI, 500); // تحديث شريط التقدم كل نصف ثانية
                                 },
                                 'onStateChange': onPlayerStateChange,
                                 'onError': (e) => {
                                     console.error("YouTube Player Error:", e.data);
-                                    loadingState.innerHTML = '<p class="text-xs text-red-500 p-4">حدث خطأ أثناء تشغيل يوتيوب.</p>';
+                                    loadingState.innerHTML = '<p class="text-xs text-red-500 p-4">حدث خطأ أثناء تشغيل الفيديو.</p>';
                                 }
                             }
                         });
@@ -724,7 +947,9 @@
                     }
 
                 } else {
+                    // إذا كان الفيديو ليس من يوتيوب (MP4 مباشر)
                     ytContainer.classList.add('hidden');
+                    customControls.style.display = 'none'; // نخفي المشغل المخصص لأن المتصفح يحمي الـ MP4 بشكل كاف
                     nativeContainer.classList.remove('hidden');
                     loadingState.classList.add('hidden');
 
@@ -736,10 +961,7 @@
 
                     const player = document.getElementById('html5-video-player');
                     
-                    player.onended = () => {
-                        updateProgressInSupabase(100);
-                    };
-
+                    player.onended = () => { updateProgressInSupabase(100); };
                     player.ontimeupdate = () => {
                         if (player.duration) {
                             const currentPercent = Math.round((player.currentTime / player.duration) * 100);
@@ -754,7 +976,12 @@
         }
 
         function onPlayerStateChange(event) {
+            const playBtn = document.getElementById('custom-play-btn');
+            
             if (event.data == YT.PlayerState.PLAYING) {
+                playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                isVideoPlaying = true;
+                
                 progressInterval = setInterval(() => {
                     if (ytPlayer && ytPlayer.getDuration) {
                         const duration = ytPlayer.getDuration();
@@ -768,7 +995,13 @@
                         }
                     }
                 }, 1000);
+            } else if (event.data == YT.PlayerState.PAUSED) {
+                playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                isVideoPlaying = false;
+                if (progressInterval) clearInterval(progressInterval);
             } else if (event.data == YT.PlayerState.ENDED) {
+                playBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+                isVideoPlaying = false;
                 if (progressInterval) clearInterval(progressInterval);
                 updateProgressInSupabase(100);
             } else {
