@@ -422,44 +422,60 @@
             }
             globalCourseData = course;
 
+            // ==========================================
+            // التعديل الجذري والآمن لجلب الأجزاء (المحاضرات)
+            // تم إزالة .order() من الـ API لمنع تعطلها في حال عدم وجود عمود sort_order
+            // ==========================================
+
+            // 1. جلب الأقسام
             const { data: sections } = await supabaseClient
                 .from('course_sections')
                 .select('*')
-                .eq('course_id', courseId)
-                .order('sort_order', { ascending: true });
+                .eq('course_id', courseId);
 
             globalSections = sections || [];
+            // الترتيب برمجياً (آمن جداً)
+            globalSections.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-            // ⚠️ تعديل جذري ومطور لإصلاح مشكلة تداخل واختفاء المحاضرات:
             let fetchedLectures = [];
 
-            // 1. محاولة جلب المحاضرات المرتبطة بالكورس مباشرة (الطريقة الأدق والتي ستعمل فور إضافة course_id)
+            // 2. جلب المحاضرات المرتبطة مباشرة بالكورس
             const { data: lecturesByCourse } = await supabaseClient
                 .from('lectures')
                 .select('*')
-                .eq('course_id', courseId)
-                .order('sort_order', { ascending: true });
+                .eq('course_id', courseId);
 
             if (lecturesByCourse && lecturesByCourse.length > 0) {
-                fetchedLectures = lecturesByCourse;
-            } else if (globalSections.length > 0) {
-                // 2. كخيار بديل قوي: جلب المحاضرات المرتبطة بأقسام الكورس فقط
+                fetchedLectures = [...lecturesByCourse];
+            }
+
+            // 3. جلب المحاضرات المرتبطة بالأقسام ودمجها (لتجنب ضياع المحاضرات التي تم ربطها بقسم فقط)
+            if (globalSections.length > 0) {
                 const sectionIds = globalSections.map(s => s.id);
                 const { data: lecturesBySection } = await supabaseClient
                     .from('lectures')
                     .select('*')
-                    .in('section_id', sectionIds)
-                    .order('sort_order', { ascending: true });
+                    .in('section_id', sectionIds);
                 
-                if (lecturesBySection) {
-                    fetchedLectures = lecturesBySection;
+                if (lecturesBySection && lecturesBySection.length > 0) {
+                    lecturesBySection.forEach(secLec => {
+                        // التأكد من عدم التكرار إذا كانت المحاضرة تم جلبها بالفعل
+                        if (!fetchedLectures.some(l => l.id === secLec.id)) {
+                            fetchedLectures.push(secLec);
+                        }
+                    });
                 }
             }
 
-            // 3. حل مشكلة الاختفاء بسبب is_visible:
-            // في السابق كان يتم استبعاد المحاضرة إذا كانت is_visible فارغة (null). 
-            // الآن نعتبرها مرئية دائماً إلا إذا تم إخفاؤها صراحة (false).
-            globalLectures = fetchedLectures.filter(l => l.is_visible !== false);
+            // ترتيب الفيديوهات والمحاضرات برمجياً 
+            fetchedLectures.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+            // حل مشكلة الاختفاء بسبب is_visible: نعتبرها مرئية دائماً إلا إذا تم إخفاؤها صراحة بشكل واضح
+            globalLectures = fetchedLectures.filter(l => 
+                l.is_visible !== false && 
+                l.is_visible !== 'false' && 
+                l.is_visible !== 0
+            );
 
             // في حال عدم وجود أي أجزاء مرفوعة نهائياً، وعوضاً عن ذلك تم رفع فيديو رئيسي للكورس نفسه
             if (globalLectures.length === 0 && course.video_url) {
@@ -472,6 +488,8 @@
                     section_id: null
                 });
             }
+
+            // ==========================================
 
             const { data: results } = await supabaseClient
                 .from('student_results')
