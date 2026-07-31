@@ -430,19 +430,22 @@
 
             globalSections = sections || [];
 
-            let lecturesQuery = supabaseClient
-                .from('lectures')
-                .select('*')
-                .eq('is_visible', true)
-                .order('sort_order', { ascending: true });
-
+            // ⚠️ تعديل جذري لإصلاح مشكلة تداخل المحاضرات القديمة:
+            // نتأكد أولاً أن الكورس يمتلك أقساماً، ثم نجلب المحاضرات المرتبطة بها حصرياً.
             if (globalSections.length > 0) {
                 const sectionIds = globalSections.map(s => s.id);
-                lecturesQuery = lecturesQuery.in('section_id', sectionIds);
-            }
+                const { data: lectures } = await supabaseClient
+                    .from('lectures')
+                    .select('*')
+                    .in('section_id', sectionIds)
+                    .eq('is_visible', true)
+                    .order('sort_order', { ascending: true });
 
-            const { data: lectures } = await lecturesQuery;
-            globalLectures = lectures || [];
+                globalLectures = lectures || [];
+            } else {
+                // إذا لم يكن هناك أي أقسام في الكورس، نمنع جلب المحاضرات العشوائية تماماً.
+                globalLectures = [];
+            }
 
             if (globalLectures.length === 0 && course.video_url) {
                 globalLectures.push({
