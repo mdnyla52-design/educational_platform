@@ -408,8 +408,8 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 <th class="p-4 px-5 font-black">اسم الطالب</th>
 <th class="p-4 font-black">كود الطالب</th>
 <th class="p-4 font-black">الكورس المطلوب</th>
-<th class="p-4 font-black">رقم الهاتف</th>
-<th class="p-4 font-black text-center">الإجراء</th>
+<th class="p-4 font-black">تفاصيل الدفع والتواصل</th>
+<th class="p-4 font-black text-center">الإجراء والتفعيل</th>
 </tr>
 </thead>
 <tbody class="divide-y divide-gray-100 bg-white text-gray-600" id="pending-subscriptions-table">
@@ -660,9 +660,8 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm fon
     </div>
 </div>
 
-<!-- 6. لوحة الأرشيف الأكاديمي المطور (الميزة المضافة) -->
+<!-- 6. لوحة الأرشيف الأكاديمي المطور -->
 <div id="panel-archive" class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-8 space-y-8 hidden animate-scale-up">
-    <!-- رأس لوحة الأرشيف -->
     <div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
@@ -709,7 +708,7 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm fon
         </div>
     </div>
 
-    <!-- قسم الكورسات المؤرشفة (Soft Delete / Hidden Courses) -->
+    <!-- قسم الكورسات المؤرشفة -->
     <div class="space-y-4">
         <div class="border-b border-gray-100 pb-3 flex justify-between items-center">
             <h3 class="font-black text-slate-950 text-xs sm:text-sm flex items-center gap-2">
@@ -1226,1220 +1225,1162 @@ renderLectureParts();
 }
 
 // ==========================================
-// رفع ومعالجة المحاضرة والأجزاء ورابط الصورة في Supabase
+// رفع ومعالجة المحاضرة والأجزاء في Supabase
 // ==========================================
 
-window.handleCourseUpload = async function(event) {
-event.preventDefault();
-if(lectureParts.length === 0) {
-showNotification("يرجى إضافة جزء واحد على الأقل للمحاضرة!", "warning");
-return;
-}
+async function handleCourseUpload(event) {
+    event.preventDefault();
+    if (lectureParts.length === 0) {
+        showNotification("يرجى إضافة جزء واحد على الأقل للمحاضرة", "warning");
+        return;
+    }
 
-const submitBtn = document.getElementById('submitBtn');
-const originalBtnHtml = submitBtn.innerHTML;
-submitBtn.disabled = true;
-submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> جاري حفظ الأجزاء والربط الشرطي...`;
+    const title = document.getElementById('titleInput').value.trim();
+    const desc = document.getElementById('descInput').value.trim();
+    const price = parseFloat(document.getElementById('priceInput').value) || 0;
+    const stage = document.getElementById('stageInput').value;
+    const term = document.getElementById('termInput').value;
+    const imageUrl = document.getElementById('imageUrlInput').value.trim();
+    const submitBtn = document.getElementById('submitBtn');
 
-try {
-const courseTitle = document.getElementById('titleInput').value;
-const description = document.getElementById('descInput').value;
-const price = parseFloat(document.getElementById('priceInput').value) || 0;
-const stage = document.getElementById('stageInput').value;
-const term = document.getElementById('termInput').value;
-const imageUrl = document.getElementById('imageUrlInput').value.trim() || null;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> جاري حفظ الكورس ورفع البيانات...`;
 
-const { data: courseData, error: courseError } = await _supabase
-.from('courses')
-.insert([{ title: courseTitle, description, price, stage, term, is_visible: true, image_url: imageUrl }])
-.select();
+    try {
+        // 1. إنشاء الكورس الرئيسي
+        const { data: courseData, error: courseErr } = await _supabase
+            .from('courses')
+            .insert([{
+                title,
+                description: desc,
+                price,
+                stage,
+                term,
+                image_url: imageUrl || null,
+                is_visible: true
+            }])
+            .select()
+            .single();
 
-if(courseError) throw courseError;
-const newCourseId = courseData[0].id;
+        if (courseErr) throw courseErr;
+        const courseId = courseData.id;
 
-const { data: sectionData, error: sectionError } = await _supabase
-.from('course_sections')
-.insert([{ course_id: newCourseId, title: `أجزاء: ${courseTitle}`, sort_order: 1 }])
-.select();
+        // 2. إدخال الأجزاء والامتحانات التابعة
+        for (let i = 0; i < lectureParts.length; i++) {
+            const part = lectureParts[i];
+            
+            // رفع ملف PDF إذا تم اختياره
+            let pdfUrl = null;
+            const pdfInput = document.getElementById(part.pdfFileId);
+            if (pdfInput && pdfInput.files && pdfInput.files[0]) {
+                const file = pdfInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const filePath = `lectures/${courseId}/part_${i}_${Date.now()}.${fileExt}`;
+                const { error: uploadErr } = await _supabase.storage.from('pdfs').upload(filePath, file);
+                if (!uploadErr) {
+                    const { data: pubUrl } = _supabase.storage.from('pdfs').getPublicUrl(filePath);
+                    pdfUrl = pubUrl.publicUrl;
+                }
+            }
 
-if(sectionError) throw sectionError;
-const newSectionId = sectionData[0].id;
+            // إدراج المحاضرة/الجزء
+            const { data: lecData, error: lecErr } = await _supabase
+                .from('lectures')
+                .insert([{
+                    title: part.title,
+                    description: part.description || title,
+                    video_url: part.video_url,
+                    pdf_url: pdfUrl,
+                    sort_order: i + 1,
+                    is_visible: true
+                }])
+                .select()
+                .single();
 
-let previousPartExamId = null; 
+            if (lecErr) throw lecErr;
+            const lectureId = lecData.id;
 
-for(let i = 0; i < lectureParts.length; i++) {
-const part = lectureParts[i];
-const sortOrder = i + 1;
+            // إدراج الاختبار إن وجد
+            if (part.hasExam && part.questions.length > 0) {
+                const { data: examData, error: examErr } = await _supabase
+                    .from('exams')
+                    .insert([{
+                        title: part.examTitle || `امتحان ${part.title}`,
+                        lecture_id: lectureId,
+                        course_id: courseId,
+                        duration_minutes: part.examDuration || 15
+                    }])
+                    .select()
+                    .single();
 
-let partPdfUrl = null;
-const fileInput = document.getElementById(part.pdfFileId);
-if(fileInput && fileInput.files[0]) {
-const pFile = fileInput.files[0];
-const fileName = `${Date.now()}_part_${sortOrder}.${pFile.name.split('.').pop()}`;
-const { error: upErr } = await _supabase.storage.from('homework').upload(fileName, pFile);
-if(!upErr) {
-const { data: pUrl } = _supabase.storage.from('homework').getPublicUrl(fileName);
-partPdfUrl = pUrl.publicUrl;
-}
-}
+                if (!examErr && examData) {
+                    const examId = examData.id;
+                    for (const q of part.questions) {
+                        const { data: qData, error: qErr } = await _supabase
+                            .from('questions')
+                            .insert([{
+                                exam_id: examId,
+                                question_text: q.text,
+                                passage: q.passage || null,
+                                points: q.points || 1
+                            }])
+                            .select()
+                            .single();
 
-const { data: lectData, error: lectError } = await _supabase
-.from('lectures')
-.insert([{
-section_id: newSectionId,
-title: part.title,
-description: `الجزء ${sortOrder} من ${courseTitle}`,
-video_url: part.video_url,
-pdf_url: partPdfUrl,
-sort_order: sortOrder,
-is_visible: true,
-prerequisite_exam_id: previousPartExamId 
-}])
-.select();
+                        if (!qErr && qData) {
+                            const qId = qData.id;
+                            const optionsToInsert = q.options.map(opt => ({
+                                question_id: qId,
+                                option_text: opt.text,
+                                is_correct: opt.isCorrect
+                            }));
+                            await _supabase.from('options').insert(optionsToInsert);
+                        }
+                    }
+                }
+            }
+        }
 
-if(lectError) throw lectError;
-const currentLectureId = lectData[0].id;
+        showNotification("تم نشر الكورس وتجزيء المحاضرة بنجاح!", "success");
+        document.getElementById('courseForm').reset();
+        document.getElementById('courseImagePreview').classList.add('hidden');
+        document.getElementById('courseImagePlaceholder').classList.remove('hidden');
+        lectureParts = [];
+        addNewLecturePart();
+        fetchCoursesList();
+        loadDashboardStats();
 
-if(part.hasExam && part.questions.length > 0) {
-const { data: examData, error: examErr } = await _supabase
-.from('exams')
-.insert([{
-course_id: newCourseId,
-lecture_id: currentLectureId,
-title: part.examTitle || `اختبار: ${part.title}`,
-duration_minutes: part.examDuration || 15
-}])
-.select();
-
-if(!examErr && examData.length > 0) {
-const createdExamId = examData[0].id;
-previousPartExamId = createdExamId; 
-
-for(let q of part.questions) {
-const { data: qData, error: qErr } = await _supabase
-.from('questions')
-.insert([{ exam_id: createdExamId, passage: q.passage, question_text: q.text, points: q.points }])
-.select();
-
-if(!qErr && qData.length > 0) {
-const optionsToInsert = q.options.map(opt => ({
-question_id: qData[0].id,
-option_text: opt.text,
-is_correct: opt.isCorrect
-}));
-await _supabase.from('options').insert(optionsToInsert);
-}
-}
-}
-}
-}
-
-showNotification("تم رفع الكورس وجميع الأجزاء والامتحانات بنجاح!", "success");
-document.getElementById('courseForm').reset();
-document.getElementById('courseImagePreview').classList.add('hidden');
-document.getElementById('courseImagePlaceholder').classList.remove('hidden');
-lectureParts = [];
-addNewLecturePart();
-fetchCoursesList();
-loadDashboardStats();
-
-} catch (err) {
-console.error("Course Upload Error:", err);
-showNotification(`خطأ أثناء الرفع: ${err.message || 'تعذر حفظ البيانات'}`, "error");
-} finally {
-submitBtn.disabled = false;
-submitBtn.innerHTML = originalBtnHtml;
-}
+    } catch (err) {
+        console.error("Course Upload Error:", err);
+        showNotification("حدث خطأ أثناء الرفع: " + err.message, "error");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>نشر المحاضرة وربط جميع الأجزاء والامتحانات</span>`;
+    }
 }
 
 // ==========================================
-// إدارة جلب وحذف وأرشفة الكورسات
+// جلب قائمة الكورسات
 // ==========================================
-
 async function fetchCoursesList() {
-const tbody = document.getElementById('course-list-table');
-if(!tbody) return;
+    try {
+        const { data, error } = await _supabase
+            .from('courses')
+            .select('*')
+            .eq('is_visible', true)
+            .order('created_at', { ascending: false });
 
-try {
-const { data: courses, error } = await _supabase
-.from('courses')
-.select('*')
-.eq('is_visible', true)
-.order('created_at', { ascending: false });
+        if (error) throw error;
 
-if(error) throw error;
+        const table = document.getElementById('course-list-table');
+        const couponSelect = document.getElementById('couponCourseSelect');
+        const disableSelect = document.getElementById('disableModalCourseSelect');
 
-if(!courses || courses.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات نشطة حالياً</td></tr>`;
-return;
+        if (table) table.innerHTML = '';
+        if (couponSelect) couponSelect.innerHTML = '<option value="">-- اختر الكورس --</option>';
+        if (disableSelect) disableSelect.innerHTML = '<option value="">-- اختر الكورس --</option>';
+
+        if (!data || data.length === 0) {
+            if (table) table.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات نشطة حالياً</td></tr>`;
+            return;
+        }
+
+        data.forEach(c => {
+            if (table) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50/80 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4 px-5">
+                        <div class="flex items-center gap-3">
+                            <img src="${c.image_url || 'https://via.placeholder.com/80'}" class="w-12 h-10 object-cover rounded-xl border border-gray-200">
+                            <span class="font-bold text-slate-900">${c.title}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 font-bold text-gray-700">${c.stage}</td>
+                    <td class="p-4 font-bold text-gray-500">${c.term || '---'}</td>
+                    <td class="p-4 text-center font-black text-emerald-600">${c.price > 0 ? c.price + ' ج.م' : 'مجاني'}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="archiveCourse(${c.id})" class="bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-amber-200 active:scale-95">
+                            <i class="fa-solid fa-box-archive text-xs"></i> أرشفة
+                        </button>
+                    </td>
+                `;
+                table.appendChild(tr);
+            }
+
+            const opt = `<option value="${c.id}">${c.title} (${c.stage})</option>`;
+            if (couponSelect) couponSelect.innerHTML += opt;
+            if (disableSelect) disableSelect.innerHTML += opt;
+        });
+
+    } catch (err) {
+        console.error("Fetch Courses Error:", err);
+    }
 }
 
-tbody.innerHTML = courses.map(c => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-4 px-5">
-<div class="flex items-center gap-3">
-<div class="w-12 h-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 flex-shrink-0 flex items-center justify-center">
-${c.image_url ? `<img src="${c.image_url}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-graduation-cap text-gray-400"></i>`}
-</div>
-<div>
-<span class="font-black text-slate-900 block text-xs">${c.title}</span>
-<span class="text-[10px] text-gray-400 font-bold block mt-0.5">${c.description ? c.description.substring(0, 40) + '...' : ''}</span>
-</div>
-</div>
-</td>
-<td class="p-4 font-bold text-gray-700">${c.stage}</td>
-<td class="p-4 font-bold text-emerald-700">${c.term || 'غير محدد'}</td>
-<td class="p-4 text-center font-black text-slate-900">${c.price > 0 ? c.price + ' ج.م' : '<span class="text-emerald-600">مجاني</span>'}</td>
-<td class="p-4 text-center">
-<div class="flex items-center justify-center gap-2">
-<button onclick="toggleCourseArchive('${c.id}', true)" class="bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-700 p-2 px-3 rounded-xl border border-amber-200 font-bold text-xs transition-all flex items-center gap-1 active:scale-95">
-<i class="fa-solid fa-box-archive"></i> أرشفة
-</button>
-<button onclick="deleteCourse('${c.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all flex items-center gap-1 active:scale-95">
-<i class="fa-solid fa-trash-can"></i> حذف
-</button>
-</div>
-</td>
-</tr>
-`).join('');
-
-} catch(err) {
-console.error(err);
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">خطأ أثناء جلب الكورسات</td></tr>`;
-}
-}
-
-async function toggleCourseArchive(courseId, shouldArchive) {
-try {
-const { error } = await _supabase
-.from('courses')
-.update({ is_visible: !shouldArchive })
-.eq('id', courseId);
-
-if(error) throw error;
-showNotification(shouldArchive ? "تم نقل الكورس للأرشيف بنجاح!" : "تمت استعادة الكورس للواجهة!", "success");
-fetchCoursesList();
-loadDashboardStats();
-loadArchivePanelData();
-} catch(err) {
-showNotification("فشل تحديث حالة الأرشيف!", "error");
-}
-}
-
-async function deleteCourse(courseId) {
-if(!confirm("هل أنت تأكد من حذف هذا الكورس نهائياً؟ سيتم حذف جميع المحاضرات والأسئلة المرتبطة به!")) return;
-
-try {
-const { error } = await _supabase.from('courses').delete().eq('id', courseId);
-if(error) throw error;
-showNotification("تم حذف الكورس بنجاح!", "success");
-fetchCoursesList();
-loadDashboardStats();
-loadArchivePanelData();
-} catch(err) {
-showNotification("تعذر حذف الكورس!", "error");
-}
+async function archiveCourse(courseId) {
+    if(!confirm("هل أنت تأكد من نقل الكورس إلى الأرشيف (إخفاء عن المنصة)؟")) return;
+    try {
+        const { error } = await _supabase.from('courses').update({ is_visible: false }).eq('id', courseId);
+        if (error) throw error;
+        showNotification("تم نقل الكورس إلى الأرشيف بنجاح", "success");
+        fetchCoursesList();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification("خطأ في الأرشفة: " + err.message, "error");
+    }
 }
 
 // ==========================================
-// إدارة تعطيل / تفعيل الكورس للطلاب
+// لوحة إدارة الأدمن (معدلة ومحسنة بالكامل)
 // ==========================================
 
-async function openDisableCourseModal() {
-const modal = document.getElementById('disable-course-modal');
-const select = document.getElementById('disableModalCourseSelect');
-modal.classList.remove('hidden');
+async function handleAdminSearch(event) {
+    if (event) event.preventDefault();
+    const input = document.getElementById('adminSearchInput').value.trim();
+    const loader = document.getElementById('admin-search-loader');
+    const resultsBox = document.getElementById('admin-search-results');
+    const tbody = document.getElementById('admin-search-results-table');
 
-try {
-const { data: courses } = await _supabase.from('courses').select('id, title, stage');
-select.innerHTML = '<option value="">-- اختر الكورس --</option>' + 
-(courses || []).map(c => `<option value="${c.id}">${c.title} (${c.stage})</option>`).join('');
-} catch(err) { console.error(err); }
-}
+    if (!input) {
+        showNotification("يرجى كتابة نص للبحث", "warning");
+        return;
+    }
 
-function closeDisableCourseModal() {
-document.getElementById('disable-course-modal').classList.add('hidden');
-}
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+    resultsBox.classList.add('hidden');
+    tbody.innerHTML = '';
 
-function toggleDisableScope() {
-const scope = document.querySelector('input[name="disable_scope"]:checked').value;
-const studentBox = document.getElementById('disable-student-box');
-if(scope === 'specific') {
-studentBox.classList.remove('hidden');
-} else {
-studentBox.classList.add('hidden');
-clearSelectedDisableStudent();
-}
-}
+    try {
+        // فحص ما إذا كان البحث عبارة عن UUID
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input);
 
-async function handleDisableStudentSearch(query) {
-const dropdown = document.getElementById('disableStudentDropdown');
-if(!query || query.trim().length < 2) {
-dropdown.classList.add('hidden');
-return;
-}
+        let query = _supabase.from('profiles').select('id, full_name, student_code, email');
 
-try {
-const { data: students } = await _supabase
-.from('profiles')
-.select('id, full_name, student_code, student_phone')
-.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
-.limit(5);
+        if (isUuid) {
+            query = query.eq('id', input);
+        } else {
+            query = query.or(`full_name.ilike.%${input}%,student_code.ilike.%${input}%,email.ilike.%${input}%`);
+        }
 
-if(!students || students.length === 0) {
-dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 font-bold text-center">لا يوجد طلاب مطبقون</div>';
-} else {
-dropdown.innerHTML = students.map(s => `
-<div onclick="selectDisableStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-red-50 cursor-pointer text-xs font-bold text-gray-800 transition-colors">
-${s.full_name} (${s.student_code || 'بدون كود'})
-</div>
-`).join('');
-}
-dropdown.classList.remove('hidden');
-} catch(err) { console.error(err); }
-}
+        const { data, error } = await query.limit(20);
 
-function selectDisableStudent(id, name) {
-document.getElementById('targetDisableStudentUuid').value = id;
-document.getElementById('selectedDisableStudentName').innerText = `الطالب المحدد: ${name}`;
-document.getElementById('selectedDisableStudentBadge').classList.remove('hidden');
-document.getElementById('selectedDisableStudentBadge').classList.add('flex');
-document.getElementById('disableStudentDropdown').classList.add('hidden');
-}
+        if (error) throw error;
 
-function clearSelectedDisableStudent() {
-document.getElementById('targetDisableStudentUuid').value = '';
-document.getElementById('selectedDisableStudentBadge').classList.add('hidden');
-document.getElementById('selectedDisableStudentBadge').classList.remove('flex');
-document.getElementById('disableStudentSearchInput').value = '';
-}
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-amber-600 font-bold">لم يتم العثور على أي مستخدم يطابق نتائج البحث</td></tr>`;
+        } else {
+            // جلب الأدمينات الحاليين لمقارنة الحالات
+            const { data: adminsData } = await _supabase.from('admins').select('id');
+            const adminIds = new Set((adminsData || []).map(a => a.id));
 
-async function executeDisableCourseAction(statusType) {
-const courseId = document.getElementById('disableModalCourseSelect').value;
-if(!courseId) {
-showNotification("يرجى اختيار الكورس أولاً!", "warning");
-return;
+            tbody.innerHTML = data.map(user => {
+                const isAdmin = adminIds.has(user.id);
+                return `
+                    <tr class="hover:bg-purple-50/30 transition-colors border-b border-gray-100">
+                        <td class="p-3 px-4 font-bold text-slate-800">${user.full_name || 'بدون اسم'}</td>
+                        <td class="p-3 font-mono font-bold text-purple-700">${user.student_code || '---'}</td>
+                        <td class="p-3 text-gray-500">${user.email || '---'}</td>
+                        <td class="p-3 font-mono text-[10px] text-gray-400 text-center">${user.id}</td>
+                        <td class="p-3 text-center">
+                            ${isAdmin ? 
+                                `<span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-[10px] font-black border border-purple-200">أدمن بالفعل</span>` :
+                                `<button type="button" onclick="makeUserAdmin('${user.id}')" class="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 mx-auto">
+                                    <i class="fa-solid fa-user-plus text-[10px]"></i> تعيين كـ أدمن
+                                </button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        resultsBox.classList.remove('hidden');
+
+    } catch (err) {
+        console.error("Admin search error:", err);
+        showNotification("حدث خطأ أثناء البحث: " + err.message, "error");
+    } finally {
+        loader.classList.add('hidden');
+        loader.classList.remove('flex');
+    }
 }
 
-const scope = document.querySelector('input[name="disable_scope"]:checked').value;
+async function makeUserAdmin(userId) {
+    if (!confirm("هل أنت تأكد من ترقية هذا المستخدم وصنعه كـ أدمن بالمنصة؟")) return;
+    try {
+        const { error } = await _supabase.from('admins').insert([{ id: userId }]);
+        if (error) throw error;
 
-try {
-if(scope === 'all') {
-const { error } = await _supabase
-.from('course_subscriptions')
-.update({ status: statusType })
-.eq('course_id', courseId);
-if(error) throw error;
-} else {
-const studentUuid = document.getElementById('targetDisableStudentUuid').value;
-if(!studentUuid) {
-showNotification("يرجى تحديد الطالب!", "warning");
-return;
-}
-const { error } = await _supabase
-.from('course_subscriptions')
-.update({ status: statusType })
-.eq('course_id', courseId)
-.eq('student_id', studentUuid);
-if(error) throw error;
+        showNotification("تم تعيين المستخدم كـ أدمن بنجاح!", "success");
+        fetchAdminsList();
+        loadDashboardStats();
+        handleAdminSearch(); // إعادة إنعاش نتائج البحث
+    } catch (err) {
+        showNotification("خطأ في تعيين الأدمن: " + err.message, "error");
+    }
 }
 
-showNotification(`تمت العملية وتحديث حالة الاشتراك إلى (${statusType === 'disabled' ? 'معطل' : 'نشط'}) بنجاح!`, "success");
-closeDisableCourseModal();
-} catch(err) {
-showNotification("فشل تغيير حالة تفعيل الكورس!", "error");
+async function removeAdmin(adminId) {
+    if (!confirm("هل أنت تأكد من إلغاء صلاحية الأدمن لهذا المستخدم؟")) return;
+    try {
+        const { error } = await _supabase.from('admins').delete().eq('id', adminId);
+        if (error) throw error;
+
+        showNotification("تم إلغاء صلاحية الأدمن بنجاح", "success");
+        fetchAdminsList();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification("خطأ في إلغاء الصلاحية: " + err.message, "error");
+    }
 }
+
+async function fetchAdminsList() {
+    const tbody = document.getElementById('admins-list-table');
+    if (!tbody) return;
+
+    try {
+        const { data: admins, error: adminErr } = await _supabase.from('admins').select('id');
+        if (adminErr) throw adminErr;
+
+        if (!admins || admins.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد مسؤولين حالياً</td></tr>`;
+            return;
+        }
+
+        const adminIds = admins.map(a => a.id);
+        const { data: profiles, error: profErr } = await _supabase
+            .from('profiles')
+            .select('*')
+            .in('id', adminIds);
+
+        if (profErr) throw profErr;
+
+        tbody.innerHTML = (profiles || []).map(p => `
+            <tr class="hover:bg-gray-50/80 transition-colors border-b border-gray-100">
+                <td class="p-4 px-5 font-bold text-slate-900">${p.full_name || 'مسؤول المنصة'}</td>
+                <td class="p-4 font-bold text-purple-700">${p.student_code || p.student_phone || '---'}</td>
+                <td class="p-4 text-gray-500">${p.email || '---'}</td>
+                <td class="p-4 font-mono text-[10px] text-gray-400">${p.id}</td>
+                <td class="p-4 text-center">
+                    <button onclick="removeAdmin('${p.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold transition-all text-xs active:scale-95">
+                        <i class="fa-solid fa-user-minus ml-1"></i> سحب الصلاحية
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Fetch Admins Error:", err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">حدث خطأ في تحميل القائمة</td></tr>`;
+    }
 }
 
 // ==========================================
-// إدارة طلبات الاشتراكات المعلقة
+// إدارة الطلبات المعلقة والاشتراكات
 // ==========================================
 
 async function loadPendingSubscriptions() {
-const tbody = document.getElementById('pending-subscriptions-table');
-if(!tbody) return;
+    const tbody = document.getElementById('pending-subscriptions-table');
+    if (!tbody) return;
 
-try {
-const { data: requests, error } = await _supabase
-.from('subscription_requests')
-.select('*, profiles(full_name, student_code, student_phone), courses(title)')
-.eq('status', 'pending')
-.order('created_at', { ascending: false });
+    try {
+        const { data: reqs, error } = await _supabase
+            .from('subscription_requests')
+            .select(`*, profiles(full_name, student_code, student_phone), courses(title, price)`)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
 
-if(error) throw error;
+        if (error) throw error;
 
-if(!requests || requests.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد طلبات اشتراك معلقة بانتظار الموافقة</td></tr>`;
-return;
+        if (!reqs || reqs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد طلبات اشتراك معلقة بانتظار الموافقة</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = reqs.map(r => `
+            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                <td class="p-4 px-5 font-bold text-slate-900">${r.profiles?.full_name || 'طالب غير معرف'}</td>
+                <td class="p-4 font-mono font-bold text-emerald-600">${r.profiles?.student_code || '---'}</td>
+                <td class="p-4 font-bold text-gray-800">${r.courses?.title || 'كورس غير معروف'}</td>
+                <td class="p-4 text-xs space-y-0.5">
+                    <div class="font-bold text-slate-700">هاتف: ${r.sender_phone || r.profiles?.student_phone || '---'}</div>
+                    <div class="text-gray-400 text-[10px]">طريقة الدفع: ${r.payment_method || 'فودافون كاش'}</div>
+                </td>
+                <td class="p-4 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="approveSubscription('${r.id}', '${r.student_id}', ${r.course_id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-sm active:scale-95 transition-all">
+                            <i class="fa-solid fa-check ml-1"></i> موافقة
+                        </button>
+                        <button onclick="rejectSubscription('${r.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200 font-bold px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all">
+                            إلغاء
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Load Pending Subscriptions Error:", err);
+    }
 }
 
-tbody.innerHTML = requests.map(req => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-4 px-5 font-black text-slate-900">${req.profiles?.full_name || 'غير معروف'}</td>
-<td class="p-4 font-bold text-amber-600 font-mono">${req.profiles?.student_code || 'بدون كود'}</td>
-<td class="p-4 font-bold text-slate-800">${req.courses?.title || 'كورس غير مسمى'}</td>
-<td class="p-4 font-semibold text-gray-600 font-mono" dir="ltr">${req.sender_phone || req.profiles?.student_phone || '-'}</td>
-<td class="p-4 text-center">
-<div class="flex items-center justify-center gap-2">
-<button onclick="approveSubscription('${req.id}', '${req.student_id}', '${req.course_id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 px-3 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-sm">
-<i class="fa-solid fa-check"></i> قبول
-</button>
-<button onclick="rejectSubscription('${req.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all active:scale-95">
-<i class="fa-solid fa-xmark"></i> رفض
-</button>
-</div>
-</td>
-</tr>
-`).join('');
-
-} catch(err) {
-console.error(err);
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">خطأ أثناء تحميل طلبات الاشتراك</td></tr>`;
-}
+async function approveSubscription(reqId, studentId, courseId) {
+    try {
+        await _supabase.from('subscription_requests').update({ status: 'approved' }).eq('id', reqId);
+        await _supabase.from('course_subscriptions').insert([{ student_id: studentId, course_id: courseId, status: 'active' }]);
+        showNotification("تم تفعيل اشتراك الطالب بنجاح!", "success");
+        loadPendingSubscriptions();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification("خطأ في التفعيل: " + err.message, "error");
+    }
 }
 
-async function approveSubscription(requestId, studentId, courseId) {
-try {
-const { error: subErr } = await _supabase
-.from('course_subscriptions')
-.insert([{ student_id: studentId, course_id: courseId, status: 'active' }]);
-
-if(subErr) throw subErr;
-
-await _supabase
-.from('subscription_requests')
-.update({ status: 'approved' })
-.eq('id', requestId);
-
-showNotification("تم تفعيل اشتراك الطالب بنجاح!", "success");
-loadPendingSubscriptions();
-loadDashboardStats();
-} catch(err) {
-showNotification("فشل تفعيل الاشتراك!", "error");
-}
-}
-
-async function rejectSubscription(requestId) {
-try {
-await _supabase
-.from('subscription_requests')
-.update({ status: 'rejected' })
-.eq('id', requestId);
-
-showNotification("تم رفض طلب الاشتراك ونقله للأرشيف!", "info");
-loadPendingSubscriptions();
-loadDashboardStats();
-} catch(err) {
-showNotification("فشل رفض الطلب!", "error");
-}
+async function rejectSubscription(reqId) {
+    try {
+        await _supabase.from('subscription_requests').update({ status: 'rejected' }).eq('id', reqId);
+        showNotification("تم رفض طلب الاشتراك", "info");
+        loadPendingSubscriptions();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification("خطأ في إلغاء الطلب: " + err.message, "error");
+    }
 }
 
 // ==========================================
-// دليل للطلاب واستعلام الداتا الشاملة
+// بحث الطلاب الشامل وتقرير البيانات
 // ==========================================
 
 async function handleStudentSearch(event) {
-event.preventDefault();
-const query = document.getElementById('studentSearchQuery').value.trim();
-const loader = document.getElementById('student-search-loader');
-const resultsArea = document.getElementById('student-results-area');
-const tbody = document.getElementById('students-results-table');
+    event.preventDefault();
+    const query = document.getElementById('studentSearchQuery').value.trim();
+    const loader = document.getElementById('student-search-loader');
+    const resultsArea = document.getElementById('student-results-area');
+    const tbody = document.getElementById('students-results-table');
 
-if(!query) return;
+    if (!query) return;
 
-loader.classList.remove('hidden');
-loader.classList.add('flex');
-resultsArea.classList.add('hidden');
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+    resultsArea.classList.add('hidden');
+    tbody.innerHTML = '';
 
-try {
-const { data: students, error } = await _supabase
-.from('profiles')
-.select('*')
-.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`)
-.limit(10);
+    try {
+        const { data, error } = await _supabase
+            .from('profiles')
+            .select('*')
+            .or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`)
+            .limit(20);
 
-if(error) throw error;
+        if (error) throw error;
 
-if(!students || students.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لم يتم العثور على أي طالب بهذه البيانات</td></tr>`;
-} else {
-tbody.innerHTML = students.map(s => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-3.5 px-4 font-black text-slate-900">${s.full_name}</td>
-<td class="p-3.5 font-mono text-emerald-700 font-bold">${s.student_code || 'غير مخصص'}</td>
-<td class="p-3.5 font-bold text-gray-700">${s.stage || 'غير مخصص'}</td>
-<td class="p-3.5 text-center font-mono text-gray-600">${s.student_phone || '-'}</td>
-<td class="p-3.5 text-center">
-<button onclick="openStudentModal('${s.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5 mx-auto shadow-sm">
-<i class="fa-solid fa-chart-pie text-emerald-400"></i> التقرير الشامل
-</button>
-</td>
-</tr>
-`).join('');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-amber-600 font-bold">لم يتم العثور على أي طالب بهذه البيانات</td></tr>`;
+        } else {
+            tbody.innerHTML = data.map(s => `
+                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                    <td class="p-3 px-4 font-bold text-slate-900">${s.full_name || 'بدون اسم'}</td>
+                    <td class="p-3 font-mono font-bold text-emerald-600">${s.student_code || '---'}</td>
+                    <td class="p-3 font-bold text-gray-600">${s.stage || '---'}</td>
+                    <td class="p-3 text-center font-bold text-gray-700">${s.student_phone || '---'}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="viewStudentReport('${s.id}')" class="bg-slate-900 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all shadow-sm">
+                            <i class="fa-solid fa-chart-pie ml-1"></i> التقرير الشامل
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        resultsArea.classList.remove('hidden');
+
+    } catch (err) {
+        showNotification("خطأ في الاستعلام: " + err.message, "error");
+    } finally {
+        loader.classList.add('hidden');
+        loader.classList.remove('flex');
+    }
 }
 
-resultsArea.classList.remove('hidden');
-} catch(err) {
-showNotification("حدث خطأ أثناء الاستعلام!", "error");
-} finally {
-loader.classList.add('hidden');
-loader.classList.remove('flex');
-}
-}
+async function viewStudentReport(studentId) {
+    const modal = document.getElementById('student-modal');
+    const content = document.getElementById('modal-student-content');
+    const nameEl = document.getElementById('modal-student-name');
+    const subEl = document.getElementById('modal-student-subtitle');
 
-async function openStudentModal(studentId) {
-const modal = document.getElementById('student-modal');
-const content = document.getElementById('modal-student-content');
-modal.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    content.innerHTML = `<div class="flex flex-col items-center justify-center py-12 gap-3 text-emerald-600"><i class="fa-solid fa-circle-notch animate-spin text-3xl"></i><span class="text-xs font-bold text-gray-500">جاري تجميع بيانات واستعلامات الطالب من الأنظمة...</span></div>`;
 
-try {
-const { data: student } = await _supabase.from('profiles').select('*').eq('id', studentId).single();
-const { data: subs } = await _supabase.from('course_subscriptions').select('*, courses(title)').eq('student_id', studentId);
-const { data: results } = await _supabase.from('student_results').select('*, exams(title)').eq('student_id', studentId);
+    try {
+        const { data: profile } = await _supabase.from('profiles').select('*').eq('id', studentId).single();
+        const { data: subs } = await _supabase.from('course_subscriptions').select('*, courses(title)').eq('student_id', studentId);
+        const { data: results } = await _supabase.from('student_results').select('*, exams(title)').eq('student_id', studentId);
 
-document.getElementById('modal-student-name').innerText = student.full_name;
-document.getElementById('modal-student-subtitle').innerText = `كود الطالب: ${student.student_code || 'بدون كود'} | ${student.stage || ''}`;
+        if (profile) {
+            nameEl.innerText = profile.full_name || 'طالب';
+            subEl.innerText = `الكود: ${profile.student_code || '---'} | المرحلة: ${profile.stage || '---'}`;
+        }
 
-content.innerHTML = `
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-<div class="bg-white p-4 rounded-2xl border border-gray-200">
-<span class="text-xs font-bold text-gray-400 block">نقاط الطالب الأسبوعية</span>
-<span class="text-xl font-black text-emerald-600 block mt-1">${student.weekly_points || 0} نقطة</span>
-</div>
-<div class="bg-white p-4 rounded-2xl border border-gray-200">
-<span class="text-xs font-bold text-gray-400 block">إجمالي النقاط التراكمية</span>
-<span class="text-xl font-black text-blue-600 block mt-1">${student.total_points || 0} نقطة</span>
-</div>
-<div class="bg-white p-4 rounded-2xl border border-gray-200">
-<span class="text-xs font-bold text-gray-400 block">هاتف ولي الأمر</span>
-<span class="text-sm font-black text-slate-800 block mt-1 font-mono">${student.parent_phone || 'غير مسجل'}</span>
-</div>
-</div>
+        content.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-2xl border border-gray-200">
+                    <span class="text-xs text-gray-400 font-bold block">رقم الطالب</span>
+                    <span class="text-sm font-black text-slate-800">${profile?.student_phone || 'غير مسجل'}</span>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-200">
+                    <span class="text-xs text-gray-400 font-bold block">رقم ولي الأمر</span>
+                    <span class="text-sm font-black text-slate-800">${profile?.parent_phone || 'غير مسجل'}</span>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-200">
+                    <span class="text-xs text-gray-400 font-bold block">إجمالي النقاط الأسبوعية</span>
+                    <span class="text-sm font-black text-emerald-600">${profile?.weekly_points || 0} نقطة</span>
+                </div>
+            </div>
 
-<div class="space-y-4">
-<h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-graduation-cap text-emerald-600"></i> الكورسات المشترك بها:</h4>
-<div class="flex flex-wrap gap-2">
-${subs && subs.length > 0 ? subs.map(s => `<span class="bg-emerald-50 text-emerald-800 border border-emerald-200 p-2 px-3 rounded-xl text-xs font-bold">${s.courses?.title} (${s.status})</span>`).join('') : '<span class="text-xs text-gray-400 font-bold">غير مشترك في أي كورس</span>'}
-</div>
-</div>
+            <div class="space-y-4">
+                <h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-graduation-cap text-emerald-600 ml-1"></i> الكورسات المشترك بها:</h4>
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
+                    ${(subs && subs.length > 0) ? subs.map(sb => `<div class="p-2 bg-emerald-50 text-emerald-900 rounded-xl font-bold text-xs flex justify-between"><span>${sb.courses?.title || 'كورس'}</span><span class="text-emerald-600">${sb.status}</span></div>`).join('') : '<p class="text-xs text-gray-400 font-bold">لا توجد اشتراكات مفعّلة</p>'}
+                </div>
+            </div>
 
-<div class="space-y-4 pt-4 border-t border-gray-200">
-<h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-file-circle-check text-blue-600"></i> درجات الامتحانات والتقييمات:</h4>
-<div class="overflow-x-auto w-full rounded-xl border border-gray-200 bg-white">
-<table class="w-full text-right text-xs font-semibold whitespace-nowrap">
-<thead class="bg-gray-50 text-gray-700">
-<tr>
-<th class="p-3">اسم الامتحان</th>
-<th class="p-3 text-center">الدرجة</th>
-<th class="p-3 text-center">تاريخ التقديم</th>
-</tr>
-</thead>
-<tbody class="divide-y divide-gray-100">
-${results && results.length > 0 ? results.map(r => `
-<tr>
-<td class="p-3 font-bold">${r.exams?.title || 'اختبار'}</td>
-<td class="p-3 text-center font-black text-emerald-600">${r.score}</td>
-<td class="p-3 text-center text-gray-500">${new Date(r.submission_date).toLocaleDateString('ar-EG')}</td>
-</tr>
-`).join('') : '<tr><td colspan="3" class="text-center p-4 text-gray-400 font-bold">لا توجد درجات مسجلة</td></tr>'}
-</tbody>
-</table>
-</div>
-</div>
-`;
+            <div class="space-y-4 pt-4">
+                <h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-square-poll-vertical text-emerald-600 ml-1"></i> نتائج الاختبارات والدرجات:</h4>
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
+                    ${(results && results.length > 0) ? results.map(r => `<div class="p-2 bg-gray-50 rounded-xl font-bold text-xs flex justify-between border border-gray-100"><span>${r.exams?.title || 'امتحان'}</span><span class="text-blue-600 font-black">${r.score} درجة</span></div>`).join('') : '<p class="text-xs text-gray-400 font-bold">لم يؤدِ أي اختبارات حتى الآن</p>'}
+                </div>
+            </div>
+        `;
 
-} catch(err) {
-content.innerHTML = `<div class="p-6 text-center text-red-500 font-bold">حدث خطأ أثناء تحميل تقرير الطالب!</div>`;
-}
+    } catch (err) {
+        content.innerHTML = `<p class="text-center text-red-500 font-bold p-6">حدث خطأ أثناء تحميل التقرير: ${err.message}</p>`;
+    }
 }
 
 function closeStudentModal() {
-document.getElementById('student-modal').classList.add('hidden');
+    document.getElementById('student-modal').classList.add('hidden');
 }
 
 // ==========================================
-// منظومة الأكواد والسناتر (Coupons)
+// توليد الكروت والأكواد (Coupons)
 // ==========================================
-
-async function fetchCouponsList() {
-const tbody = document.getElementById('coupons-list-table');
-const select = document.getElementById('couponCourseSelect');
-if(!tbody) return;
-
-try {
-const { data: courses } = await _supabase.from('courses').select('id, title').eq('is_visible', true);
-if(select) {
-select.innerHTML = '<option value="">-- اختر الكورس المرتبط --</option>' + 
-(courses || []).map(c => `<option value="${c.id}">${c.title}</option>`).join('');
-}
-
-const { data: codes, error } = await _supabase
-.from('center_codes')
-.select('*, courses(title)')
-.order('created_at', { ascending: false })
-.limit(20);
-
-if(error) throw error;
-
-if(!codes || codes.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد أكواد مولدة حالياً</td></tr>`;
-return;
-}
-
-tbody.innerHTML = codes.map(c => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-4 px-5 font-mono font-black text-slate-900">${c.code}</td>
-<td class="p-4 font-bold text-emerald-600">${c.price} ج.م</td>
-<td class="p-4 font-bold text-gray-700">${c.courses?.title || 'غير محدد'}</td>
-<td class="p-4 text-center">
-${c.is_used ? '<span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-red-200">مستخدم</span>' : '<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-emerald-200">متاح</span>'}
-</td>
-<td class="p-4 text-center">
-<button onclick="navigator.clipboard.writeText('${c.code}'); showNotification('تم نسخ الكود!', 'success')" class="bg-gray-100 hover:bg-slate-900 hover:text-white p-2 px-3 rounded-xl text-xs font-bold transition-all">
-<i class="fa-solid fa-copy"></i>
-</button>
-</td>
-</tr>
-`).join('');
-
-} catch(err) { console.error(err); }
-}
 
 async function handleGenerateCoupon() {
-const price = parseFloat(document.getElementById('couponPriceInput').value);
-const count = parseInt(document.getElementById('couponCountInput').value) || 1;
-const courseId = document.getElementById('couponCourseSelect').value;
+    const price = parseFloat(document.getElementById('couponPriceInput').value);
+    const count = parseInt(document.getElementById('couponCountInput').value) || 1;
+    const courseId = document.getElementById('couponCourseSelect').value;
 
-if(!price || !courseId) {
-showNotification("يرجى إدخال السعر واختيار الكورس!", "warning");
-return;
+    if (!price || !courseId) {
+        showNotification("يرجى تحديد السعر والكورس المرتبط بالأكواد", "warning");
+        return;
+    }
+
+    try {
+        const codesToInsert = [];
+        for (let i = 0; i < count; i++) {
+            const randomCode = 'CODE-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            codesToInsert.push({
+                code: randomCode,
+                price: price,
+                course_id: courseId,
+                is_used: false
+            });
+        }
+
+        const { error } = await _supabase.from('center_codes').insert(codesToInsert);
+        if (error) throw error;
+
+        showNotification(`تم توليد ${count} كود بنجاح!`, "success");
+        fetchCouponsList();
+        loadDashboardStats();
+
+    } catch (err) {
+        showNotification("خطأ في توليد الأكواد: " + err.message, "error");
+    }
 }
 
-try {
-const codesToInsert = [];
-for(let i = 0; i < count; i++) {
-const randomCode = 'EDU-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-codesToInsert.push({
-code: randomCode,
-price: price,
-course_id: courseId,
-is_used: false
-});
+async function fetchCouponsList() {
+    const tbody = document.getElementById('coupons-list-table');
+    if (!tbody) return;
+
+    try {
+        const { data, error } = await _supabase
+            .from('center_codes')
+            .select('*, courses(title)')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد أكواد متوفرة حالياً</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.map(c => `
+            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                <td class="p-3 px-5 font-mono font-black text-amber-600">${c.code}</td>
+                <td class="p-3 font-bold text-gray-800">${c.price} ج.م</td>
+                <td class="p-3 font-bold text-gray-600">${c.courses?.title || 'عام'}</td>
+                <td class="p-3 text-center font-bold">
+                    ${c.is_used ? '<span class="text-red-500 bg-red-50 px-2 py-0.5 rounded-full text-[10px]">مستخدم</span>' : '<span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">متاح</span>'}
+                </td>
+                <td class="p-3 text-center">
+                    <button onclick="navigator.clipboard.writeText('${c.code}'); showNotification('تم نسخ الكود!', 'info')" class="text-gray-400 hover:text-slate-900 transition-colors">
+                        <i class="fa-solid fa-copy"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Fetch Coupons Error:", err);
+    }
 }
 
-const { error } = await _supabase.from('center_codes').insert(codesToInsert);
-if(error) throw error;
-
-showNotification(`تم توليد ${count} كود بنجاح!`, "success");
-fetchCouponsList();
-loadDashboardStats();
-} catch(err) {
-showNotification("فشل توليد الأكواد!", "error");
-}
-}
-
-async function exportCouponsToTXT() {
-try {
-const { data: codes } = await _supabase.from('center_codes').select('code, price, is_used').eq('is_used', false);
-if(!codes || codes.length === 0) {
-showNotification("لا توجد أكواد متاحة للتصدير!", "warning");
-return;
-}
-
-const textContent = codes.map(c => `الكود: ${c.code} | القيمة: ${c.price} ج.م`).join('\n');
-const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-const link = document.createElement('a');
-link.href = URL.createObjectURL(blob);
-link.download = `أكواد_السناتر_${Date.now()}.txt`;
-link.click();
-} catch(err) { console.error(err); }
+function exportCouponsToTXT() {
+    _supabase.from('center_codes').select('code, price, is_used').eq('is_used', false).then(({ data }) => {
+        if (!data || data.length === 0) return showNotification("لا توجد أكواد غير مستخدمة للتصدير", "warning");
+        const txt = data.map(c => `${c.code} | السعر: ${c.price}`).join('\n');
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `center_codes_${Date.now()}.txt`;
+        a.click();
+    });
 }
 
 // ==========================================
-// إدارة التنبيهات
+// نظام التنبيهات
 // ==========================================
-
-async function fetchNotificationsList() {
-const tbody = document.getElementById('notifications-list-table');
-if(!tbody) return;
-
-try {
-const { data: notifs, error } = await _supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(15);
-if(error) throw error;
-
-if(!notifs || notifs.length === 0) {
-tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-400 font-bold">لا توجد تنبيهات مرسلة</td></tr>`;
-return;
-}
-
-tbody.innerHTML = notifs.map(n => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-4 px-5 font-bold text-slate-900">${n.message}</td>
-<td class="p-4 font-bold">${n.student_id ? '<span class="text-blue-600">خاص</span>' : '<span class="text-emerald-600">عام</span>'}</td>
-<td class="p-4 text-gray-500 font-mono text-[11px]">${new Date(n.created_at).toLocaleDateString('ar-EG')}</td>
-<td class="p-4 text-center">
-<button onclick="deleteNotification('${n.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs"><i class="fa-solid fa-trash"></i></button>
-</td>
-</tr>
-`).join('');
-} catch(err) { console.error(err); }
-}
 
 function toggleNotificationTarget() {
-const target = document.querySelector('input[name="target_audience"]:checked').value;
-const box = document.getElementById('specific-student-box');
-if(target === 'specific') box.classList.remove('hidden');
-else {
-box.classList.add('hidden');
-clearSelectedNotifStudent();
-}
-}
-
-async function handleNotifStudentSearch(query) {
-const dropdown = document.getElementById('notifStudentDropdown');
-if(!query || query.trim().length < 2) {
-dropdown.classList.add('hidden');
-return;
+    const val = document.querySelector('input[name="target_audience"]:checked').value;
+    const box = document.getElementById('specific-student-box');
+    if (val === 'specific') {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+        clearSelectedNotifStudent();
+    }
 }
 
-try {
-const { data: students } = await _supabase
-.from('profiles')
-.select('id, full_name, student_code')
-.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
-.limit(5);
+async function handleNotifStudentSearch(val) {
+    const dropdown = document.getElementById('notifStudentDropdown');
+    if (!val || val.length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+    }
 
-if(!students || students.length === 0) {
-dropdown.innerHTML = '<div class="p-3 text-xs text-gray-400 font-bold text-center">لا يوجد طلاب</div>';
-} else {
-dropdown.innerHTML = students.map(s => `
-<div onclick="selectNotifStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-emerald-50 cursor-pointer text-xs font-bold text-gray-800 transition-colors">
-${s.full_name} (${s.student_code || 'بدون كود'})
-</div>
-`).join('');
-}
-dropdown.classList.remove('hidden');
-} catch(err) { console.error(err); }
+    try {
+        const { data } = await _supabase
+            .from('profiles')
+            .select('id, full_name, student_code')
+            .or(`full_name.ilike.%${val}%,student_code.ilike.%${val}%`)
+            .limit(5);
+
+        if (!data || data.length === 0) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        dropdown.innerHTML = data.map(s => `
+            <div onclick="selectNotifStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-emerald-50 cursor-pointer text-xs font-bold text-gray-800 flex justify-between">
+                <span>${s.full_name}</span>
+                <span class="text-emerald-600 font-mono">${s.student_code || ''}</span>
+            </div>
+        `).join('');
+        dropdown.classList.remove('hidden');
+    } catch (err) { console.error(err); }
 }
 
 function selectNotifStudent(id, name) {
-document.getElementById('targetStudentUuid').value = id;
-document.getElementById('selectedStudentName').innerText = `الطالب المحدد: ${name}`;
-document.getElementById('selectedStudentBadge').classList.remove('hidden');
-document.getElementById('selectedStudentBadge').classList.add('flex');
-document.getElementById('notifStudentDropdown').classList.add('hidden');
+    document.getElementById('targetStudentUuid').value = id;
+    document.getElementById('selectedStudentName').innerText = `الطالب المحدد: ${name}`;
+    document.getElementById('selectedStudentBadge').classList.remove('hidden');
+    document.getElementById('selectedStudentBadge').classList.add('flex');
+    document.getElementById('notifStudentDropdown').classList.add('hidden');
 }
 
 function clearSelectedNotifStudent() {
-document.getElementById('targetStudentUuid').value = '';
-document.getElementById('selectedStudentBadge').classList.add('hidden');
-document.getElementById('selectedStudentBadge').classList.remove('flex');
-document.getElementById('notifStudentSearchInput').value = '';
+    document.getElementById('targetStudentUuid').value = '';
+    document.getElementById('selectedStudentBadge').classList.add('hidden');
+    document.getElementById('notifStudentSearchInput').value = '';
 }
 
 async function handleSendNotification(event) {
-event.preventDefault();
-const target = document.querySelector('input[name="target_audience"]:checked').value;
-const message = document.getElementById('notificationMessage').value;
-const studentId = target === 'specific' ? document.getElementById('targetStudentUuid').value : null;
+    event.preventDefault();
+    const message = document.getElementById('notificationMessage').value.trim();
+    const targetType = document.querySelector('input[name="target_audience"]:checked').value;
+    const studentId = document.getElementById('targetStudentUuid').value;
 
-if(target === 'specific' && !studentId) {
-showNotification("يرجى اختيار الطالب المستهدف!", "warning");
-return;
+    if (!message) return;
+
+    try {
+        const payload = {
+            message: message,
+            student_id: targetType === 'specific' ? studentId : null,
+            is_read: false
+        };
+
+        const { error } = await _supabase.from('notifications').insert([payload]);
+        if (error) throw error;
+
+        showNotification("تم إرسال التنبيه بنجاح!", "success");
+        document.getElementById('notificationForm').reset();
+        clearSelectedNotifStudent();
+        fetchNotificationsList();
+
+    } catch (err) {
+        showNotification("خطأ في إرسال التنبيه: " + err.message, "error");
+    }
 }
 
-try {
-const { error } = await _supabase
-.from('notifications')
-.insert([{ message, student_id: studentId, is_read: false }]);
+async function fetchNotificationsList() {
+    const tbody = document.getElementById('notifications-list-table');
+    if (!tbody) return;
 
-if(error) throw error;
-showNotification("تم إرسال التنبيه بنجاح!", "success");
-document.getElementById('notificationForm').reset();
-clearSelectedNotifStudent();
-fetchNotificationsList();
-} catch(err) {
-showNotification("فشل إرسال التنبيه!", "error");
-}
+    try {
+        const { data, error } = await _supabase
+            .from('notifications')
+            .select('*, profiles(full_name)')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (error) throw error;
+
+        tbody.innerHTML = (data || []).map(n => `
+            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                <td class="p-3 px-5 font-bold text-slate-800">${n.message}</td>
+                <td class="p-3 font-bold text-xs">${n.student_id ? `<span class="text-blue-600">خاص: ${n.profiles?.full_name || 'طالب'}</span>` : '<span class="text-emerald-600">عام للجميع</span>'}</td>
+                <td class="p-3 text-gray-400 text-[10px]">${new Date(n.created_at).toLocaleDateString('ar-EG')}</td>
+                <td class="p-3 text-center">
+                    <button onclick="deleteNotification('${n.id}')" class="text-red-500 hover:text-red-700">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) { console.error(err); }
 }
 
 async function deleteNotification(id) {
-try {
-await _supabase.from('notifications').delete().eq('id', id);
-fetchNotificationsList();
-showNotification("تم حذف التنبيه!", "info");
-} catch(err) { console.error(err); }
+    await _supabase.from('notifications').delete().eq('id', id);
+    fetchNotificationsList();
 }
 
 // ==========================================
-// إدارة صلاحيات الأدمن
-// ==========================================
-
-async function fetchAdminsList() {
-const tbody = document.getElementById('admins-list-table');
-if(!tbody) return;
-
-try {
-const { data: admins, error } = await _supabase.from('admins').select('id');
-if(error) throw error;
-
-if(!admins || admins.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد مسؤولي إدارة مسجلين</td></tr>`;
-return;
-}
-
-const adminIds = admins.map(a => a.id);
-const { data: profiles } = await _supabase.from('profiles').select('*').in('id', adminIds);
-
-tbody.innerHTML = (profiles || []).map(p => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-4 px-5 font-black text-slate-900">${p.full_name || 'مسؤول منسق'}</td>
-<td class="p-4 font-mono font-bold text-purple-700">${p.student_code || p.student_phone || '-'}</td>
-<td class="p-4 font-mono text-gray-600">${p.email || 'غير مسجل'}</td>
-<td class="p-4 font-mono text-xs text-gray-400">${p.id}</td>
-<td class="p-4 text-center">
-<button onclick="revokeAdmin('${p.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all active:scale-95">
-<i class="fa-solid fa-user-minus"></i> سحب الصلاحية
-</button>
-</td>
-</tr>
-`).join('');
-
-} catch(err) { console.error(err); }
-}
-
-async function handleAdminSearch(event) {
-event.preventDefault();
-const query = document.getElementById('adminSearchInput').value.trim();
-const loader = document.getElementById('admin-search-loader');
-const resultsBox = document.getElementById('admin-search-results');
-const tbody = document.getElementById('admin-search-results-table');
-
-if(!query) return;
-
-loader.classList.remove('hidden');
-loader.classList.add('flex');
-resultsBox.classList.add('hidden');
-
-try {
-const { data: users } = await _supabase
-.from('profiles')
-.select('*')
-.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,id.eq.${query}`)
-.limit(5);
-
-if(!users || users.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400 font-bold">لم يتم العثور على أي مستخدم بهذه البيانات</td></tr>`;
-} else {
-tbody.innerHTML = users.map(u => `
-<tr class="hover:bg-purple-50/40 transition-colors">
-<td class="p-3 font-bold text-slate-900">${u.full_name}</td>
-<td class="p-3 font-mono font-bold text-purple-700">${u.student_code || '-'}</td>
-<td class="p-3 font-mono text-gray-600 text-xs">${u.email || '-'}</td>
-<td class="p-3 font-mono text-[10px] text-gray-400 text-center">${u.id.substring(0,8)}...</td>
-<td class="p-3 text-center">
-<button onclick="promoteToAdmin('${u.id}')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-sm">
-<i class="fa-solid fa-user-plus"></i> ترقية لأدمن
-</button>
-</td>
-</tr>
-`).join('');
-}
-
-resultsBox.classList.remove('hidden');
-} catch(err) {
-showNotification("حدث خطأ في البحث!", "error");
-} finally {
-loader.classList.add('hidden');
-loader.classList.remove('flex');
-}
-}
-
-async function promoteToAdmin(userId) {
-try {
-const { error } = await _supabase.from('admins').insert([{ id: userId }]);
-if(error) throw error;
-
-showNotification("تم منح صلاحية الأدمن للمستخدم بنجاح!", "success");
-fetchAdminsList();
-loadDashboardStats();
-} catch(err) {
-showNotification("المستخدم يمتلك صلاحية الأدمن بالفعل!", "warning");
-}
-}
-
-async function revokeAdmin(userId) {
-if(!confirm("هل أنت متأكد من سحب صلاحية الأدمن عن هذا المستخدم؟")) return;
-
-try {
-const { error } = await _supabase.from('admins').delete().eq('id', userId);
-if(error) throw error;
-
-showNotification("تم سحب صلاحية الأدمن بنجاح!", "info");
-fetchAdminsList();
-loadDashboardStats();
-} catch(err) {
-showNotification("تعذر سحب الصلاحية!", "error");
-}
-}
-
-// ==========================================
-// وحدة مركز الأرشيف والسجلات التراكمية (ARCHIVE MODULE)
+// لوحة الأرشيف الأكاديمي المطور
 // ==========================================
 
 async function loadArchivePanelData() {
-fetchHonorRollArchives();
-fetchArchivedCoursesList();
-fetchSubscriptionHistoryArchive();
+    loadHonorRollArchives();
+    loadArchivedCourses();
+    loadSubscriptionHistoryArchive();
 }
 
-async function fetchHonorRollArchives() {
-const tbody = document.getElementById('honor-roll-archives-table');
-if(!tbody) return;
+async function loadHonorRollArchives() {
+    const tbody = document.getElementById('honor-roll-archives-table');
+    if (!tbody) return;
 
-try {
-const { data: archives, error } = await _supabase
-.from('honor_roll_archives')
-.select('*, profiles(full_name)')
-.order('archived_at', { ascending: false });
+    try {
+        const { data, error } = await _supabase
+            .from('honor_roll_archives')
+            .select('*, profiles(full_name)')
+            .order('archived_at', { ascending: false });
 
-if(error) throw error;
+        if (error) throw error;
 
-if(!archives || archives.length === 0) {
-tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold">لا يوجد سجل مؤرشف للوحة الشرف حتى الآن</td></tr>`;
-return;
-}
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold">لا يوجد أرشيف محفوظ للأوائل حتى الآن</td></tr>`;
+            return;
+        }
 
-tbody.innerHTML = archives.map(a => `
-<tr class="hover:bg-slate-900/80 transition-colors">
-<td class="p-3.5 px-4 font-black">
-<span class="w-7 h-7 rounded-lg inline-flex items-center justify-center font-black text-xs ${a.rank === 1 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-300'}">
-#${a.rank}
-</span>
-</td>
-<td class="p-3.5 font-black text-slate-100">${a.profiles?.full_name || 'طالب مجهول'}</td>
-<td class="p-3.5 font-bold text-amber-400">${a.weekly_points} نقطة</td>
-<td class="p-3.5 font-mono text-slate-400 text-xs">الأسبوع ${a.week_number} / ${a.year}</td>
-<td class="p-3.5 text-xs text-slate-300 font-bold">${a.stage || 'غير محدد'}</td>
-<td class="p-3.5 font-mono text-[11px] text-slate-500">${new Date(a.archived_at).toLocaleDateString('ar-EG')}</td>
-<td class="p-3.5 text-center">
-<button onclick="deleteHonorRollArchive('${a.id}')" class="text-red-400 hover:text-red-300 p-1.5 px-3 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-all">
-<i class="fa-solid fa-trash-can"></i>
-</button>
-</td>
-</tr>
-`).join('');
+        tbody.innerHTML = data.map(h => `
+            <tr class="hover:bg-slate-900 transition-colors border-b border-slate-800">
+                <td class="p-3.5 px-4 font-black text-amber-400">المركز ${h.rank}</td>
+                <td class="p-3.5 font-bold text-slate-100">${h.profiles?.full_name || 'طالب متفوق'}</td>
+                <td class="p-3.5 font-black text-emerald-400">${h.weekly_points} نقطة</td>
+                <td class="p-3.5 font-bold text-slate-400">أسبوع ${h.week_number || 1} / ${h.year || 2026}</td>
+                <td class="p-3.5 text-slate-300">${h.stage || '---'}</td>
+                <td class="p-3.5 text-slate-500 text-[10px]">${new Date(h.archived_at).toLocaleDateString('ar-EG')}</td>
+                <td class="p-3.5 text-center">
+                    <button onclick="deleteHonorArchive('${h.id}')" class="text-red-400 hover:text-red-300">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
 
-} catch(err) {
-console.error("Honor Roll Archive Error:", err);
-tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-red-400 font-bold">خطأ أثناء جلب أرشيف لوحة الشرف</td></tr>`;
-}
+    } catch (err) { console.error(err); }
 }
 
 async function archiveCurrentWeekHonorRoll() {
-if(!confirm("هل أنت متأكد من حفظ لقطة أسبوعية لأوائل اللوحة وتصفير النقاط الأسبوعية لبدء أسبوع جديد؟")) return;
+    if(!confirm("هل تأكد من أرشفة نقاط الأوائل للأسبوع الحالي وتصفير النقاط؟")) return;
+    try {
+        const { data: topStudents } = await _supabase
+            .from('profiles')
+            .select('id, weekly_points, stage')
+            .gt('weekly_points', 0)
+            .order('weekly_points', { ascending: false })
+            .limit(20);
 
-try {
-const { data: topStudents, error: fetchErr } = await _supabase
-.from('profiles')
-.select('id, weekly_points, stage')
-.gt('weekly_points', 0)
-.order('weekly_points', { ascending: false });
+        if (!topStudents || topStudents.length === 0) {
+            showNotification("لا يوجد طلاب لديهم نقاط أسبوعية لأرشفتها", "warning");
+            return;
+        }
 
-if(fetchErr) throw fetchErr;
+        const archives = topStudents.map((s, idx) => ({
+            student_id: s.id,
+            weekly_points: s.weekly_points,
+            rank: idx + 1,
+            week_number: 1,
+            year: 2026,
+            stage: s.stage,
+            archived_at: new Date().toISOString()
+        }));
 
-if(!topStudents || topStudents.length === 0) {
-showNotification("لا يوجد طلاب لديهم نقاط أسبوعية لأرشفتهم!", "warning");
-return;
+        await _supabase.from('honor_roll_archives').insert(archives);
+        await _supabase.from('profiles').update({ weekly_points: 0 }).gt('weekly_points', 0);
+
+        showNotification("تمت أرشفة المتفوقين وتصفير النقاط بنجاح!", "success");
+        loadHonorRollArchives();
+
+    } catch (err) {
+        showNotification("خطأ في الأرشفة: " + err.message, "error");
+    }
 }
 
-const currentDate = new Date();
-const currentYear = currentDate.getFullYear();
-const currentWeek = Math.ceil((((currentDate - new Date(currentYear, 0, 1)) / 86400000) + 1) / 7);
-
-const archiveRecords = topStudents.map((s, index) => ({
-student_id: s.id,
-weekly_points: s.weekly_points,
-rank: index + 1,
-week_number: currentWeek,
-year: currentYear,
-stage: s.stage,
-archived_at: new Date().toISOString()
-}));
-
-const { error: insertErr } = await _supabase.from('honor_roll_archives').insert(archiveRecords);
-if(insertErr) throw insertErr;
-
-await _supabase.from('profiles').update({ weekly_points: 0 }).gt('weekly_points', 0);
-
-showNotification(`تم أرشفة لوحة الشرف بنجاح وتصفير نقاط ${topStudents.length} طالب لبدء الأسبوع الجديد!`, "success");
-fetchHonorRollArchives();
-loadDashboardStats();
-} catch(err) {
-console.error("Archive Execution Error:", err);
-showNotification("تعذر تنفيذ أرشفة الأسبوع!", "error");
-}
+async function deleteHonorArchive(id) {
+    await _supabase.from('honor_roll_archives').delete().eq('id', id);
+    loadHonorRollArchives();
 }
 
-async function deleteHonorRollArchive(id) {
-if(!confirm("هل ترغب في حذف القيد المؤرشف؟")) return;
-try {
-await _supabase.from('honor_roll_archives').delete().eq('id', id);
-showNotification("تم حذف سجل الأرشيف!", "info");
-fetchHonorRollArchives();
-} catch(err) { console.error(err); }
+async function loadArchivedCourses() {
+    const tbody = document.getElementById('archived-courses-table');
+    if (!tbody) return;
+
+    try {
+        const { data } = await _supabase.from('courses').select('*').eq('is_visible', false);
+        document.getElementById('archived-courses-count').innerText = `${data ? data.length : 0} كورس`;
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات مؤرشفة</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.map(c => `
+            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                <td class="p-4 px-5 font-bold text-slate-800">${c.title}</td>
+                <td class="p-4 font-bold text-gray-600">${c.stage}</td>
+                <td class="p-4 text-gray-500">${c.term || '---'}</td>
+                <td class="p-4 text-center font-bold text-emerald-600">${c.price} ج.م</td>
+                <td class="p-4 text-center">
+                    <button onclick="restoreCourse(${c.id})" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1 rounded-xl text-xs font-bold border border-emerald-200 transition-all ml-2">
+                        <i class="fa-solid fa-rotate-left"></i> استعادة
+                    </button>
+                    <button onclick="deleteCoursePermanently(${c.id})" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1 rounded-xl text-xs font-bold border border-red-200 transition-all">
+                        <i class="fa-solid fa-trash"></i> حذف نهائي
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) { console.error(err); }
 }
 
-async function fetchArchivedCoursesList() {
-const tbody = document.getElementById('archived-courses-table');
-const counter = document.getElementById('archived-courses-count');
-if(!tbody) return;
-
-try {
-const { data: courses, error } = await _supabase
-.from('courses')
-.select('*')
-.eq('is_visible', false)
-.order('created_at', { ascending: false });
-
-if(error) throw error;
-
-if(counter) counter.innerText = `${courses ? courses.length : 0} كورس`;
-
-if(!courses || courses.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات مؤرشفة حالياً</td></tr>`;
-return;
+async function restoreCourse(courseId) {
+    await _supabase.from('courses').update({ is_visible: true }).eq('id', courseId);
+    showNotification("تمت استعادة الكورس إلى القائمة النشطة", "success");
+    loadArchivedCourses();
+    fetchCoursesList();
 }
 
-tbody.innerHTML = courses.map(c => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-4 px-5 font-black text-slate-900">${c.title}</td>
-<td class="p-4 font-bold text-gray-700">${c.stage}</td>
-<td class="p-4 font-bold text-amber-700">${c.term || 'غير محدد'}</td>
-<td class="p-4 text-center font-black text-slate-900">${c.price > 0 ? c.price + ' ج.م' : 'مجاني'}</td>
-<td class="p-4 text-center">
-<div class="flex items-center justify-center gap-2">
-<button onclick="toggleCourseArchive('${c.id}', false)" class="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 p-2 px-3 rounded-xl border border-emerald-200 font-bold text-xs transition-all active:scale-95 flex items-center gap-1">
-<i class="fa-solid fa-box-open"></i> استعادة للواجهة
-</button>
-<button onclick="deleteCourse('${c.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 p-2 px-3 rounded-xl border border-red-200 font-bold text-xs transition-all active:scale-95">
-<i class="fa-solid fa-trash-can"></i> حذف نهائي
-</button>
-</div>
-</td>
-</tr>
-`).join('');
-
-} catch(err) { console.error(err); }
+async function deleteCoursePermanently(courseId) {
+    if(!confirm("تحذير: هذا الإجراء سيحذف الكورس وجميع دروسه وامتحاناته نهائياً!")) return;
+    await _supabase.from('courses').delete().eq('id', courseId);
+    showNotification("تم حذف الكورس نهائياً", "info");
+    loadArchivedCourses();
 }
 
-async function fetchSubscriptionHistoryArchive() {
-const tbody = document.getElementById('subscription-history-archive-table');
-if(!tbody) return;
+async function loadSubscriptionHistoryArchive() {
+    const tbody = document.getElementById('subscription-history-archive-table');
+    if (!tbody) return;
 
-try {
-const { data: requests, error } = await _supabase
-.from('subscription_requests')
-.select('*, profiles(full_name), courses(title)')
-.neq('status', 'pending')
-.order('created_at', { ascending: false })
-.limit(20);
+    try {
+        const { data } = await _supabase
+            .from('subscription_requests')
+            .select('*, profiles(full_name), courses(title)')
+            .neq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(30);
 
-if(error) throw error;
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">لا يوجد سجل تاريخي للاشتراكات والمعاملات</td></tr>`;
+            return;
+        }
 
-if(!requests || requests.length === 0) {
-tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">لا توجد طلبات سابقة مؤرشفة</td></tr>`;
-return;
-}
+        tbody.innerHTML = data.map(s => `
+            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                <td class="p-3.5 px-4 font-bold text-slate-800">${s.profiles?.full_name || 'طالب'}</td>
+                <td class="p-3.5 font-bold text-gray-700">${s.courses?.title || 'كورس'}</td>
+                <td class="p-3.5 text-center font-bold text-emerald-600">${s.amount_paid || 0} ج.م</td>
+                <td class="p-3.5 text-center text-xs text-gray-500">${s.payment_method || 'فودافون كاش'}</td>
+                <td class="p-3.5 text-center font-black">${s.status === 'approved' ? '<span class="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full text-[10px]">مقبول ومفعّل</span>' : '<span class="text-red-500 bg-red-50 px-2.5 py-1 rounded-full text-[10px]">مرفوض</span>'}</td>
+                <td class="p-3.5 text-center text-gray-400 text-[10px]">${new Date(s.created_at).toLocaleDateString('ar-EG')}</td>
+            </tr>
+        `).join('');
 
-tbody.innerHTML = requests.map(req => `
-<tr class="hover:bg-slate-50 transition-colors">
-<td class="p-3.5 px-4 font-black text-slate-900">${req.profiles?.full_name || 'غير معروف'}</td>
-<td class="p-3.5 font-bold text-gray-800">${req.courses?.title || 'كورس غير مسمى'}</td>
-<td class="p-3.5 text-center font-black text-emerald-600">${req.amount_paid ? req.amount_paid + ' ج.م' : '-'}</td>
-<td class="p-3.5 text-center font-bold text-gray-600 text-xs">${req.payment_method || 'فودافون كاش / كود'}</td>
-<td class="p-3.5 text-center">
-${req.status === 'approved' ? '<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-emerald-200"><i class="fa-solid fa-check ml-1"></i> مقبول</span>' : '<span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-red-200"><i class="fa-solid fa-xmark ml-1"></i> مرفوض</span>'}
-</td>
-<td class="p-3.5 text-center font-mono text-[11px] text-gray-400">${new Date(req.created_at).toLocaleDateString('ar-EG')}</td>
-</tr>
-`).join('');
-
-} catch(err) { console.error(err); }
+    } catch (err) { console.error(err); }
 }
 
 // ==========================================
-// البث المباشر (Jitsi Live Studio)
+// النافذة المنبثقة لتعطيل / تفعيل الكورسات
+// ==========================================
+
+function openDisableCourseModal() {
+    document.getElementById('disable-course-modal').classList.remove('hidden');
+}
+
+function closeDisableCourseModal() {
+    document.getElementById('disable-course-modal').classList.add('hidden');
+}
+
+function toggleDisableScope() {
+    const scope = document.querySelector('input[name="disable_scope"]:checked').value;
+    const box = document.getElementById('disable-student-box');
+    if (scope === 'specific') {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+        clearSelectedDisableStudent();
+    }
+}
+
+async function handleDisableStudentSearch(val) {
+    const dropdown = document.getElementById('disableStudentDropdown');
+    if (!val || val.length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+
+    try {
+        const { data } = await _supabase
+            .from('profiles')
+            .select('id, full_name, student_code')
+            .or(`full_name.ilike.%${val}%,student_code.ilike.%${val}%`)
+            .limit(5);
+
+        if (!data || data.length === 0) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        dropdown.innerHTML = data.map(s => `
+            <div onclick="selectDisableStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-red-50 cursor-pointer text-xs font-bold text-gray-800 flex justify-between">
+                <span>${s.full_name}</span>
+                <span class="text-red-600 font-mono">${s.student_code || ''}</span>
+            </div>
+        `).join('');
+        dropdown.classList.remove('hidden');
+    } catch (err) { console.error(err); }
+}
+
+function selectDisableStudent(id, name) {
+    document.getElementById('targetDisableStudentUuid').value = id;
+    document.getElementById('selectedDisableStudentName').innerText = `الطالب المحدد: ${name}`;
+    document.getElementById('selectedDisableStudentBadge').classList.remove('hidden');
+    document.getElementById('selectedDisableStudentBadge').classList.add('flex');
+    document.getElementById('disableStudentDropdown').classList.add('hidden');
+}
+
+function clearSelectedDisableStudent() {
+    document.getElementById('targetDisableStudentUuid').value = '';
+    document.getElementById('selectedDisableStudentBadge').classList.add('hidden');
+    document.getElementById('disableStudentSearchInput').value = '';
+}
+
+async function executeDisableCourseAction(targetStatus) {
+    const courseId = document.getElementById('disableModalCourseSelect').value;
+    const scope = document.querySelector('input[name="disable_scope"]:checked').value;
+    const studentId = document.getElementById('targetDisableStudentUuid').value;
+
+    if (!courseId) {
+        showNotification("يرجى اختيار الكورس المراد التعديل عليه", "warning");
+        return;
+    }
+
+    try {
+        if (scope === 'all') {
+            await _supabase.from('course_subscriptions').update({ status: targetStatus }).eq('course_id', courseId);
+            showNotification(`تمت تحديث حالة الكورس لجميع الطلاب إلى: ${targetStatus === 'disabled' ? 'معطل' : 'نشط'}`, "success");
+        } else {
+            if (!studentId) return showNotification("يرجى تحديد الطالب المطلوب", "warning");
+            await _supabase.from('course_subscriptions').update({ status: targetStatus }).eq('course_id', courseId).eq('student_id', studentId);
+            showNotification(`تمت تعديل حالة الكورس لهذا الطالب بنجاح`, "success");
+        }
+        closeDisableCourseModal();
+    } catch (err) {
+        showNotification("خطأ في العملية: " + err.message, "error");
+    }
+}
+
+// ==========================================
+// لوحة البث المباشر (Jitsi Live Stream)
 // ==========================================
 
 async function loadLiveStreamDetails() {
-try {
-const { data: room } = await _supabase.from('live_rooms').select('*').eq('id', LIVE_ROOM_ID).single();
-if(room) {
-document.getElementById('liveTitleInput').value = room.title || '';
-document.getElementById('liveDescInput').value = room.description || '';
-document.getElementById('liveChannelInput').value = room.channel_name || 'MagdyLiveClass2026';
-isLiveActive = (room.status === 'live');
-updateLiveUIStatus();
-}
-} catch(err) { console.error(err); }
-}
-
-function updateLiveUIStatus() {
-const badge = document.getElementById('liveStatusBadge');
-const btn = document.getElementById('startLiveBtn');
-const placeholder = document.getElementById('noVideoPlaceholder');
-
-if(isLiveActive) {
-badge.className = "bg-red-50 text-red-600 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-red-200";
-badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span> مباشر الآن`;
-
-btn.className = "flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md order-1 sm:order-2";
-btn.innerHTML = `<i class="fa-solid fa-stop text-red-500"></i> إنهاء البث المباشر`;
-
-if(placeholder) placeholder.classList.add('hidden');
-if(!jitsiAPI) initJitsiLive();
-} else {
-badge.className = "bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200";
-badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-400"></span> مغلق حالياً`;
-
-btn.className = "flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20 order-1 sm:order-2";
-btn.innerHTML = `<i class="fa-solid fa-play"></i> بدء البث المباشر (تفعيل الآن)`;
-
-if(placeholder) placeholder.classList.remove('hidden');
-if(jitsiAPI) {
-jitsiAPI.dispose();
-jitsiAPI = null;
-}
-}
+    try {
+        const { data } = await _supabase.from('live_rooms').select('*').eq('id', LIVE_ROOM_ID).single();
+        if (data) {
+            document.getElementById('liveTitleInput').value = data.title || '';
+            document.getElementById('liveDescInput').value = data.description || '';
+            document.getElementById('liveChannelInput').value = data.channel_name || 'MagdyLiveClass2026';
+            isLiveActive = (data.status === 'live');
+            updateLiveUI();
+        }
+    } catch (err) { console.error(err); }
 }
 
-function initJitsiLive() {
-const domain = "meet.jit.si";
-const roomName = document.getElementById('liveChannelInput').value.trim() || "MagdyLiveClass2026";
-const options = {
-roomName: roomName,
-width: "100%",
-height: "100%",
-parentNode: document.getElementById('jitsiContainer'),
-userInfo: { displayName: "الأستاذ (المُحاضر)" }
-};
-jitsiAPI = new JitsiMeetExternalAPI(domain, options);
+function updateLiveUI() {
+    const badge = document.getElementById('liveStatusBadge');
+    const startBtn = document.getElementById('startLiveBtn');
+    const placeholder = document.getElementById('noVideoPlaceholder');
+
+    if (isLiveActive) {
+        badge.className = "bg-red-50 text-red-600 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-red-200 animate-pulse";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-600"></span> مباشر الآن (جارٍ البث)`;
+        startBtn.className = "flex-1 bg-gray-800 hover:bg-gray-900 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md";
+        startBtn.innerHTML = `<i class="fa-solid fa-stop"></i> إنهاء البث المباشر`;
+        placeholder.classList.add('hidden');
+        if (!jitsiAPI) initJitsiFrame();
+    } else {
+        badge.className = "bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-400"></span> مغلق حالياً`;
+        startBtn.className = "flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20";
+        startBtn.innerHTML = `<i class="fa-solid fa-play"></i> بدء البث المباشر (تفعيل الآن)`;
+        placeholder.classList.remove('hidden');
+        if (jitsiAPI) { jitsiAPI.dispose(); jitsiAPI = null; }
+    }
 }
 
-async function handleUpdateLiveDetails(e) {
-e.preventDefault();
-const title = document.getElementById('liveTitleInput').value;
-const description = document.getElementById('liveDescInput').value;
-const channel_name = document.getElementById('liveChannelInput').value.trim();
-
-try {
-await _supabase.from('live_rooms').upsert([{
-id: LIVE_ROOM_ID,
-title,
-description,
-channel_name,
-status: isLiveActive ? 'live' : 'ended'
-}]);
-showNotification("تم تفاصيل غرفة البث بنجاح!", "success");
-} catch(err) { showNotification("فشل حفظ إعدادات البث!", "error"); }
+function initJitsiFrame() {
+    const domain = "meet.jit.si";
+    const channelName = document.getElementById('liveChannelInput').value.trim() || 'MagdyLiveClass2026';
+    const options = {
+        roomName: channelName,
+        width: '100%',
+        height: '100%',
+        parentNode: document.getElementById('jitsiContainer'),
+        userInfo: { displayName: "الأستاذ (المعلم)" }
+    };
+    jitsiAPI = new JitsiMeetExternalAPI(domain, options);
 }
 
 async function toggleLiveStatus() {
-isLiveActive = !isLiveActive;
-const statusStr = isLiveActive ? 'live' : 'ended';
+    isLiveActive = !isLiveActive;
+    try {
+        await _supabase.from('live_rooms').upsert({
+            id: LIVE_ROOM_ID,
+            title: document.getElementById('liveTitleInput').value.trim() || 'حصة مباشرة',
+            description: document.getElementById('liveDescInput').value.trim() || '',
+            channel_name: document.getElementById('liveChannelInput').value.trim() || 'MagdyLiveClass2026',
+            status: isLiveActive ? 'live' : 'ended',
+            started_at: isLiveActive ? new Date().toISOString() : null,
+            ended_at: !isLiveActive ? new Date().toISOString() : null
+        });
 
-try {
-await _supabase.from('live_rooms').upsert([{
-id: LIVE_ROOM_ID,
-status: statusStr,
-started_at: isLiveActive ? new Date().toISOString() : null
-}]);
-
-updateLiveUIStatus();
-showNotification(isLiveActive ? "تم بدء البث المباشر بنجاح!" : "تم إنهاء البث المباشر!", isLiveActive ? "success" : "info");
-} catch(err) { showNotification("فشل تغيير حالة البث!", "error"); }
+        showNotification(isLiveActive ? "تم بدء البث المباشر بنجاح!" : "تم إغلاق البث المباشر", isLiveActive ? "success" : "info");
+        updateLiveUI();
+    } catch (err) {
+        showNotification("خطأ في تغيير حالة البث: " + err.message, "error");
+    }
 }
 
-async function loadLivePreviousMessages() {
-const container = document.getElementById('liveChatMessages');
-if(!container) return;
-
-try {
-const { data: msgs } = await _supabase
-.from('live_messages')
-.select('*')
-.eq('room_id', LIVE_ROOM_ID)
-.order('created_at', { ascending: true })
-.limit(50);
-
-if(msgs) {
-container.innerHTML = '<div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">مرحباً بك في الدردشة المباشرة 👋</div>';
-msgs.forEach(appendLiveChatMessage);
-}
-} catch(err) { console.error(err); }
-}
-
-function appendLiveChatMessage(msg) {
-const container = document.getElementById('liveChatMessages');
-if(!container) return;
-
-const isTeacher = (msg.sender_role === 'teacher' || msg.sender_role === 'admin');
-const msgDiv = document.createElement('div');
-msgDiv.className = `flex flex-col ${isTeacher ? 'items-start' : 'items-end'} animate-fade-in`;
-
-msgDiv.innerHTML = `
-<div class="max-w-[85%] rounded-2xl p-3 text-xs shadow-sm ${isTeacher ? 'bg-slate-900 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-gray-100 rounded-tl-none'}">
-<div class="flex items-center gap-2 mb-1">
-<span class="font-black ${isTeacher ? 'text-red-400' : 'text-emerald-600'} text-[10px]">${msg.sender_name}</span>
-<span class="text-[9px] opacity-60">${new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
-</div>
-<p class="leading-relaxed font-semibold">${msg.message}</p>
-</div>
-`;
-
-container.appendChild(msgDiv);
-container.scrollTop = container.scrollHeight;
-}
-
-async function sendAdminLiveMessage(e) {
-e.preventDefault();
-const input = document.getElementById('liveAdminChatInput');
-const text = input.value.trim();
-if(!text) return;
-
-try {
-const { error } = await _supabase.from('live_messages').insert([{
-room_id: LIVE_ROOM_ID,
-sender_name: 'الأستاذ (المُحاضر)',
-sender_role: 'teacher',
-message: text
-}]);
-
-if(error) throw error;
-input.value = '';
-} catch(err) { showNotification("فشل إرسال التعليق!", "error"); }
-}
-
-function subscribeToLiveMessages() {
-_supabase
-.channel('realtime_live_chat')
-.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages' }, payload => {
-appendLiveChatMessage(payload.new);
-})
-.subscribe();
+async function handleUpdateLiveDetails(event) {
+    event.preventDefault();
+    try {
+        await _supabase.from('live_rooms').upsert({
+            id: LIVE_ROOM_ID,
+            title: document.getElementById('liveTitleInput').value.trim(),
+            description: document.getElementById('liveDescInput').value.trim(),
+            channel_name: document.getElementById('liveChannelInput').value.trim(),
+            status: isLiveActive ? 'live' : 'ended'
+        });
+        showNotification("تم تفاصيل البث المباشر بنجاح", "success");
+    } catch (err) {
+        showNotification("خطأ في حفظ البيانات: " + err.message, "error");
+    }
 }
 
 function toggleChatStatus() {
-const toggle = document.getElementById('chatStatusToggle');
-const label = document.getElementById('chatStatusLabel');
-if(toggle.checked) {
-label.innerText = 'مفتوحة';
-label.className = "text-[9px] sm:text-[10px] text-emerald-400 font-bold w-6 text-center";
-} else {
-label.innerText = 'مغلقة';
-label.className = "text-[9px] sm:text-[10px] text-red-400 font-bold w-6 text-center";
+    const isChecked = document.getElementById('chatStatusToggle').checked;
+    document.getElementById('chatStatusLabel').innerText = isChecked ? "مفتوحة" : "مغلقة";
+    document.getElementById('chatStatusLabel').className = isChecked ? "text-[9px] sm:text-[10px] text-emerald-400 font-bold w-6 text-center" : "text-[9px] sm:text-[10px] text-red-400 font-bold w-6 text-center";
 }
+
+async function loadLivePreviousMessages() {
+    const container = document.getElementById('liveChatMessages');
+    if (!container) return;
+
+    try {
+        const { data } = await _supabase
+            .from('live_messages')
+            .select('*')
+            .eq('room_id', LIVE_ROOM_ID)
+            .order('created_at', { ascending: true })
+            .limit(50);
+
+        if (data) {
+            data.forEach(m => appendChatMessage(m));
+        }
+    } catch (err) { console.error(err); }
+}
+
+function appendChatMessage(m) {
+    const container = document.getElementById('liveChatMessages');
+    if (!container) return;
+
+    const div = document.createElement('div');
+    const isAdmin = (m.sender_role === 'admin' || m.sender_name?.includes('الأستاذ'));
+    
+    div.className = `flex flex-col p-2.5 rounded-2xl text-xs max-w-[85%] ${isAdmin ? 'bg-red-50 text-red-900 border border-red-100 self-start mr-auto' : 'bg-white text-gray-800 border border-gray-100 self-end ml-auto'}`;
+    div.innerHTML = `
+        <span class="font-black text-[10px] ${isAdmin ? 'text-red-600' : 'text-slate-900'}">${m.sender_name || 'طالب'} ${isAdmin ? '⭐' : ''}</span>
+        <p class="font-bold mt-0.5">${m.message}</p>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendAdminLiveMessage(event) {
+    event.preventDefault();
+    const input = document.getElementById('liveAdminChatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const msg = {
+        room_id: LIVE_ROOM_ID,
+        sender_name: "الأستاذ / الأدمن",
+        sender_role: "admin",
+        message: text,
+        created_at: new Date().toISOString()
+    };
+
+    input.value = '';
+    try {
+        await _supabase.from('live_messages').insert([msg]);
+    } catch (err) { console.error(err); }
+}
+
+function subscribeToLiveMessages() {
+    _supabase
+        .channel('live_messages_realtime')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages' }, payload => {
+            appendChatMessage(payload.new);
+        })
+        .subscribe();
 }
 </script>
 </body>
