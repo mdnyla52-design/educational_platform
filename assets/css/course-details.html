@@ -71,12 +71,6 @@
         .ytp-impression-link, .ytp-watermark {
             display: none !important;
         }
-
-        /* تنسيق العلامة المائية للحماية - تم التعديل لتكون ثابتة وبخط أوضح */
-        .watermark-text {
-            user-select: none;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 4px rgba(0,0,0,0.7);
-        }
     </style>
 </head>
 <body class="font-cairo bg-gray-50 text-gray-800 antialiased">
@@ -142,10 +136,9 @@
                         <!-- طبقة حماية شفافة لمنع أي تفاعل مباشر مع الفيديو (كليك يمين أو نسخ) -->
                         <div class="absolute inset-0 w-full h-full z-10 bg-transparent pointer-events-auto" oncontextmenu="return false;"></div>
 
-                        <!-- العلامة المائية (اسم الطالب والقسم) - تم تثبيتها في الأعلى -->
-                        <div id="video-watermark" class="absolute top-6 left-0 right-0 z-20 pointer-events-none opacity-60 watermark-text flex flex-col items-center justify-start">
-                            <span id="watermark-student-name" class="text-white font-black text-2xl sm:text-3xl text-center tracking-wide"></span>
-                            <span id="watermark-section-name" class="text-emerald-400 font-bold text-lg sm:text-xl mt-1 text-center"></span>
+                        <!-- العلامة المائية الاحترافية (اسم الطالب ورقم تعريفي) - أعلى اليمين -->
+                        <div id="video-watermark" class="absolute top-4 right-6 z-40 pointer-events-none opacity-85 flex items-center justify-end select-none">
+                            <span id="watermark-student-name" class="text-white/90 font-semibold text-xs sm:text-sm tracking-wide" style="text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.9);"></span>
                         </div>
                         
                         <div id="native-video-container" class="absolute inset-0 w-full h-full hidden"></div>
@@ -153,7 +146,7 @@
                         <!-- مشغل الفيديو الاحترافي المخصص (الطبقة العازلة) -->
                         <div id="custom-video-controls" class="absolute inset-0 w-full h-full flex flex-col justify-between opacity-0 hover:opacity-100 transition-opacity duration-300 z-30">
                             <!-- طبقة تظليل علوية لإخفاء أي تسريب لعنوان يوتيوب ولتوضيح العلامة المائية -->
-                            <div class="w-full h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"></div>
+                            <div class="w-full h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"></div>
                             
                             <!-- منطقة النقر الوسطى للتشغيل والإيقاف -->
                             <div id="center-click-area" class="flex-1 w-full h-full cursor-pointer flex items-center justify-center" oncontextmenu="return false;">
@@ -415,8 +408,7 @@
             globalCourseData = course;
 
             // ==========================================
-            // التعديل الجذري والآمن لجلب الأجزاء (المحاضرات)
-            // تم إزالة .order() من الـ API لمنع تعطلها في حال عدم وجود عمود sort_order
+            // جلب الأجزاء (المحاضرات)
             // ==========================================
 
             // 1. جلب الأقسام
@@ -426,7 +418,6 @@
                 .eq('course_id', courseId);
 
             globalSections = sections || [];
-            // الترتيب برمجياً (آمن جداً)
             globalSections.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
             let fetchedLectures = [];
@@ -441,7 +432,7 @@
                 fetchedLectures = [...lecturesByCourse];
             }
 
-            // 3. جلب المحاضرات المرتبطة بالأقسام ودمجها (لتجنب ضياع المحاضرات التي تم ربطها بقسم فقط)
+            // 3. جلب المحاضرات المرتبطة بالأقسام ودمجها
             if (globalSections.length > 0) {
                 const sectionIds = globalSections.map(s => s.id);
                 const { data: lecturesBySection } = await supabaseClient
@@ -451,7 +442,6 @@
                 
                 if (lecturesBySection && lecturesBySection.length > 0) {
                     lecturesBySection.forEach(secLec => {
-                        // التأكد من عدم التكرار إذا كانت المحاضرة تم جلبها بالفعل
                         if (!fetchedLectures.some(l => l.id === secLec.id)) {
                             fetchedLectures.push(secLec);
                         }
@@ -459,17 +449,14 @@
                 }
             }
 
-            // ترتيب الفيديوهات والمحاضرات برمجياً 
             fetchedLectures.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-            // حل مشكلة الاختفاء بسبب is_visible: نعتبرها مرئية دائماً إلا إذا تم إخفاؤها صراحة بشكل واضح
             globalLectures = fetchedLectures.filter(l => 
                 l.is_visible !== false && 
                 l.is_visible !== 'false' && 
                 l.is_visible !== 0
             );
 
-            // في حال عدم وجود أي أجزاء مرفوعة نهائياً، وعوضاً عن ذلك تم رفع فيديو رئيسي للكورس نفسه
             if (globalLectures.length === 0 && course.video_url) {
                 globalLectures.push({
                     id: 'main-course-video',
@@ -525,7 +512,7 @@
             document.getElementById('lectures-count-badge').textContent = `${globalLectures.length} جزء`;
 
             renderSidebarLectures();
-            setupCustomPlayerControls(); // إعداد المشغل المخصص
+            setupCustomPlayerControls(); 
 
             if (globalLectures.length > 0) {
                 selectLecture(0);
@@ -656,21 +643,20 @@
             document.getElementById('details-course-name').textContent = lecture.title;
             document.getElementById('details-course-desc').textContent = lecture.description || globalCourseData.description || 'لا يوجد وصف متاح لهذا الجزء حالياً.';
 
-            // تحديث العلامة المائية باسم الطالب واسم القسم
+            // تحديث العلامة المائية بشكل احترافي (الاسم + رقم تعريفي كما في الصورة)
             const watermarkStudent = document.getElementById('watermark-student-name');
-            const watermarkSection = document.getElementById('watermark-section-name');
             
             if (watermarkStudent && studentProfile) {
-                watermarkStudent.textContent = studentProfile.full_name || 'طالب المنصة';
-            }
-            
-            if (watermarkSection) {
-                let sectionName = 'عام';
-                if (lecture.section_id) {
-                    const sectionObj = globalSections.find(s => s.id === lecture.section_id);
-                    if (sectionObj) sectionName = sectionObj.title;
+                // استخراج رقم تعريفي قصير وثابت للطالب من الـ ID الخاص به
+                let hash = 0;
+                const uuid = (studentUser && studentUser.id) ? studentUser.id : 'default';
+                for (let i = 0; i < uuid.length; i++) {
+                    hash = uuid.charCodeAt(i) + ((hash << 5) - hash);
                 }
-                watermarkSection.textContent = sectionName;
+                const shortNum = Math.abs(hash % 10000).toString().padStart(4, '0');
+                
+                const studentName = studentProfile.full_name || 'طالب المنصة';
+                watermarkStudent.textContent = `${studentName} #${shortNum}`;
             }
 
             const fileUrl = lecture.pdf_url || globalCourseData.homework_url;
@@ -770,9 +756,6 @@
             isVideoPlaying = false;
         }
 
-        // ==========================================
-        // برمجة واجهة المستخدم المخصصة للفيديو (الأزرار العازلة)
-        // ==========================================
         function setupCustomPlayerControls() {
             const playBtn = document.getElementById('custom-play-btn');
             const centerClickArea = document.getElementById('center-click-area');
@@ -780,7 +763,7 @@
             const fullscreenBtn = document.getElementById('custom-fullscreen-btn');
             const muteBtn = document.getElementById('custom-mute-btn');
             const speedOptions = document.querySelectorAll('.speed-option');
-            const videoContainer = document.getElementById('actual-video'); // الحاوية التي سيتم تكبيرها
+            const videoContainer = document.getElementById('actual-video'); 
 
             const togglePlay = () => {
                 if (!ytPlayer || !ytPlayer.getPlayerState) return;
@@ -914,7 +897,7 @@
                 if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
                     nativeContainer.classList.add('hidden');
                     ytContainer.classList.remove('hidden');
-                    customControls.style.display = 'flex'; // إظهار المشغل المخصص
+                    customControls.style.display = 'flex'; 
 
                     let videoId = '';
                     if (videoUrl.includes('v=')) {
@@ -936,12 +919,12 @@
                             videoId: videoId,
                             playerVars: {
                                 'autoplay': 1,
-                                'controls': 0, // إخفاء واجهة يوتيوب بالكامل
-                                'disablekb': 1, // تعطيل أزرار الكيبورد الخاصة بيوتيوب
-                                'rel': 0, // إخفاء الفيديوهات المقترحة
-                                'modestbranding': 1, // إخفاء اللوجو
-                                'fs': 0, // تعطيل التكبير الخاص بيوتيوب
-                                'iv_load_policy': 3, // إخفاء التعليقات التوضيحية
+                                'controls': 0,
+                                'disablekb': 1,
+                                'rel': 0,
+                                'modestbranding': 1,
+                                'fs': 0,
+                                'iv_load_policy': 3,
                                 'playsinline': 1,
                                 'origin': window.location.origin
                             },
@@ -951,7 +934,7 @@
                                     event.target.playVideo();
                                     document.getElementById('custom-play-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
                                     isVideoPlaying = true;
-                                    uiUpdateInterval = setInterval(updateCustomUI, 500); // تحديث شريط التقدم كل نصف ثانية
+                                    uiUpdateInterval = setInterval(updateCustomUI, 500);
                                 },
                                 'onStateChange': onPlayerStateChange,
                                 'onError': (e) => {
@@ -975,9 +958,8 @@
                     }
 
                 } else {
-                    // إذا كان الفيديو ليس من يوتيوب (MP4 مباشر)
                     ytContainer.classList.add('hidden');
-                    customControls.style.display = 'none'; // نخفي المشغل المخصص لأن المتصفح يحمي الـ MP4 بشكل كاف
+                    customControls.style.display = 'none';
                     nativeContainer.classList.remove('hidden');
                     loadingState.classList.add('hidden');
 

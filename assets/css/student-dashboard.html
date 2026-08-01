@@ -261,7 +261,7 @@
                 </a>
                 <div class="flex items-center gap-3">
                     <span id="top-bar-stage" class="text-xs md:text-sm font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10"><i class="fa-solid fa-graduation-cap ml-1"></i> جاري التحميل...</span>
-                    <button onclick="window.location.href = 'index.html'" class="text-xs md:text-sm font-bold text-emerald-200 hover:text-white transition-colors"> الخروج <i class="fa-solid fa-right-from-bracket mr-1"></i></button>
+                    <button onclick="handleLogout()" class="text-xs md:text-sm font-bold text-emerald-200 hover:text-white transition-colors"> الخروج <i class="fa-solid fa-right-from-bracket mr-1"></i></button>
                 </div>
             </div>
 
@@ -580,20 +580,38 @@
                 const allCourses = allCoursesResponse?.data || [];
                 const leaderboardData = leaderboardResponse?.data || [];
                 
-                // بناء خريطة لتحديد حالة الكورس
+                // 🔴 [التعديل الجوهري] بناء خريطة لتحديد حالة الكورس بشكل صحيح ومنطقي 🔴
                 const userSubs = {};
 
+                // أولاً: نقرأ الطلبات (subscription_requests)
+                // لو الأدمن وافق على الطلب (approved) نخليه (active). 
                 (requestsResponse?.data || []).forEach(req => {
                     const cId = String(req.course_id);
                     if (cId && cId !== 'undefined') {
-                        userSubs[cId] = req.status || 'pending';
+                        const currentStatus = userSubs[cId];
+                        
+                        let mappedStatus = req.status;
+                        if (req.status === 'approved') mappedStatus = 'active';
+                        
+                        // نحدث الحالة بشرط إنها مش active مسبقاً (عشان لو فيه طلبين واحد مقبول وواحد مرفوض)
+                        if (currentStatus !== 'active') {
+                            if (mappedStatus === 'active') {
+                                userSubs[cId] = 'active';
+                            } else if (mappedStatus === 'pending') {
+                                userSubs[cId] = 'pending';
+                            } else if (req.status === 'rejected' && currentStatus !== 'pending') {
+                                userSubs[cId] = 'rejected';
+                            }
+                        }
                     }
                 });
 
+                // ثانياً: نقرأ الاشتراكات الفعلية (course_subscriptions)
+                // ودي ليها الأولوية القصوى وتمسح أي حالة جاية من جدول الطلبات
                 (subscriptionsResponse?.data || []).forEach(sub => {
                     const cId = String(sub.course_id);
                     if (cId && cId !== 'undefined') {
-                        userSubs[cId] = sub.status;
+                        userSubs[cId] = sub.status; 
                     }
                 });
                 
@@ -684,11 +702,13 @@
                 const status = userSubs[cId];
                 
                 const isGloballyDisabled = course.is_visible === false;
+                // تم التأكد من فصل حالة الرفض عن حالة الإيقاف
                 const isStudentDisabled = status === 'disabled' || status === 'suspended' || status === 'inactive';
                 const isDisabled = isGloballyDisabled || isStudentDisabled;
 
                 const isUnlocked = status === 'active' && !isDisabled;
                 const isPending = status === 'pending' && !isDisabled;
+                const isRejected = status === 'rejected' && !isDisabled; // حالة الرفض
                 
                 const progress = Math.min(Math.max(Number(progressMap[cId]) || 0, 0), 100);
                 const isFree = Number(course.price) === 0;
@@ -700,6 +720,8 @@
                     badgeHtml = `<span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-circle-check ml-0.5"></i> مشترك ومفتوح</span>`;
                 } else if (isPending) {
                     badgeHtml = `<span class="bg-amber-50 text-amber-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-clock ml-0.5"></i> قيد المراجعة</span>`;
+                } else if (isRejected) {
+                    badgeHtml = `<span class="bg-red-50 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-circle-xmark ml-0.5"></i> تم الرفض - اشترك مجدداً</span>`;
                 } else {
                     badgeHtml = `<span class="bg-gray-100 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded-md"><i class="fa-solid fa-lock ml-0.5"></i> متاح للاشتراك</span>`;
                 }
@@ -763,7 +785,8 @@
 
                 const borderClass = isDisabled ? 'border-gray-200 bg-gray-50/50 opacity-80 grayscale-[0.2]' :
                                     isUnlocked ? 'border-blue-100/50' : 
-                                    (isPending ? 'border-amber-200/60 bg-gradient-to-b from-white to-amber-50/10' : 'border-gray-100');
+                                    (isPending ? 'border-amber-200/60 bg-gradient-to-b from-white to-amber-50/10' : 
+                                    (isRejected ? 'border-red-200/60 bg-gradient-to-b from-white to-red-50/10' : 'border-gray-100'));
 
                 const hoverEffect = isDisabled ? '' : 'card-transition hover:shadow-xl hover:-translate-y-1';
 
