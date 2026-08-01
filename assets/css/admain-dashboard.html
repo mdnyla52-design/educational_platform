@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght=300;400;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- مكتبة Jitsi Meet للبث المباشر -->
@@ -1419,7 +1419,25 @@ async function fetchCoursesList() {
 }
 
 async function archiveCourse(courseId) {
-    if(!confirm("هل أنت تأكد من نقل الكورس إلى الأرشيف (إخفاء عن المنصة)؟")) return;
+    const result = await Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'يرجى تأكيد العملية.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'تأكيد',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
     try {
         const { error } = await _supabase.from('courses').update({ is_visible: false }).eq('id', courseId);
         if (error) throw error;
@@ -1507,7 +1525,25 @@ async function handleAdminSearch(event) {
 }
 
 async function makeUserAdmin(userId) {
-    if (!confirm("هل أنت تأكد من ترقية هذا المستخدم وصنعه كـ أدمن بالمنصة؟")) return;
+    const result = await Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'يرجى تأكيد العملية.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'تأكيد',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
     try {
         const { error } = await _supabase.from('admins').insert([{ id: userId }]);
         if (error) throw error;
@@ -1522,7 +1558,25 @@ async function makeUserAdmin(userId) {
 }
 
 async function removeAdmin(adminId) {
-    if (!confirm("هل أنت تأكد من إلغاء صلاحية الأدمن لهذا المستخدم؟")) return;
+    const result = await Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'يرجى تأكيد العملية.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'تأكيد',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
     try {
         const { error } = await _supabase.from('admins').delete().eq('id', adminId);
         if (error) throw error;
@@ -2017,7 +2071,25 @@ async function loadHonorRollArchives() {
 }
 
 async function archiveCurrentWeekHonorRoll() {
-    if(!confirm("هل تأكد من أرشفة نقاط الأوائل للأسبوع الحالي وتصفير النقاط؟")) return;
+    const result = await Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'يرجى تأكيد العملية.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'تأكيد',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
     try {
         const { data: topStudents } = await _supabase
             .from('profiles')
@@ -2098,7 +2170,25 @@ async function restoreCourse(courseId) {
 }
 
 async function deleteCoursePermanently(courseId) {
-    if(!confirm("تحذير: هذا الإجراء سيحذف الكورس وجميع دروسه وامتحاناته نهائياً!")) return;
+    const result = await Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'يرجى تأكيد العملية.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'تأكيد',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
     await _supabase.from('courses').delete().eq('id', courseId);
     showNotification("تم حذف الكورس نهائياً", "info");
     loadArchivedCourses();
