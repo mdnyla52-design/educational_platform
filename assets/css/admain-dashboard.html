@@ -1227,7 +1227,6 @@ renderLectureParts();
 // ==========================================
 // رفع ومعالجة المحاضرة والأجزاء في Supabase
 // ==========================================
-
 async function handleCourseUpload(event) {
     event.preventDefault();
     if (lectureParts.length === 0) {
@@ -1265,7 +1264,7 @@ async function handleCourseUpload(event) {
         if (courseErr) throw courseErr;
         const courseId = courseData.id;
 
-        // 2. إدخال الأجزاء والامتحانات التابعة
+        // 2. إدراج الأجزاء والامتحانات التابعة مع ربطها بالـ course_id
         for (let i = 0; i < lectureParts.length; i++) {
             const part = lectureParts[i];
             
@@ -1283,10 +1282,11 @@ async function handleCourseUpload(event) {
                 }
             }
 
-            // إدراج المحاضرة/الجزء
+            // إدراج المحاضرة/الجزء مع إضافة course_id لضمان ظهورها للطالب داخل الكورس
             const { data: lecData, error: lecErr } = await _supabase
                 .from('lectures')
                 .insert([{
+                    course_id: courseId,
                     title: part.title,
                     description: part.description || title,
                     video_url: part.video_url,

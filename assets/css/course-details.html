@@ -72,18 +72,10 @@
             display: none !important;
         }
 
-        /* تنسيق العلامة المائية للحماية */
+        /* تنسيق العلامة المائية للحماية - تم التعديل لتكون ثابتة وبخط أوضح */
         .watermark-text {
             user-select: none;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
-            animation: floatWatermark 30s infinite alternate ease-in-out;
-        }
-        @keyframes floatWatermark {
-            0% { top: 10%; left: 10%; }
-            25% { top: 15%; left: 60%; }
-            50% { top: 70%; left: 55%; }
-            75% { top: 65%; left: 15%; }
-            100% { top: 30%; left: 40%; }
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 4px rgba(0,0,0,0.7);
         }
     </style>
 </head>
@@ -150,9 +142,9 @@
                         <!-- طبقة حماية شفافة لمنع أي تفاعل مباشر مع الفيديو (كليك يمين أو نسخ) -->
                         <div class="absolute inset-0 w-full h-full z-10 bg-transparent pointer-events-auto" oncontextmenu="return false;"></div>
 
-                        <!-- العلامة المائية (اسم الطالب والقسم) -->
-                        <div id="video-watermark" class="absolute z-20 pointer-events-none opacity-40 watermark-text flex flex-col items-center justify-center transform -rotate-12">
-                            <span id="watermark-student-name" class="text-white font-black text-2xl sm:text-3xl text-center"></span>
+                        <!-- العلامة المائية (اسم الطالب والقسم) - تم تثبيتها في الأعلى -->
+                        <div id="video-watermark" class="absolute top-6 left-0 right-0 z-20 pointer-events-none opacity-60 watermark-text flex flex-col items-center justify-start">
+                            <span id="watermark-student-name" class="text-white font-black text-2xl sm:text-3xl text-center tracking-wide"></span>
                             <span id="watermark-section-name" class="text-emerald-400 font-bold text-lg sm:text-xl mt-1 text-center"></span>
                         </div>
                         
@@ -160,8 +152,8 @@
                         
                         <!-- مشغل الفيديو الاحترافي المخصص (الطبقة العازلة) -->
                         <div id="custom-video-controls" class="absolute inset-0 w-full h-full flex flex-col justify-between opacity-0 hover:opacity-100 transition-opacity duration-300 z-30">
-                            <!-- طبقة تظليل علوية لإخفاء أي تسريب لعنوان يوتيوب -->
-                            <div class="w-full h-24 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"></div>
+                            <!-- طبقة تظليل علوية لإخفاء أي تسريب لعنوان يوتيوب ولتوضيح العلامة المائية -->
+                            <div class="w-full h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"></div>
                             
                             <!-- منطقة النقر الوسطى للتشغيل والإيقاف -->
                             <div id="center-click-area" class="flex-1 w-full h-full cursor-pointer flex items-center justify-center" oncontextmenu="return false;">
