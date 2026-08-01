@@ -580,38 +580,30 @@
                 const allCourses = allCoursesResponse?.data || [];
                 const leaderboardData = leaderboardResponse?.data || [];
                 
-                // 🔴 [التعديل الجوهري] بناء خريطة لتحديد حالة الكورس بشكل صحيح ومنطقي 🔴
+                // 🔴 [التعديل الجوهري] بناء خريطة لتحديد حالة الكورس - نفس منطق الصفحة الرئيسية index.html 🔴
+                // القاعدة: course_subscriptions هو مصدر الحقيقة الوحيد لو فيه صف موجود.
+                // subscription_requests بيتستخدم بس عشان نعرف نعرض "قيد المراجعة" لو لسه مفيش صف في course_subscriptions.
                 const userSubs = {};
 
-                // أولاً: نقرأ الطلبات (subscription_requests)
-                // لو الأدمن وافق على الطلب (approved) نخليه (active). 
-                (requestsResponse?.data || []).forEach(req => {
-                    const cId = String(req.course_id);
-                    if (cId && cId !== 'undefined') {
-                        const currentStatus = userSubs[cId];
-                        
-                        let mappedStatus = req.status;
-                        if (req.status === 'approved') mappedStatus = 'active';
-                        
-                        // نحدث الحالة بشرط إنها مش active مسبقاً (عشان لو فيه طلبين واحد مقبول وواحد مرفوض)
-                        if (currentStatus !== 'active') {
-                            if (mappedStatus === 'active') {
-                                userSubs[cId] = 'active';
-                            } else if (mappedStatus === 'pending') {
-                                userSubs[cId] = 'pending';
-                            } else if (req.status === 'rejected' && currentStatus !== 'pending') {
-                                userSubs[cId] = 'rejected';
-                            }
-                        }
-                    }
-                });
-
-                // ثانياً: نقرأ الاشتراكات الفعلية (course_subscriptions)
-                // ودي ليها الأولوية القصوى وتمسح أي حالة جاية من جدول الطلبات
+                // أولاً: أولوية مطلقة للاشتراكات الفعلية (course_subscriptions)
                 (subscriptionsResponse?.data || []).forEach(sub => {
                     const cId = String(sub.course_id);
                     if (cId && cId !== 'undefined') {
-                        userSubs[cId] = sub.status; 
+                        userSubs[cId] = sub.status;
+                    }
+                });
+
+                // ثانياً: لو مفيش صف خالص في course_subscriptions، نستخدم حالة الطلب كمؤشر مبدئي فقط
+                (requestsResponse?.data || []).forEach(req => {
+                    const cId = String(req.course_id);
+                    if (cId && cId !== 'undefined' && userSubs[cId] === undefined) {
+                        if (req.status === 'pending') {
+                            userSubs[cId] = 'pending';
+                        } else if (req.status === 'rejected') {
+                            userSubs[cId] = 'rejected';
+                        }
+                        // ملحوظة: مش بنتعامل مع 'approved' هنا؛ لو الطلب اتوافق عليه فعلاً
+                        // لازم يبقى ليه صف في course_subscriptions أصلاً (upsert بيضمن كده).
                     }
                 });
                 
@@ -1101,13 +1093,14 @@
 
                 const { error } = await supabaseClient
                     .from('course_subscriptions')
-                    .insert([
+                    .upsert(
                         { 
                             student_id: user.id,
                             course_id: courseId,
                             status: 'active' 
-                        }
-                    ]);
+                        },
+                        { onConflict: 'student_id,course_id' }
+                    );
 
                 if (error) {
                     toastSystem.error('خطأ في التفعيل', `حدث خطأ أثناء تفعيل الاشتراك المجاني: ${error.message}`);
