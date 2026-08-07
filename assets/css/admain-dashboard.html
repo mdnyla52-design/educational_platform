@@ -378,6 +378,7 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 <th class="p-4 px-5 font-black">اسم الكورس والصورة</th>
 <th class="p-4 font-black">المرحلة الدراسية</th>
 <th class="p-4 font-black">الترم</th>
+<th class="p-4 font-black text-center">عدد الاشتراكات</th>
 <th class="p-4 font-black text-center">السعر</th>
 <th class="p-4 font-black text-center">إدارة الصلاحية والأرشفة</th>
 </tr>
@@ -665,9 +666,9 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm fon
     <div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
-                <i class="fa-solid fa-box-archive text-amber-500"></i> مركز الأرشيف والسجلات التراكمية (Supabase Archive)
+                <i class="fa-solid fa-box-archive text-amber-500"></i> مركز الأرشيف والسجلات التراكمية 
             </h2>
-            <p class="text-xs text-gray-500 font-semibold mt-1">إدارة وأرشفة لوحة الشرف الأسبوعية (`honor_roll_archives`)، الكورسات غير النشطة، وسجل الاشتراكات المكتملة.</p>
+            <p class="text-xs text-gray-500 font-semibold mt-1">إدارة وأرشفة لوحة الشرف الأسبوعية ، الكورسات غير النشطة، وسجل الاشتراكات المكتملة.</p>
         </div>
         <button onclick="loadArchivePanelData()" class="bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-amber-200 active:scale-95 w-full sm:w-auto">
             <i class="fa-solid fa-rotate hover:animate-spin"></i> تحديث بيانات الأرشيف
@@ -1364,9 +1365,13 @@ async function handleCourseUpload(event) {
 // ==========================================
 async function fetchCoursesList() {
     try {
+        // جلب الكورسات مع عدد الاشتراكات المرتبطة بكل كورس باستخدام Supabase Joins
         const { data, error } = await _supabase
             .from('courses')
-            .select('*')
+            .select(`
+                *,
+                course_subscriptions (id)
+            `)
             .eq('is_visible', true)
             .order('created_at', { ascending: false });
 
@@ -1386,47 +1391,65 @@ async function fetchCoursesList() {
         }
 
         data.forEach(c => {
+            // حساب عدد المشتركين في الكورس الواحد من العلاقة المجلوبة
+            const subscribersCount = c.course_subscriptions ? c.course_subscriptions.length : 0;
+
             if (table) {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50/80 transition-colors";
+                tr.className = "hover:bg-gray-50/85 transition-all duration-200 border-b border-gray-100";
                 tr.innerHTML = `
                     <td class="p-4 px-5">
                         <div class="flex items-center gap-3">
-                            <img src="${c.image_url || 'https://via.placeholder.com/80'}" class="w-12 h-10 object-cover rounded-xl border border-gray-200">
-                            <span class="font-bold text-slate-900">${c.title}</span>
+                            <img src="${c.image_url || 'https://via.placeholder.com/80'}" class="w-12 h-10 object-cover rounded-xl border border-gray-200 shadow-sm">
+                            <div>
+                                <span class="font-bold text-slate-900 block">${c.title}</span>
+                                <span class="text-xs text-gray-400">إضافة: ${new Date(c.created_at).toLocaleDateString('ar-EG')}</span>
+                            </div>
                         </div>
                     </td>
                     <td class="p-4 font-bold text-gray-700">${c.stage}</td>
                     <td class="p-4 font-bold text-gray-500">${c.term || '---'}</td>
+                    <td class="p-4 text-center">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-black text-xs">
+                            <i class="fa-solid fa-users text-[10px]"></i>
+                            <span>${subscribersCount} مشترك</span>
+                        </div>
+                    </td>
                     <td class="p-4 text-center font-black text-emerald-600">${c.price > 0 ? c.price + ' ج.م' : 'مجاني'}</td>
                     <td class="p-4 text-center">
-                        <button onclick="archiveCourse(${c.id})" class="bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-amber-200 active:scale-95">
-                            <i class="fa-solid fa-box-archive text-xs"></i> أرشفة
-                        </button>
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="archiveCourse(${c.id})" class="bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-amber-200 active:scale-95 shadow-sm flex items-center gap-1">
+                                <i class="fa-solid fa-box-archive text-xs"></i> أرشفة
+                            </button>
+                            <button onclick="deleteCourse(${c.id})" class="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-rose-200 active:scale-95 shadow-sm flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can text-xs"></i> حذف
+                            </button>
+                        </div>
                     </td>
                 `;
                 table.appendChild(tr);
             }
 
-            const opt = `<option value="${c.id}">${c.title} (${c.stage})</option>`;
+            const opt = `<option value="${c.id}">${c.title} (${c.stage}) - [${subscribersCount} مشترك]</option>`;
             if (couponSelect) couponSelect.innerHTML += opt;
             if (disableSelect) disableSelect.innerHTML += opt;
         });
 
     } catch (err) {
         console.error("Fetch Courses Error:", err);
+        showNotification("حدث خطأ أثناء تحميل الكورسات والتقارير", "error");
     }
 }
 
 async function archiveCourse(courseId) {
     const result = await Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'يرجى تأكيد العملية.',
+        title: 'هل أنت متأكد من الأرشفة؟',
+        text: 'سيتم إخفاء الكورس من المنصة مؤقتاً.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'تأكيد',
+        confirmButtonText: 'نعم، أرشفة',
         cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#10B981',
+        confirmButtonColor: '#F59E0B',
         cancelButtonColor: '#6B7280',
         reverseButtons: true,
         allowOutsideClick: true,
@@ -1446,6 +1469,37 @@ async function archiveCourse(courseId) {
         loadDashboardStats();
     } catch (err) {
         showNotification("خطأ في الأرشفة: " + err.message, "error");
+    }
+}
+
+async function deleteCourse(courseId) {
+    const result = await Swal.fire({
+        title: 'تحذير شديد الخطورة!',
+        text: 'هل أنت متأكد تماماً من الحذف النهائي؟ سيتم حذف الكورس وكل البيانات المرتبطة به بشكل نهائي ولا يمكن استرجاعها.',
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، حذف نهائي',
+        cancelButtonText: 'تراجع',
+        confirmButtonColor: '#E11D48',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        focusCancel: true
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    try {
+        const { error } = await _supabase.from('courses').delete().eq('id', courseId);
+        if (error) throw error;
+        showNotification("تم حذف الكورس نهائياً بنجاح", "success");
+        fetchCoursesList();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification("خطأ في الحذف النهائي: " + err.message, "error");
     }
 }
 

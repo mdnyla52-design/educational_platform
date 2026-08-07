@@ -8,11 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -122,12 +119,12 @@
         <div id="login-section" class="auth-view opacity-100 scale-100">
             <form id="login-form" class="space-y-4 sm:space-y-5" onsubmit="handleLogin(event)">
                 <div class="space-y-1.5">
-                    <label for="login-identifier" class="text-xs font-bold text-gray-700 block pr-1">البريد الإلكتروني أو رقم الهاتف</label>
+                    <label for="login-identifier" class="text-xs font-bold text-gray-700 block pr-1">رقم الطالب، ولي الأمر، أو البريد الإلكتروني</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
                             <i class="fa-solid fa-user text-sm"></i>
                         </div>
-                        <input type="text" id="login-identifier" required placeholder="example@gmail.com أو 01xxxxxxxxx"
+                        <input type="text" id="login-identifier" required placeholder="01xxxxxxxxx أو الإيميل"
                             class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all duration-300">
                     </div>
                 </div>
@@ -186,17 +183,6 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="signup-email" class="text-xs font-bold text-gray-700 block pr-1">البريد الإلكتروني (لتلقي التفعيل)</label>
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
-                                <i class="fa-solid fa-envelope text-sm"></i>
-                            </div>
-                            <input type="email" id="signup-email" required placeholder="your-email@gmail.com"
-                                class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-                        </div>
-                    </div>
-
-                    <div class="space-y-1.5">
                         <label for="signup-student-phone" class="text-xs font-bold text-gray-700 block pr-1">رقم هاتف الطالب</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
@@ -208,12 +194,23 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="signup-parent-phone" class="text-xs font-bold text-gray-700 block pr-1">رقم هاتف ولي الأمر</label>
+                        <label for="signup-parent-phone" class="text-xs font-bold text-gray-700 block pr-1">رقم هاتف ولي الأمر (اختياري)</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
                                 <i class="fa-solid fa-user-shield text-sm"></i>
                             </div>
-                            <input type="tel" id="signup-parent-phone" required placeholder="01xxxxxxxxx"
+                            <input type="tel" id="signup-parent-phone" placeholder="01xxxxxxxxx"
+                                class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label for="signup-email" class="text-xs font-bold text-gray-700 block pr-1">البريد الإلكتروني (اختياري)</label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                                <i class="fa-solid fa-envelope text-sm"></i>
+                            </div>
+                            <input type="email" id="signup-email" placeholder="your-email@gmail.com"
                                 class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
                         </div>
                     </div>
@@ -266,10 +263,8 @@
         const SUPABASE_URL = "https://equefefnimfaqkyckbep.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk";
         
-        // هنا كان سبب المشكلة بالكامل: تم استخدام المتغير الصحيح `window.supabase` واسم جديد لتجنب توقف السكريبت
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // دالة التبديل بين الشاشات
         function switchView(view) {
             const card = document.getElementById('auth-card');
             const loginSec = document.getElementById('login-section');
@@ -308,7 +303,6 @@
             }
         }
 
-        // دالة إظهار الباسورد
         function togglePassword(inputId, iconId) {
             const passwordInput = document.getElementById(inputId);
             const toggleIcon = document.getElementById(iconId);
@@ -327,20 +321,22 @@
             }
         }
 
-        // دالة التسجيل وإنشاء الحساب
         async function handleSignup(event) {
             event.preventDefault();
             const button = event.target.querySelector('button[type="submit"]');
 
-            const fullName = document.getElementById('signup-fullname').value;
-            const email = document.getElementById('signup-email').value;
-            const studentPhone = document.getElementById('signup-student-phone').value;
-            const parentPhone = document.getElementById('signup-parent-phone').value;
+            const fullName = document.getElementById('signup-fullname').value.trim();
+            const emailInput = document.getElementById('signup-email').value.trim();
+            const studentPhone = document.getElementById('signup-student-phone').value.trim();
+            const parentPhone = document.getElementById('signup-parent-phone').value.trim();
             const academicStage = document.getElementById('signup-stage').value;
             const password = document.getElementById('signup-password').value;
 
-            if (studentPhone === parentPhone) {
-                showNotification('يجب أن يكون رقم هاتف ولي الأمر مختلفاً عن رقم الطالب، تأكد من إدخال أرقام مختلفة.', 'warning');
+            // في حال لم يقم الطالب بإدخال إيميل، نقوم بإنشاء إيميل وهمي ليتمكن من التسجيل
+            const authEmail = emailInput !== '' ? emailInput : `${studentPhone}@student.alim.com`;
+
+            if (parentPhone !== '' && studentPhone === parentPhone) {
+                showNotification('يجب أن يكون رقم هاتف ولي الأمر مختلفاً عن رقم الطالب.', 'warning');
                 return;
             }
 
@@ -349,7 +345,7 @@
 
             try {
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-                    email: email,
+                    email: authEmail,
                     password: password
                 });
 
@@ -362,15 +358,15 @@
                             id: authData.user.id,
                             full_name: fullName,
                             student_phone: studentPhone,
-                            parent_phone: parentPhone,
+                            parent_phone: parentPhone !== '' ? parentPhone : null,
                             stage: academicStage,
-                            email: email
+                            email: authEmail // نحتفظ بالإيميل (الحقيقي أو الوهمي) لكي نستخدمه في تسجيل الدخول
                         }
                     ]);
 
                 if (profileError) throw profileError;
 
-                showNotification('تم إنشاء حسابك بنجاح! ✨ تحقق من بريدك الإلكتروني لتفعيل الحساب، ثم يمكنك تسجيل الدخول.', 'success');
+                showNotification('تم إنشاء حسابك بنجاح! ✨ يمكنك تسجيل الدخول الآن باستخدام رقمك أو بريدك.', 'success');
                 document.getElementById('signup-form').reset();
                 setTimeout(() => switchView('login'), 1500);
 
@@ -378,7 +374,7 @@
                 console.error("Signup Error:", error);
                 const errorMsg = error.message || "حاول مرة أخرى";
                 if (errorMsg.includes('already registered')) {
-                    showNotification('هذا البريد الإلكتروني مسجل بالفعل! جرب بريد آخر أو استخدم "نسيت كلمة المرور".', 'error');
+                    showNotification('هذا الرقم أو البريد مسجل بالفعل! جرب استخدام "نسيت كلمة المرور".', 'error');
                 } else {
                     showNotification('فشل التسجيل: ' + errorMsg, 'error');
                 }
@@ -388,7 +384,6 @@
             }
         }
 
-        // دالة الدخول الذكية (مع فحص الحساب قبل أي حاجة)
         async function handleLogin(event) {
             event.preventDefault();
             const button = event.target.querySelector('button[type="submit"]');
@@ -399,30 +394,23 @@
             button.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin text-sm sm:text-lg"></i> <span>جاري فحص الحساب...</span>`;
 
             try {
-                // 1. الفحص الشامل في الداتابيز: هل اليوزر ده موجود فعلاً؟
-                const isEmail = identifier.includes('@');
-                let profileQuery = supabaseClient.from('profiles').select('email, student_phone');
-
-                if (isEmail) {
-                    profileQuery = profileQuery.eq('email', identifier);
-                } else {
-                    profileQuery = profileQuery.eq('student_phone', identifier);
-                }
-
-                const { data: matchedProfiles, error: checkError } = await profileQuery;
+                // البحث عن الحساب باستخدام (البريد الإلكتروني) أو (رقم الطالب) أو (رقم ولي الأمر)
+                const { data: matchedProfiles, error: checkError } = await supabaseClient
+                    .from('profiles')
+                    .select('email')
+                    .or(`email.eq.${identifier},student_phone.eq.${identifier},parent_phone.eq.${identifier}`);
 
                 if (checkError) throw checkError;
 
-                // التنبيه القاطع: الحساب مش موجود من الأساس!
                 if (!matchedProfiles || matchedProfiles.length === 0) {
                     showNotification('هذا الحساب غير مسجل في المنصة. تأكد من إدخال البيانات الصحيحة أو أنشئ حسابك الآن.', 'error');
                     return;
                 }
 
-                const targetEmail = isEmail ? identifier : matchedProfiles[0].email;
+                // نستخرج البريد الإلكتروني الخاص بالحساب (حتى وإن كان البريد الوهمي الذي أنشأناه)
+                const targetEmail = matchedProfiles[0].email;
                 button.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin text-sm sm:text-lg"></i> <span>جاري الدخول...</span>`;
 
-                // 2. التحقق من الباسورد أو التفعيل
                 const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
                     email: targetEmail,
                     password: password
@@ -430,7 +418,7 @@
 
                 if (authError) {
                     if (authError.message.toLowerCase().includes("confirm") || authError.message.includes("verified")) {
-                        showNotification('الحساب موجود! لكن لم يتم تفعيله بعد. تحقق من بريدك الإلكتروني واضغط على رابط التفعيل.', 'info');
+                        showNotification('الحساب موجود! لكن لم يتم تفعيله بعد.', 'info');
                         return;
                     }
                     showNotification('كلمة المرور غير صحيحة. تحقق من إدخالك وحاول مرة أخرى.', 'error');
@@ -470,7 +458,6 @@
             if (error) showNotification('خطأ في الاتصال بسيرفرات Google: ' + error.message, 'error');
         }
 
-        // دالة عرض التنبيهات الحديثة الاحترافية
         function showNotification(message, type = 'info', duration = 5000) {
             const container = document.createElement('div');
             container.className = `notification-toast ${type}`;
