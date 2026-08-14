@@ -3,134 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>البث المباشر التفاعلي | المنصة التعليمية</title>
-    <!-- Tailwind CSS للتحكم السريع في التصميم والتجاوب -->
+    <title>البث المباشر التفاعلي | مشغل المنصة الاحترافي</title>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- مكتبة الأيقونات FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- مكتبة Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- استدعاء مكتبة Jitsi Meet بدلاً من Agora -->
-    <script src="https://meet.jit.si/external_api.js"></script>
     
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- HLS.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap');
-        body {
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap');
+        
+        * {
             font-family: 'Cairo', sans-serif;
-            background-color: #0b0f19; /* خلفية ليلية فاخرة */
         }
-        /* إخفاء شريط التمرير للدردشة مع إبقاء إمكانية التمرير */
+
+        body {
+            background-color: #080c14;
+        }
+
+        /* تخصيص شريط التمرير للدردشة */
         .chat-container::-webkit-scrollbar {
             width: 5px;
         }
+        .chat-container::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
         .chat-container::-webkit-scrollbar-thumb {
             background: #1e293b;
-            border-radius: 10px;
+            border-radius: 8px;
+        }
+
+        /* أنيميشن النبض للعلامة المباشرة */
+        @keyframes livePulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .live-pulse {
+            animation: livePulse 2s infinite;
+        }
+
+        /* حماية ومنع التفاعل المباشر مع فيديو يوتيوب لإخفاء أدواته */
+        .iframe-shield {
+            pointer-events: none !important;
+        }
+
+        /* تخصيص شريط التقديم والـ Seek Bar */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #ef4444;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
         }
     </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col">
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-red-500 selection:text-white">
 
     <!-- الهيدر العلوي للمنصة -->
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
+    <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-50 shadow-xl">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center shadow-lg shadow-red-600/20">
-                <i class="fa-solid fa-graduation-cap text-lg text-white"></i>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-red-500 to-amber-500 flex items-center justify-center shadow-lg shadow-red-600/25">
+                <i class="fa-solid fa-tv text-lg text-white"></i>
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-wide">المنصة التعليمية الذكية</h1>
-                <p class="text-xs text-slate-400">البث المباشر التفاعلي</p>
+                <h1 class="text-base sm:text-lg font-black tracking-wide text-white flex items-center gap-2">
+                    المنصة التعليمية الذكية
+                </h1>
+                <p class="text-[11px] text-slate-400 font-semibold">استديو المشغل المباشر الخاص بالمنصة</p>
             </div>
         </div>
-        <!-- حالة البث ونبض التنبيه -->
-        <div id="liveBadgeContainer" class="hidden flex items-center gap-2 bg-red-950/50 border border-red-500/30 px-3 py-1.5 rounded-full">
-            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-            <span class="text-xs font-bold text-red-400">مباشر الآن</span>
+        
+        <!-- شارة حالة البث ومعداد المشاهدين -->
+        <div class="flex items-center gap-3">
+            <div id="liveBadgeContainer" class="hidden flex items-center gap-2 bg-red-950/60 border border-red-500/40 px-3.5 py-1.5 rounded-full shadow-inner">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 live-pulse"></span>
+                <span class="text-xs font-black text-red-400 tracking-wider">مباشر الآن</span>
+            </div>
+
+            <div id="viewerCountBadge" class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300">
+                <i class="fa-solid fa-users text-red-500"></i>
+                <span id="viewerNum" class="font-mono text-white">0</span>
+            </div>
         </div>
     </header>
 
     <!-- الجسم الرئيسي لغرفة البث -->
     <main class="flex-1 grid grid-cols-1 lg:grid-cols-4 overflow-hidden">
         
-        <!-- قسم الفيديو ووصف الدرس (يأخذ 3/4 من المساحة في الشاشات الكبيرة) -->
-        <div class="lg:col-span-3 p-4 lg:p-6 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-80px)]">
+        <!-- قسم الفيديو والمشغل المخصص (3/4 المساحة) -->
+        <div class="lg:col-span-3 p-3 sm:p-5 lg:p-6 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-67px)]">
             
-            <!-- مشغل البث (Video Player Container) -->
-            <div class="relative aspect-video w-full bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-2xl group">
-                <!-- هذا العنصر سيتم حقن البث المباشر داخله بواسطة Jitsi -->
-                <div id="remoteVideoPlayer" class="w-full h-full"></div>
+            <!-- =================== مشغل البث المباشر الاحترافي الفاخر =================== -->
+            <div id="customPlayerContainer" class="relative aspect-video w-full bg-slate-950 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800/80 shadow-2xl group select-none">
                 
-                <!-- واجهة انتظار عند عدم وجود بث -->
-                <div id="offlinePlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 z-10">
-                    <div id="offlineIcon" class="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-slate-500">
-                        <i class="fa-solid fa-video-slash text-3xl"></i>
+                <!-- حاوية المحتوى المرئي بالفيديو (تتيح التكبير والزوم) -->
+                <div id="videoScaleWrapper" class="w-full h-full relative overflow-hidden flex items-center justify-center transition-transform duration-300 ease-out transform scale-100">
+                    <div id="remoteVideoPlayer" class="w-full h-full flex items-center justify-center bg-black"></div>
+                </div>
+
+                <!-- طبقة حماية شفافة تمنع الضغط المباشر على فيديو يوتيوب -->
+                <div id="clickOverlay" onclick="PlayerController.togglePlay()" class="absolute inset-0 z-10 cursor-pointer"></div>
+
+                <!-- إسكرينة المعاينة وبداية البث (Poster Screen Overlay) -->
+                <div id="posterScreen" class="absolute inset-0 z-20 bg-slate-950/90 flex flex-col items-center justify-center bg-cover bg-center transition-all duration-500" style="background-image: url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop');">
+                    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md"></div>
+                    <div class="relative z-10 flex flex-col items-center text-center p-6 max-w-lg">
+                        <button onclick="PlayerController.startStream()" class="w-20 h-20 rounded-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white flex items-center justify-center text-2xl shadow-2xl shadow-red-600/50 transition transform hover:scale-110 active:scale-95 mb-4 group/btn">
+                            <i class="fa-solid fa-play mr-1 group-hover/btn:scale-110 transition"></i>
+                        </button>
+                        <h3 id="posterTitle" class="text-xl sm:text-2xl font-black text-white">بدء مشاهدة البث المباشر</h3>
+                        <p id="posterSub" class="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">انقر على الزر أعلاه للبدء بالبث ومشاهدة الحصة داخل مشغل المنصة المخصص.</p>
                     </div>
-                    <h3 id="offlineTitle" class="text-xl font-bold text-slate-300">البث المباشر مغلق حالياً</h3>
-                    <p id="offlineDesc" class="text-sm text-slate-500 mt-1">يرجى الانتظار لحين بدء المدرس الحصة المباشرة</p>
                 </div>
 
-                <!-- تراكب البيانات على الفيديو (Overlays) -->
-                <div class="absolute top-4 right-4 z-20 flex gap-2">
-                    <span id="viewerCount" class="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-white/10">
-                        <i class="fa-solid fa-eye text-red-500"></i>
-                        <span id="viewerNum">0</span> مشاهد
-                    </span>
+                <!-- واجهة التوقف في حالة عدم وجود بث مباشر -->
+                <div id="offlinePlaceholder" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 transition-all duration-500 hidden">
+                    <div class="w-20 h-20 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-center mb-4 text-slate-600 shadow-2xl">
+                        <i class="fa-solid fa-podcast text-4xl"></i>
+                    </div>
+                    <h3 id="offlineTitle" class="text-lg sm:text-xl font-bold text-slate-200">البث المباشر مغلق حالياً</h3>
+                    <p id="offlineDesc" class="text-xs sm:text-sm text-slate-400 mt-1.5 text-center px-6 max-w-md leading-relaxed">
+                        يرجى الانتظار لحين بدء المعلم الحصة المباشرة من لوحة التحكم.
+                    </p>
                 </div>
-            </div>
 
-            <!-- معلومات الدرس والوصف -->
-            <div class="bg-slate-900/50 border border-slate-800/80 p-5 rounded-2xl">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-800">
-                    <div>
-                        <h2 id="streamTitle" class="text-xl font-black text-white">جاري تحميل عنوان الدرس...</h2>
-                        <div class="flex items-center gap-3 mt-2 text-sm text-slate-400">
-                            <span class="flex items-center gap-1"><i class="fa-solid fa-user-tie text-red-500"></i> مستر مجدي شافعي</span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-                            <span id="streamTime"><i class="fa-solid fa-calendar-day"></i> اليوم</span>
+                <!-- =================== شريط التحكم الخاص بالمنصة (Custom Controls) =================== -->
+                <div id="customControlsBar" class="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent p-3 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2">
+                    
+                    <!-- شريط التقديم والـ Seek Bar الاحترافي -->
+                    <div class="relative w-full flex items-center group/progress cursor-pointer">
+                        <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1" 
+                               class="w-full h-1.5 bg-slate-700/80 rounded-lg appearance-none cursor-pointer accent-red-500 hover:h-2.5 transition-all" 
+                               oninput="PlayerController.onSeekInput(this.value)" 
+                               onchange="PlayerController.onSeekChange(this.value)">
+                    </div>
+
+                    <!-- زراير التحكم والتفاعل -->
+                    <div class="flex items-center justify-between">
+                        
+                        <!-- القسم الأيمن: تشغيل، تقديم، تأخير والوقت -->
+                        <div class="flex items-center gap-3">
+                            <!-- زر التشغيل والإيقاف المؤقت -->
+                            <button onclick="PlayerController.togglePlay()" class="text-white hover:text-red-500 transition text-base w-8 h-8 flex items-center justify-center bg-slate-800/60 hover:bg-slate-700/80 rounded-xl border border-slate-700/50">
+                                <i id="playIcon" class="fa-solid fa-play"></i>
+                            </button>
+
+                            <!-- تأخير 10 ثوانٍ -->
+                            <button onclick="PlayerController.seekRelative(-10)" title="تأخير 10 ثوانٍ" class="text-slate-300 hover:text-white transition text-xs flex items-center gap-1 bg-slate-800/40 hover:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700/40">
+                                <i class="fa-solid fa-rotate-left text-[10px]"></i> 10s
+                            </button>
+
+                            <!-- تقديم 10 ثوانٍ -->
+                            <button onclick="PlayerController.seekRelative(10)" title="تقديم 10 ثوانٍ" class="text-slate-300 hover:text-white transition text-xs flex items-center gap-1 bg-slate-800/40 hover:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700/40">
+                                10s <i class="fa-solid fa-rotate-right text-[10px]"></i>
+                            </button>
+
+                            <!-- توقيت البث -->
+                            <span class="text-[11px] text-slate-300 font-mono bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800">
+                                <span id="currentTime">00:00</span> / <span id="durationTime">00:00</span>
+                            </span>
+                        </div>
+
+                        <!-- القسم الأيسر: زوم المحتوى، الصوت، وتكبير الشاشة -->
+                        <div class="flex items-center gap-2.5">
+                            
+                            <!-- زر تكبير المحتوى الداخلي الخاص بالمنصة -->
+                            <button onclick="PlayerController.toggleZoom()" title="تكبير/تكيف المحتوى داخل المنصة" class="text-slate-200 hover:text-white transition text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-magnifying-glass-plus text-amber-400"></i> 
+                                <span id="zoomLabel" class="text-[11px]">زوم 100%</span>
+                            </button>
+
+                            <!-- زر كتم/تشغيل الصوت -->
+                            <button onclick="PlayerController.toggleMute()" class="text-slate-300 hover:text-white transition text-sm w-8 h-8 flex items-center justify-center bg-slate-800/60 rounded-xl border border-slate-700/50">
+                                <i id="volumeIcon" class="fa-solid fa-volume-high"></i>
+                            </button>
+
+                            <!-- زر الشاشة الكاملة للمنصة -->
+                            <button onclick="PlayerController.toggleFullscreen()" title="تكبير الشاشة بالكامل" class="text-slate-300 hover:text-white transition text-sm w-8 h-8 flex items-center justify-center bg-slate-800/60 rounded-xl border border-slate-700/50">
+                                <i id="fullscreenIcon" class="fa-solid fa-expand"></i>
+                            </button>
                         </div>
                     </div>
-                    <!-- زر الدعم التقني السريع للطالب -->
-                    <button class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 self-start">
-                        <i class="fa-solid fa-circle-question text-amber-500"></i> هل تواجه مشكلة في الصوت أو الصورة؟
+                </div>
+
+            </div>
+            <!-- ========================================================================= -->
+
+            <!-- معلومات الحصة والوصف -->
+            <div class="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl sm:rounded-3xl backdrop-blur-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-800/60">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span id="courseBadge" class="bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-extrabold px-2.5 py-0.5 rounded-md">حصة مباشرة</span>
+                            <span id="streamStatusText" class="text-xs font-semibold text-slate-500">جاري التحقق...</span>
+                        </div>
+                        <h2 id="streamTitle" class="text-lg sm:text-xl font-black text-white leading-snug">جاري تحميل عنوان الحصة...</h2>
+                        
+                        <div class="flex items-center gap-4 mt-3 text-xs text-slate-400 font-semibold">
+                            <span class="flex items-center gap-1.5 text-slate-300">
+                                <i class="fa-solid fa-user-circle text-red-500 text-sm"></i>
+                                <span id="hostName">محاضر المنصة</span>
+                            </span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                            <span id="streamTime" class="flex items-center gap-1.5 text-slate-400">
+                                <i class="fa-solid fa-clock text-slate-500"></i>
+                                <span id="streamDateText">تفاعلي مباشر</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- زر تحديث البث -->
+                    <button onclick="reloadStream()" class="bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-700/50 transition flex items-center justify-center gap-2 self-start md:self-auto active:scale-95">
+                        <i class="fa-solid fa-rotate text-amber-400"></i> تحديث البث
                     </button>
                 </div>
-                <!-- تفاصيل الحصة والوصف -->
+
+                <!-- التفاصيل والوصف -->
                 <div>
-                    <h4 class="text-sm font-bold text-slate-300 mb-2">💡 تفاصيل ومحاور هذه الحصة المباشرة:</h4>
-                    <p id="streamDescription" class="text-sm text-slate-400 leading-relaxed">
-                        جاري تحميل تفاصيل ومحاور الحصة المباشرة حالياً...
+                    <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-red-500"></i> التفاصيل والمحاور:
+                    </h4>
+                    <p id="streamDescription" class="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+                        جاري تحميل تفاصيل ومحاور الحصة المباشرة...
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- قسم المحادثة الفورية (Live Chat) (يأخذ 1/4 المساحة) -->
-        <div class="lg:col-span-1 border-t lg:border-t-0 lg:border-r border-slate-800 bg-slate-900/30 flex flex-col h-[600px] lg:h-[calc(100vh-80px)]">
+        <!-- قسم المحادثة الفورية (Live Chat) -->
+        <div class="lg:col-span-1 border-t lg:border-t-0 lg:border-r border-slate-800/80 bg-slate-900/30 flex flex-col h-[550px] lg:h-[calc(100vh-67px)] backdrop-blur-md">
             
             <!-- هيدر الدردشة -->
-            <div class="p-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-comments text-red-500"></i>
-                    <span class="font-bold text-sm text-white">الدردشة التفاعلية</span>
+            <div class="p-3.5 px-4 border-b border-slate-800/80 bg-slate-900/70 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
+                    <span class="font-black text-xs sm:text-sm text-white tracking-wide">الدردشة التفاعلية</span>
                 </div>
-                <span class="bg-red-500/10 text-red-400 text-[10px] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider">مباشر</span>
+                <span id="chatStatusBadge" class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                    مباشر
+                </span>
             </div>
 
-            <!-- حاوية الرسائل المتدفقة -->
-            <div id="chatMessages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 chat-container">
-                <!-- رسالة ترحيبية افتراضية -->
-                <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800">
-                    <p class="text-xs text-slate-400 leading-relaxed text-center">أهلاً بك في البث! يرجى الالتزام بالآداب العامة أثناء النقاش مع الأستاذ وزملائك.</p>
+            <!-- حاوية الرسائل -->
+            <div id="chatMessages" class="flex-1 p-3.5 space-y-3 overflow-y-auto chat-container">
+                <div class="bg-slate-800/30 p-3 rounded-2xl border border-slate-800/60 text-center">
+                    <i class="fa-solid fa-shield-halved text-red-500 text-base mb-1"></i>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">مرحباً بك في البث! يرجى الالتزام بالآداب العامة وطرح الأسئلة المتعلقة بالمادة فقط.</p>
                 </div>
             </div>
 
-            <!-- إرسال رسالة جديدة -->
-            <div class="p-4 border-t border-slate-800 bg-slate-900/60">
-                <form id="chatForm" class="flex gap-2">
-                    <input type="text" id="chatInput" placeholder="اكتب سؤالك للأستاذ هنا..." required autocomplete="off"
-                           class="flex-1 bg-slate-950 border border-slate-800 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-slate-200 text-sm rounded-xl px-4 py-3 outline-none transition placeholder:text-slate-600">
-                    <button type="submit" class="bg-red-600 hover:bg-red-500 text-white w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 transition active:scale-95">
-                        <i class="fa-solid fa-paper-plane transform rotate-180 text-sm"></i>
+            <!-- إرسال رسالة -->
+            <div class="p-3 border-t border-slate-800/80 bg-slate-900/80">
+                <form id="chatForm" class="flex items-center gap-2" onsubmit="sendStudentChatMessage(event)">
+                    <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." required autocomplete="off" maxlength="300"
+                           class="flex-1 bg-slate-950/90 border border-slate-800 focus:border-red-500 focus:ring-1 focus:ring-red-500/30 text-slate-100 text-xs sm:text-sm rounded-xl px-3.5 py-2.5 outline-none transition placeholder:text-slate-600">
+                    <button type="submit" id="sendBtn" class="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20 transition active:scale-95 flex-shrink-0 disabled:opacity-50">
+                        <i class="fa-solid fa-paper-plane transform rotate-180 text-xs"></i>
                     </button>
                 </form>
             </div>
@@ -138,223 +276,488 @@
 
     </main>
 
-    <!-- كود التشغيل والربط البرمجي مع Supabase & Jitsi -->
+    <!-- تحميل سكربت YouTube API رسمياً -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <!-- كود التشغيل والربط البرمجي للمشغل المخصص -->
     <script>
-        // === 1. إعدادات بيئة العمل الأساسية ===
+        // === 1. إعدادات بيئة العمل والاتصال بـ Supabase ===
         const SUPABASE_URL = "https://equefefnimfaqkyckbep.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk"; 
         
-        const ROOM_ID = "00000000-0000-0000-0000-000000000001"; // معرف الغرفة الافتراضية
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let activeRoomId = null;
         
-        let jitsiApi = null; // الاحتفاظ بكائن البث المباشر لـ Jitsi
-        let studentName = "طالب مميز " + Math.floor(Math.random() * 1000);
+        let currentStudent = {
+            id: null,
+            name: "طالب " + Math.floor(1000 + Math.random() * 9000),
+            role: "student"
+        };
 
-        // === 2. جلب وتحديث حالة البث من قاعدة البيانات ===
+        // === 2. محرك المشغل الاحترافي المخصص (Platform Video Controller) ===
+        const PlayerController = {
+            mode: 'none', // 'youtube' | 'hls'
+            ytPlayer: null,
+            hlsPlayer: null,
+            videoElement: null,
+            isPlaying: false,
+            isMuted: false,
+            zoomLevel: 0,
+            updateInterval: null,
+            rawSource: '',
+            isYTApiReady: false,
+
+            initSource(source) {
+                if (!source || this.rawSource === source) return;
+                this.rawSource = source.trim();
+                const ytId = this.parseYouTubeID(this.rawSource);
+
+                const container = document.getElementById('remoteVideoPlayer');
+                container.innerHTML = '';
+
+                if (ytId) {
+                    this.mode = 'youtube';
+                    const playerDiv = document.createElement('div');
+                    playerDiv.id = 'ytFrameTarget';
+                    playerDiv.className = 'w-full h-full iframe-shield';
+                    container.appendChild(playerDiv);
+
+                    const createYT = () => {
+                        this.ytPlayer = new YT.Player('ytFrameTarget', {
+                            videoId: ytId,
+                            playerVars: {
+                                'controls': 0,
+                                'disablekb': 1,
+                                'modestbranding': 1,
+                                'rel': 0,
+                                'showinfo': 0,
+                                'iv_load_policy': 3,
+                                'playsinline': 1,
+                                'autoplay': 1
+                            },
+                            events: {
+                                'onReady': (e) => {
+                                    console.log("مشغل يوتيوب جاهز للعمل من المنصة");
+                                    e.target.playVideo();
+                                },
+                                'onStateChange': (e) => this.onYTStateChange(e)
+                            }
+                        });
+                    };
+
+                    if (window.YT && window.YT.Player) {
+                        createYT();
+                    } else {
+                        window.onYouTubeIframeAPIReady = () => createYT();
+                    }
+
+                } else if (this.rawSource.includes('.m3u8') || this.rawSource.startsWith('http')) {
+                    this.mode = 'hls';
+                    this.videoElement = document.createElement('video');
+                    this.videoElement.className = 'w-full h-full object-contain';
+                    this.videoElement.playsInline = true;
+                    this.videoElement.autoplay = true;
+                    container.appendChild(this.videoElement);
+
+                    if (Hls.isSupported()) {
+                        this.hlsPlayer = new Hls({ lowLatencyMode: true });
+                        this.hlsPlayer.loadSource(this.rawSource);
+                        this.hlsPlayer.attachMedia(this.videoElement);
+                    } else if (this.videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                        this.videoElement.src = this.rawSource;
+                    }
+
+                    this.videoElement.play().catch(() => console.log("يتطلب التفاعل للتشغيل"));
+                    this.isPlaying = true;
+                    this.updatePlayIcon();
+                    this.startProgressTicker();
+                }
+            },
+
+            startStream() {
+                document.getElementById('posterScreen').classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => document.getElementById('posterScreen').classList.add('hidden'), 500);
+                this.play();
+            },
+
+            play() {
+                if (this.mode === 'youtube' && this.ytPlayer && this.ytPlayer.playVideo) {
+                    this.ytPlayer.playVideo();
+                } else if (this.mode === 'hls' && this.videoElement) {
+                    this.videoElement.play();
+                }
+                this.isPlaying = true;
+                this.updatePlayIcon();
+                this.startProgressTicker();
+            },
+
+            pause() {
+                if (this.mode === 'youtube' && this.ytPlayer && this.ytPlayer.pauseVideo) {
+                    this.ytPlayer.pauseVideo();
+                } else if (this.mode === 'hls' && this.videoElement) {
+                    this.videoElement.pause();
+                }
+                this.isPlaying = false;
+                this.updatePlayIcon();
+                this.stopProgressTicker();
+            },
+
+            togglePlay() {
+                if (this.isPlaying) this.pause();
+                else this.play();
+            },
+
+            seekRelative(seconds) {
+                let current = this.getCurrentTime();
+                this.seekTo(current + seconds);
+            },
+
+            seekTo(seconds) {
+                if (this.mode === 'youtube' && this.ytPlayer && this.ytPlayer.seekTo) {
+                    this.ytPlayer.seekTo(seconds, true);
+                } else if (this.mode === 'hls' && this.videoElement) {
+                    this.videoElement.currentTime = seconds;
+                }
+                this.updateProgressUI();
+            },
+
+            onSeekInput(val) {
+                const duration = this.getDuration();
+                if (duration > 0) {
+                    const targetSec = (val / 100) * duration;
+                    document.getElementById('currentTime').innerText = this.formatTime(targetSec);
+                }
+            },
+
+            onSeekChange(val) {
+                const duration = this.getDuration();
+                if (duration > 0) {
+                    const targetSec = (val / 100) * duration;
+                    this.seekTo(targetSec);
+                }
+            },
+
+            toggleZoom() {
+                const wrapper = document.getElementById('videoScaleWrapper');
+                const label = document.getElementById('zoomLabel');
+
+                this.zoomLevel = (this.zoomLevel + 1) % 3;
+
+                if (this.zoomLevel === 0) {
+                    wrapper.style.transform = "scale(1.0)";
+                    label.innerText = "زوم 100%";
+                } else if (this.zoomLevel === 1) {
+                    wrapper.style.transform = "scale(1.15)";
+                    label.innerText = "زوم 115%";
+                } else {
+                    wrapper.style.transform = "scale(1.30)";
+                    label.innerText = "زوم 130%";
+                }
+            },
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                const icon = document.getElementById('volumeIcon');
+
+                if (this.mode === 'youtube' && this.ytPlayer) {
+                    if (this.isMuted) this.ytPlayer.mute();
+                    else this.ytPlayer.unMute();
+                } else if (this.mode === 'hls' && this.videoElement) {
+                    this.videoElement.muted = this.isMuted;
+                }
+
+                icon.className = this.isMuted ? "fa-solid fa-volume-xmark text-red-400" : "fa-solid fa-volume-high";
+            },
+
+            toggleFullscreen() {
+                const container = document.getElementById('customPlayerContainer');
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().catch(err => console.error(err));
+                    document.getElementById('fullscreenIcon').className = "fa-solid fa-compress";
+                } else {
+                    document.exitFullscreen();
+                    document.getElementById('fullscreenIcon').className = "fa-solid fa-expand";
+                }
+            },
+
+            getCurrentTime() {
+                if (this.mode === 'youtube' && this.ytPlayer && this.ytPlayer.getCurrentTime) {
+                    return this.ytPlayer.getCurrentTime() || 0;
+                } else if (this.mode === 'hls' && this.videoElement) {
+                    return this.videoElement.currentTime || 0;
+                }
+                return 0;
+            },
+
+            getDuration() {
+                if (this.mode === 'youtube' && this.ytPlayer && this.ytPlayer.getDuration) {
+                    return this.ytPlayer.getDuration() || 0;
+                } else if (this.mode === 'hls' && this.videoElement) {
+                    return this.videoElement.duration || 0;
+                }
+                return 0;
+            },
+
+            startProgressTicker() {
+                this.stopProgressTicker();
+                this.updateInterval = setInterval(() => this.updateProgressUI(), 500);
+            },
+
+            stopProgressTicker() {
+                if (this.updateInterval) clearInterval(this.updateInterval);
+            },
+
+            updateProgressUI() {
+                const current = this.getCurrentTime();
+                const duration = this.getDuration();
+
+                document.getElementById('currentTime').innerText = this.formatTime(current);
+                document.getElementById('durationTime').innerText = this.formatTime(duration);
+
+                if (duration > 0) {
+                    const percent = (current / duration) * 100;
+                    document.getElementById('seekBar').value = percent;
+                }
+            },
+
+            updatePlayIcon() {
+                const icon = document.getElementById('playIcon');
+                icon.className = this.isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
+            },
+
+            onYTStateChange(e) {
+                if (e.data === YT.PlayerState.PLAYING) {
+                    this.isPlaying = true;
+                    this.updatePlayIcon();
+                    this.startProgressTicker();
+                } else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+                    this.isPlaying = false;
+                    this.updatePlayIcon();
+                    this.stopProgressTicker();
+                }
+            },
+
+            parseYouTubeID(url) {
+                if (!url) return null;
+                const clean = url.trim();
+                if (clean.length === 11 && !clean.includes('/') && !clean.includes('.')) return clean;
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                const match = clean.match(regExp);
+                return (match && match[2].length === 11) ? match[2] : null;
+            },
+
+            formatTime(seconds) {
+                const sec = Math.floor(seconds % 60);
+                const min = Math.floor((seconds / 60) % 60);
+                return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+            }
+        };
+
+        // === 3. حماية النصوص من هجمات XSS ===
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+
+        // === 4. جلب حساب الطالب الحالي ===
+        async function fetchUserProfile() {
+            try {
+                const { data: { user } } = await _supabase.auth.getUser();
+                if (user) {
+                    currentStudent.id = user.id;
+
+                    const { data: adminData } = await _supabase.from('admins').select('id').eq('id', user.id).maybeSingle();
+                    if (adminData) currentStudent.role = 'admin';
+
+                    const { data: profile } = await _supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+                    if (profile && profile.full_name) {
+                        currentStudent.name = profile.full_name;
+                    }
+                }
+            } catch (err) {
+                console.warn("استخدام الحساب الافتراضي للطالب", err);
+            }
+        }
+
+        // === 5. جلب أحدث بث مباشر أوتوماتيكياً من جدول live_rooms ===
         async function fetchRoomDetails() {
             try {
-                const { data, error } = await supabaseClient
+                // البحث أولاً عن بث مباشر مفعل
+                let { data, error } = await _supabase
                     .from('live_rooms')
                     .select('*')
-                    .eq('id', ROOM_ID)
-                    .single();
+                    .eq('status', 'live')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
-                if (error) throw error;
+                // إذا لم يوجد بث مباشر حالياً، جلب آخر غرفة مضافة
+                if (!data) {
+                    const res = await _supabase
+                        .from('live_rooms')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    data = res.data;
+                }
 
                 if (data) {
-                    document.getElementById('streamTitle').innerText = data.title || "لا توجد حصة مفعلة حالياً";
-                    document.getElementById('streamDescription').innerText = data.description || "لا يوجد وصف متوفر.";
-                    
-                    if (data.status === 'live') {
+                    activeRoomId = data.id;
+                    document.getElementById('streamTitle').innerText = data.title || "حصة مباشرة بدون عنوان";
+                    document.getElementById('streamDescription').innerText = data.description || "لا يوجد وصف لهذه الحصة حالياً.";
+                    document.getElementById('viewerNum').innerText = data.viewer_count ?? 0;
+
+                    const streamSource = data.channel_name ? data.channel_name.trim() : '';
+
+                    if (data.status === 'live' && streamSource) {
                         document.getElementById('liveBadgeContainer').classList.remove('hidden');
-                        // الاتصال بـ Jitsi باستخدام اسم القناة (Room Name) القادم من الـ database
-                        joinLiveStream(data.channel_name);
+                        document.getElementById('streamStatusText').innerText = "مباشر الآن 🟢";
+                        document.getElementById('streamStatusText').className = "text-xs font-bold text-emerald-400";
+                        document.getElementById('offlinePlaceholder').classList.add('hidden');
+
+                        PlayerController.initSource(streamSource);
                     } else {
                         document.getElementById('liveBadgeContainer').classList.add('hidden');
-                        showOfflineUI("البث المباشر مغلق حالياً", "يرجى الانتظار لحين بدء المدرس الحصة المباشرة", "fa-video-slash");
-                        leaveLiveStream();
+                        document.getElementById('streamStatusText').innerText = "غير مباشر 🔴";
+                        document.getElementById('streamStatusText').className = "text-xs font-semibold text-slate-500";
+                        document.getElementById('offlinePlaceholder').classList.remove('hidden');
                     }
+
+                    // إعادة تحميل الشات ليكون متوافقاً مع الغرفة المكتشفة
+                    loadChatHistory();
+                    subscribeToChatRealtime();
                 }
             } catch (err) {
-                console.error("خطأ في جلب بيانات الغرفة:", err);
+                console.error("خطأ جلب بيانات البث المباشر:", err);
             }
         }
 
-        // === 3. تتبع تحديثات البث مباشرة (Realtime Subscriptions) ===
-        function subscribeToLiveRoomUpdates() {
-            supabaseClient
-                .channel('room-status-changes')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_rooms', filter: `id=eq.${ROOM_ID}` }, payload => {
-                    console.log('تم تحديث حالة البث المباشر في قاعدة البيانات!', payload.new);
-                    fetchRoomDetails(); 
-                })
+        // === 6. الاستماع الفوري لتغييرات حالة البث (Realtime) ===
+        function subscribeToRoomChanges() {
+            _supabase
+                .channel('realtime-live-rooms')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'live_rooms' 
+                }, () => fetchRoomDetails())
                 .subscribe();
         }
 
-        // === 4. دمج الـ Jitsi Meet داخل الصفحة ===
-        async function joinLiveStream(channelName) {
-            if (jitsiApi) return; // متصل بالفعل لتجنب تكرار تحميل البث
-
-            try {
-                // إخفاء واجهة الانتظار
-                document.getElementById('offlinePlaceholder').classList.add('hidden');
-
-                const domain = 'meet.jit.si';
-                const options = {
-                    roomName: channelName, // استخدام اسم الغرفة الديناميكي من الـ Database
-                    width: '100%',
-                    height: '100%',
-                    parentNode: document.querySelector('#remoteVideoPlayer'),
-                    userInfo: {
-                        displayName: studentName // إرسال اسم الطالب تلقائياً للغرفة
-                    },
-                    configOverwrite: {
-                        disableDeepLinking: true, // يمنع إجبار الطالب على الخروج أو تحميل تطبيق خارجي
-                        startWithAudioMuted: true, // يفتح الصوت صامت افتراضياً لتجنب الإزعاج
-                        startWithVideoMuted: true, // يغلق كاميرا الطالب تلقائياً عند الدخول كـ مستمع
-                        prejoinPageEnabled: false // تخطي صفحة الانتظار والاتصال مباشرة
-                    },
-                    interfaceConfigOverwrite: {
-                        // تخصيص الواجهة لتكون مناسبة للطلاب (إخفاء خيارات التحكم الزائدة)
-                        TOOLBAR_BUTTONS: [
-                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                            'factions', 'shareaudio', 'raisehand', 'videoquality', 'filmstrip'
-                        ]
-                    }
-                };
-
-                // إنشاء نافذة البث داخل الـ Div المخصص
-                jitsiApi = new JitsiMeetExternalAPI(domain, options);
-                updateViewerCount(1); // تحديث افتراضي لعداد المشاهدين
-
-                // الاستماع لحدث الخروج من الغرفة
-                jitsiApi.addEventListener('readyToClose', () => {
-                    leaveLiveStream();
-                });
-
-            } catch (err) {
-                console.error("فشل الاتصال بالبث المباشر (Jitsi):", err);
-                showOfflineUI("فشل الاتصال بالبث", "حدث خطأ أثناء تشغيل محرك الفيديو الخاص باللايف.", "fa-circle-exclamation text-rose-500");
-            }
-        }
-
-        async function leaveLiveStream() {
-            if (jitsiApi) {
-                try {
-                    jitsiApi.dispose(); // إغلاق وتهيئة اتصال Jitsi بالكامل
-                    console.log("تم مغادرة قناة البث بنجاح.");
-                } catch (err) {
-                    console.error("خطأ أثناء مغادرة البث:", err);
-                } finally {
-                    jitsiApi = null;
-                    document.getElementById("remoteVideoPlayer").innerHTML = ""; // تصفير مشغل الفيديو
-                    updateViewerCount(0);
-                }
-            }
-        }
-
-        // مساعد لتعديل واجهة الانتظار
-        function showOfflineUI(title, desc, iconClass) {
-            document.getElementById('offlinePlaceholder').classList.remove('hidden');
-            document.getElementById('offlineTitle').innerText = title;
-            document.getElementById('offlineDesc').innerText = desc;
-            
-            const iconContainer = document.getElementById('offlineIcon');
-            iconContainer.className = `w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4`;
-            iconContainer.innerHTML = `<i class="fa-solid ${iconClass} text-3xl"></i>`;
-        }
-
-        function updateViewerCount(num) {
-            document.getElementById('viewerNum').innerText = num;
-        }
-
-        // === 5. نظام المحادثة الفورية (Live Chat System) ===
-        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+        // === 7. نظام المحادثة الفورية (Live Chat Realtime) ===
+        async function sendStudentChatMessage(e) {
             e.preventDefault();
+            if (!activeRoomId) return;
+
             const input = document.getElementById('chatInput');
+            const btn = document.getElementById('sendBtn');
             const messageText = input.value.trim();
+
             if (!messageText) return;
 
-            const { error } = await supabaseClient
-                .from('live_messages')
-                .insert({
-                    room_id: ROOM_ID,
-                    sender_name: studentName,
-                    sender_role: 'student',
-                    message: messageText
-                });
+            input.disabled = true;
+            btn.disabled = true;
 
-            if (!error) {
-                input.value = '';
-            } else {
-                console.error("خطأ في إرسال الرسالة:", error);
-            }
-        });
-
-        async function loadPreviousMessages() {
             try {
-                const { data, error } = await supabaseClient
-                    .from('live_messages')
-                    .select('*')
-                    .eq('room_id', ROOM_ID)
-                    .order('created_at', { ascending: true })
-                    .limit(50);
-
+                const { error } = await _supabase.from('live_messages').insert([{
+                    room_id: activeRoomId,
+                    sender_id: currentStudent.id,
+                    sender_name: currentStudent.name,
+                    sender_role: currentStudent.role,
+                    message: messageText
+                }]);
                 if (error) throw error;
-
-                if (data) {
-                    document.getElementById('chatMessages').innerHTML = `
-                        <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800">
-                            <p class="text-xs text-slate-400 leading-relaxed text-center">أهلاً بك في البث! يرجى الالتزام بالآداب العامة أثناء النقاش مع الأستاذ وزملائك.</p>
-                        </div>
-                    `;
-                    data.forEach(msg => appendMessageToChat(msg));
-                }
+                input.value = '';
             } catch (err) {
-                console.error("خطأ في تحميل الرسائل السابقة:", err);
+                console.error("خطأ إرسال الرسالة:", err);
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
             }
         }
 
-        function subscribeToNewMessages() {
-            supabaseClient
-                .channel('chat-messages')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages', filter: `room_id=eq.${ROOM_ID}` }, payload => {
-                    appendMessageToChat(payload.new);
-                })
+        async function loadChatHistory() {
+            if (!activeRoomId) return;
+            try {
+                const { data } = await _supabase
+                    .from('live_messages')
+                    .select('*')
+                    .eq('room_id', activeRoomId)
+                    .order('created_at', { ascending: true })
+                    .limit(80);
+
+                const chatBox = document.getElementById('chatMessages');
+                chatBox.innerHTML = `
+                    <div class="bg-slate-800/30 p-3 rounded-2xl border border-slate-800/60 text-center">
+                        <i class="fa-solid fa-shield-halved text-red-500 text-base mb-1"></i>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">مرحباً بك في البث! يرجى الالتزام بالآداب العامة وطرح الأسئلة المتعلقة بالمادة فقط.</p>
+                    </div>
+                `;
+
+                if (data) data.forEach(msg => appendMessageUI(msg));
+            } catch (err) {
+                console.error("خطأ جلب المحادثات:", err);
+            }
+        }
+
+        function subscribeToChatRealtime() {
+            if (!activeRoomId) return;
+            _supabase
+                .channel(`realtime-messages-${activeRoomId}`)
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'live_messages', 
+                    filter: `room_id=eq.${activeRoomId}` 
+                }, payload => appendMessageUI(payload.new))
                 .subscribe();
         }
 
-        function appendMessageToChat(msg) {
+        function appendMessageUI(msg) {
             const chatBox = document.getElementById('chatMessages');
-            const isTeacher = msg.sender_role === 'admin';
-            
-            const messageElement = document.createElement('div');
-            messageElement.className = `flex flex-col gap-1 max-w-[85%] rounded-2xl p-3 ${
+            if (!chatBox) return;
+
+            const isTeacher = (msg.sender_role === 'admin' || msg.sender_role === 'host' || msg.sender_name?.includes('الأستاذ'));
+            const isMe = (msg.sender_id && msg.sender_id === currentStudent.id);
+
+            const msgDiv = document.createElement('div');
+            msgDiv.id = `msg-${msg.id}`;
+            msgDiv.className = `flex flex-col gap-1 max-w-[88%] rounded-2xl p-3 text-right transition-all ${
                 isTeacher 
-                ? 'bg-amber-500/10 border border-amber-500/20 mr-auto text-right' 
-                : 'bg-slate-800/60 border border-slate-700/50 ml-auto text-right'
+                ? 'bg-gradient-to-r from-red-950/80 to-slate-900 border border-red-500/30 mr-auto shadow-md' 
+                : isMe
+                ? 'bg-slate-800/80 border border-slate-700/60 ml-auto'
+                : 'bg-slate-900/90 border border-slate-800/80 ml-auto'
             }`;
 
-            messageElement.innerHTML = `
-                <div class="flex items-center gap-1.5 justify-start">
-                    <span class="text-xs font-bold ${isTeacher ? 'text-amber-400' : 'text-slate-300'}">
-                        ${msg.sender_name}
+            const timeStr = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '';
+
+            msgDiv.innerHTML = `
+                <div class="flex items-center justify-between gap-2 border-b border-white/5 pb-1">
+                    <span class="text-[11px] font-bold ${isTeacher ? 'text-red-400' : 'text-slate-300'} flex items-center gap-1">
+                        ${escapeHTML(msg.sender_name || 'طالب')}
+                        ${isTeacher ? '<span class="bg-red-500/20 text-red-400 text-[9px] font-black px-1.5 py-0.2 rounded border border-red-500/30">⭐ المعلم</span>' : ''}
                     </span>
-                    ${isTeacher ? '<span class="bg-amber-500/20 text-amber-400 text-[8px] font-bold px-1.5 py-0.5 rounded">المعلم</span>' : ''}
+                    <span class="text-[9px] text-slate-500 font-mono">${timeStr}</span>
                 </div>
-                <p class="text-sm text-slate-200 leading-relaxed break-words mt-0.5">${msg.message}</p>
+                <p class="text-xs sm:text-sm text-slate-200 leading-relaxed break-words mt-1">${escapeHTML(msg.message)}</p>
             `;
 
-            chatBox.appendChild(messageElement);
+            chatBox.appendChild(msgDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // === 6. بدء تشغيل الصفحة بالكامل عند التحميل ===
-        window.addEventListener('DOMContentLoaded', () => {
+        function reloadStream() {
             fetchRoomDetails();
-            loadPreviousMessages();
-            subscribeToLiveRoomUpdates();
-            subscribeToNewMessages();
+        }
+
+        // === 8. التهيئة الأولية عند التحميل ===
+        window.addEventListener('DOMContentLoaded', async () => {
+            await fetchUserProfile();
+            await fetchRoomDetails();
+            subscribeToRoomChanges();
         });
     </script>
 </body>

@@ -12,8 +12,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- مكتبة Jitsi Meet للبث المباشر -->
-<script src="https://meet.jit.si/external_api.js"></script>
 
 <script>
 tailwind.config = {
@@ -183,7 +181,7 @@ button, input, select, textarea {
 </div>
 <div>
 <span class="text-sm sm:text-base font-black block leading-none tracking-wide">لوحة تحكم المنصة</span>
-<span class="text-[10px] sm:text-xs text-emerald-400 font-bold mt-1 block">نظام إدارة المحتوى والمسؤولين والأرشيف V3.5</span>
+<span class="text-[10px] sm:text-xs text-emerald-400 font-bold mt-1 block">نظام إدارة المحتوى والمسؤولين والبث V3.5</span>
 </div>
 </div>
 <div class="flex items-center gap-4">
@@ -276,7 +274,7 @@ button, input, select, textarea {
 <i class="fa-solid fa-box-archive text-amber-500"></i> الأرشيف الأكاديمي
 </button>
 <button id="tab-live-btn" onclick="switchPanel('live')" class="flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-700 active:scale-95">
-<i class="fa-solid fa-video animate-pulse"></i> البث المباشر
+<i class="fa-solid fa-video animate-pulse"></i> البث المباشر (OBS)
 </button>
 </div>
 
@@ -428,19 +426,22 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 </div>
 
 <form onsubmit="handleStudentSearch(event)" class="space-y-3 bg-gray-50/70 p-4 sm:p-5 rounded-2xl border border-gray-100">
-<label class="text-xs font-bold text-gray-700 block pr-1">ابحث عن الطالب بكتابة اسمه الكامل أو كوده الخاص</label>
+<label class="text-xs font-bold text-gray-700 block pr-1">كل الطلاب المسجلين بالمنصة يظهروا تلقائيًا بالأسفل، ويمكنك الفلترة بالاسم أو الكود عند الحاجة</label>
 <div class="flex flex-col sm:flex-row gap-3">
-<input type="text" id="studentSearchQuery" required placeholder="مثال: محمود عبد الرؤوف أو كود الطالب..."
+<input type="text" id="studentSearchQuery" placeholder="اختياري: اكتب اسم الطالب أو كوده لتصفية القائمة..."
 class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
 <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
 <i class="fa-solid fa-magnifying-glass text-xs"></i> استعلام
+</button>
+<button type="button" onclick="document.getElementById('studentSearchQuery').value=''; loadAllStudents();" class="bg-white hover:bg-gray-100 active:scale-95 text-slate-700 font-bold px-6 py-3 rounded-xl shadow-sm border border-gray-200 transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+<i class="fa-solid fa-rotate-right text-xs"></i> عرض الكل
 </button>
 </div>
 </form>
 
 <div id="student-search-loader" class="hidden flex-col items-center justify-center py-10 gap-3">
 <i class="fa-solid fa-circle-notch animate-spin text-3xl text-emerald-600"></i>
-<span class="text-xs text-gray-500 font-bold">جاري البحث والمطابقة في قاعدة البيانات...</span>
+<span class="text-xs text-gray-500 font-bold">جاري تحميل بيانات الطلاب من قاعدة البيانات...</span>
 </div>
 
 <div id="student-results-area" class="hidden space-y-4 mt-6">
@@ -762,30 +763,35 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm fon
     </div>
 </div>
 
-<!-- 7. لوحة البث المباشر -->
+<!-- 7. لوحة البث المباشر المبتكرة الاحترافية (OBS + YouTube Live) -->
 <div id="panel-live" class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 hidden animate-scale-up w-full">
     <div class="lg:col-span-8 space-y-6">
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
+            
+            <!-- الهيدر وحالة البث -->
             <div class="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 class="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
-                    <i class="fa-solid fa-video text-red-600 animate-pulse"></i> ستوديو البث المباشر (Jitsi)
+                    <i class="fa-solid fa-tower-broadcast text-red-600 animate-pulse"></i> ستوديو البث المباشر (OBS / YouTube)
                 </h2>
-                <span id="liveStatusBadge" class="bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200">
+                <span id="liveStatusBadge" class="bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200 transition-all">
                     <span class="w-2 h-2 rounded-full bg-gray-400"></span> مغلق حالياً
                 </span>
             </div>
 
-            <div class="relative w-full h-[350px] sm:h-[450px] lg:h-[500px] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-xl group">
-                <div id="jitsiContainer" class="absolute inset-0 w-full h-full"></div>
+            <!-- شاشة معاينة البث (YouTube Embed) -->
+            <div class="relative w-full h-[350px] sm:h-[450px] lg:h-[480px] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-xl group">
+                <iframe id="youtubePreviewFrame" class="absolute inset-0 w-full h-full hidden" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                
                 <div id="noVideoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 z-10 transition-all duration-300">
                     <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-slate-600 shadow-inner">
-                        <i class="fa-solid fa-video-slash text-2xl sm:text-3xl"></i>
+                        <i class="fa-brands fa-youtube text-3xl"></i>
                     </div>
-                    <h3 class="text-sm sm:text-base font-bold text-slate-300">نافذة البث المباشر متوقفة</h3>
-                    <p class="text-[10px] sm:text-xs text-slate-500 mt-2 max-w-xs text-center px-4">اضغط على زر (بدء البث) لتفعيل الكاميرا وتهيئة الغرفة للطلاب.</p>
+                    <h3 class="text-sm sm:text-base font-bold text-slate-300">نافذة المعاينة متوقفة</h3>
+                    <p class="text-[10px] sm:text-xs text-slate-500 mt-2 max-w-xs text-center px-4">قم ببدء البث من برنامج OBS على يوتيوب، ثم ضع الرابط هنا واضغط (حفظ) للمعاينة.</p>
                 </div>
             </div>
 
+            <!-- إعدادات وعنوان البث -->
             <form id="liveSettingsForm" class="space-y-4" onsubmit="handleUpdateLiveDetails(event)">
                 <div class="grid grid-cols-1 gap-4 bg-gray-50/50 p-4 sm:p-5 rounded-2xl border border-gray-100">
                     <div class="space-y-1.5">
@@ -793,54 +799,57 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm fon
                         <input type="text" id="liveTitleInput" required placeholder="مثال: مراجعة ليلة الامتحان الشاملة"
                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all">
                     </div>
+
                     <div class="space-y-1.5">
                         <label class="text-xs font-bold text-gray-700 block pr-1">توجيهات ومحاور الحصة</label>
                         <textarea id="liveDescInput" rows="2" required placeholder="اكتب تفاصيل ومحاور هذه الحصة..."
                                   class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"></textarea>
                     </div>
+
                     <div class="space-y-1.5">
-                        <label class="text-[11px] sm:text-xs font-bold text-gray-700 block pr-1">معرف غرفة Jitsi (إنجليزي بدون مسافات)</label>
-                        <input type="text" id="liveChannelInput" required value="MagdyLiveClass2026"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-left font-mono" dir="ltr">
+                        <label class="text-[11px] sm:text-xs font-bold text-gray-700 flex items-center justify-between pr-1">
+                            <span>رابط بث يوتيوب (YouTube Live URL)</span>
+                            <span class="text-[10px] text-red-500 font-semibold">(رابط البث أو المعرف ID)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="liveYoutubeInput" required placeholder="https://www.youtube.com/watch?v=XXXXXX أو ID الفيديو"
+                                   class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-left font-mono pl-10" dir="ltr">
+                            <i class="fa-brands fa-youtube absolute left-3.5 top-1/2 -translate-y-1/2 text-red-600 text-lg"></i>
+                        </div>
                     </div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 pt-2">
                     <button type="submit" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-sm order-2 sm:order-1">
-                        <i class="fa-solid fa-floppy-disk"></i> حفظ البيانات فقط
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ وإظهار المعاينة
                     </button>
                     <button type="button" id="startLiveBtn" onclick="toggleLiveStatus()" class="flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20 order-1 sm:order-2">
-                        <i class="fa-solid fa-play"></i> بدء البث المباشر (تفعيل الآن)
+                        <i class="fa-solid fa-play"></i> بدء البث للطلاب (تفعيل الآن)
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="lg:col-span-4 flex flex-col h-[450px] lg:h-auto lg:min-h-[750px] bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in relative">
+    <!-- قسم الدردشة التفاعلية المباشرة -->
+    <div class="lg:col-span-4 flex flex-col h-[500px] lg:h-auto lg:min-h-[750px] bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in relative">
         <div class="p-3 sm:p-4 border-b border-gray-100 flex items-center justify-between bg-slate-900 text-white shadow-sm z-10 relative">
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-comments text-red-500 animate-bounce"></i>
-                <span class="font-bold text-[11px] sm:text-xs tracking-wide">الدردشة التفاعلية المباشرة</span>
+                <span class="font-bold text-[11px] sm:text-xs tracking-wide">دردشة البث المباشر</span>
             </div>
-            
-            <div class="flex items-center gap-1.5 sm:gap-2 bg-slate-800 p-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-700">
-                <label class="text-[9px] sm:text-[10px] font-bold text-slate-300 hidden sm:block">التعليقات:</label>
-                <label class="relative inline-flex items-center cursor-pointer select-none">
-                    <input type="checkbox" id="chatStatusToggle" onchange="toggleChatStatus()" class="sr-only peer" checked>
-                    <div class="w-7 h-4 sm:w-8 sm:h-4 bg-gray-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-                <span id="chatStatusLabel" class="text-[9px] sm:text-[10px] text-emerald-400 font-bold w-6 text-center">مفتوحة</span>
-            </div>
+            <button onclick="clearChatScreen()" class="text-gray-400 hover:text-white text-[10px] bg-slate-800 px-2.5 py-1 rounded-lg transition-colors border border-slate-700">
+                <i class="fa-solid fa-broom"></i> تنظيف الشاشة
+            </button>
         </div>
 
         <div id="liveChatMessages" class="flex-grow p-4 overflow-y-auto flex flex-col gap-3 bg-slate-50/50 scroll-smooth pb-20 lg:pb-24">
-            <div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">مرحباً بك في الدردشة المباشرة 👋</div>
+            <div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">مرحباً بك في الاستوديو المباشر 👋</div>
         </div>
 
         <div class="absolute bottom-0 left-0 right-0 p-3 sm:p-4 border-t border-gray-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
             <form id="liveAdminChatForm" class="flex gap-2" onsubmit="sendAdminLiveMessage(event)">
-                <input type="text" id="liveAdminChatInput" placeholder="اكتب رد الأستاذ للطلاب هنا..." required autocomplete="off"
+                <input type="text" id="liveAdminChatInput" placeholder="اكتب ردك للطلاب هنا..." required autocomplete="off"
                        class="flex-grow bg-gray-50 border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-[11px] sm:text-xs font-semibold rounded-xl px-4 py-3 outline-none transition-all placeholder:text-gray-400">
                 <button type="submit" class="bg-red-600 hover:bg-red-700 active:scale-95 text-white w-12 h-auto rounded-xl flex items-center justify-center shadow-md shadow-red-600/20 transition-all flex-shrink-0">
                     <i class="fa-solid fa-paper-plane transform rotate-180 text-sm"></i>
@@ -848,9 +857,6 @@ class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm fon
             </form>
         </div>
     </div>
-</div>
-
-</div>
 </div>
 </main>
 
@@ -887,7 +893,6 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // مصفوفة تخزين أجزاء المحاضرة المتتابعة
 let lectureParts = [];
 
-let jitsiAPI = null;
 let isLiveActive = false;
 const LIVE_ROOM_ID = "00000000-0000-0000-0000-000000000001"; 
 
@@ -915,24 +920,9 @@ disableDropdown.classList.add('hidden');
 });
 });
 
-// دالة المعاينة الحية لرابط الصورة
-function updateImagePreview(url) {
-    const img = document.getElementById('courseImagePreview');
-    const placeholder = document.getElementById('courseImagePlaceholder');
-    if (url && url.trim().length > 5) {
-        img.src = url;
-        img.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        img.onerror = () => {
-            img.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-        };
-    } else {
-        img.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-    }
-}
-
+// ==========================================
+// نظام الإشعارات والرسائل التنبيهية
+// ==========================================
 function showNotification(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -965,763 +955,296 @@ function showNotification(message, type = 'success') {
         toast.style.transform = 'translateY(0)';
         toast.style.opacity = '1';
     });
-    
+
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-10px)';
-        setTimeout(() => toast.remove(), 300);
+        if(toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => toast.remove(), 400);
+        }
     }, 4500);
 }
 
-async function loadDashboardStats() {
-try {
-const { count: studentCount } = await _supabase.from('profiles').select('*', { count: 'exact', head: true });
-if (studentCount !== null) document.getElementById('stats-students-count').innerText = `${studentCount} طالب`;
-
-const { count: courseCount } = await _supabase.from('courses').select('*', { count: 'exact', head: true }).eq('is_visible', true);
-if (courseCount !== null) {
-document.getElementById('stats-count').innerText = `${courseCount} كورس`;
-document.getElementById('table-count').innerText = `إجمالي: ${courseCount}`;
-}
-
-const { count: pendingCount } = await _supabase.from('subscription_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-if (pendingCount !== null) document.getElementById('stats-pending-count').innerText = `${pendingCount} طلب`;
-
-const { count: codeCount } = await _supabase.from('center_codes').select('*', { count: 'exact', head: true }).eq('is_used', false);
-if (codeCount !== null) document.getElementById('stats-codes-count').innerText = `${codeCount} كود`;
-
-const { count: adminCount } = await _supabase.from('admins').select('*', { count: 'exact', head: true });
-if (adminCount !== null) {
-    const el = document.getElementById('stats-admins-count');
-    if(el) el.innerText = `${adminCount} أدمن`;
-}
-} catch (err) { console.error(err); }
-}
-
-window.switchPanel = function(panelName) {
-const panels = ['course', 'student', 'coupon', 'notification', 'admin', 'archive', 'live'];
-panels.forEach(p => {
-const element = document.getElementById(`panel-${p}`);
-const btn = document.getElementById(`tab-${p}-btn`);
-if (!element || !btn) return;
-
-if (p === panelName) {
-element.classList.remove('hidden');
-if (p === 'live') {
-    element.classList.add('grid');
-} else {
-    element.classList.add('block');
-}
-element.classList.remove('animate-scale-up');
-void element.offsetWidth;
-element.classList.add('animate-scale-up');
-
-if(p === 'live') {
-    btn.className = "flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-red-600 text-white shadow-md active:scale-95";
-} else if(p === 'admin') {
-    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-md active:scale-95";
-} else if(p === 'archive') {
-    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-amber-600 text-white shadow-md active:scale-95";
-} else {
-    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow-md active:scale-95";
-}
-
-} else {
-element.classList.remove('block', 'grid');
-element.classList.add('hidden');
-if(p === 'live') {
-    btn.className = "flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-700 active:scale-95";
-} else if(p === 'archive') {
-    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-amber-600 hover:bg-amber-50 active:scale-95";
-} else {
-    btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95";
-}
-}
-});
-
-if (panelName === 'student') loadPendingSubscriptions();
-else if (panelName === 'coupon') fetchCouponsList();
-else if (panelName === 'notification') fetchNotificationsList();
-else if (panelName === 'admin') fetchAdminsList();
-else if (panelName === 'archive') loadArchivePanelData();
-else if (panelName === 'live') {
-    loadLiveStreamDetails();
-    loadLivePreviousMessages();
-    subscribeToLiveMessages();
-}
-}
-
-// =========================================================================
-// نظام تجزيء المحاضرة إلى أجزاء متتابعة وقفل المحتوى الشرطي
-// =========================================================================
-
-window.addNewLecturePart = function() {
-const partIndex = lectureParts.length + 1;
-lectureParts.push({
-title: `الجزء ${partIndex}: الشرح والتطبيق`,
-description: '',
-video_url: '',
-pdfFileId: `pdf-file-input-${Date.now()}-${Math.random().toString(36).substring(2,5)}`,
-hasExam: false,
-examTitle: `اختبار تقييمي على الجزء ${partIndex}`,
-examDuration: 15,
-questions: []
-});
-renderLectureParts();
-}
-
-window.removeLecturePart = function(index) {
-if(lectureParts.length <= 1) {
-showNotification("يجب أن تحتوي المحاضرة على جزء واحد على الأقل!", "warning");
-return;
-}
-lectureParts.splice(index, 1);
-renderLectureParts();
-}
-
-function renderLectureParts() {
-const container = document.getElementById('lecture-parts-container');
-container.innerHTML = '';
-
-lectureParts.forEach((part, pIndex) => {
-const partCard = document.createElement('div');
-partCard.className = "bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700/80 space-y-4 animate-fade-in relative transition-all";
-
-partCard.innerHTML = `
-<div class="flex items-center justify-between border-b border-slate-700 pb-3">
-<div class="flex items-center gap-2">
-<span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/30">#${pIndex + 1}</span>
-<h4 class="text-xs sm:text-sm font-black text-slate-100">بيانات الجزء المقطّع (الترتيب الشرطي: ${pIndex + 1})</h4>
-${pIndex > 0 ? `<span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-lock text-[8px] ml-1"></i> مغلق بشرط الجزء السابق</span>` : `<span class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-unlock text-[8px] ml-1"></i> الجزء الأول</span>`}
-</div>
-<button type="button" onclick="removeLecturePart(${pIndex})" class="text-red-400 hover:text-white hover:bg-red-500/30 p-1.5 px-3 rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-trash-can"></i> حذف هذا الجزء</button>
-</div>
-
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-800">
-<div class="space-y-1 sm:col-span-2">
-<label class="text-[11px] font-bold text-slate-300 block">اسم هذا الجزء من المحاضرة</label>
-<input type="text" value="${part.title}" oninput="lectureParts[${pIndex}].title = this.value" required placeholder="مثال: الجزء الأول: الشرح والتأسيس" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500">
-</div>
-
-<div class="space-y-1">
-<label class="text-[11px] font-bold text-slate-300 block">🎥 رابط فيديو هذا الجزء (Vimeo / Bunny / YouTube)</label>
-<input type="url" value="${part.video_url}" oninput="lectureParts[${pIndex}].video_url = this.value" required placeholder="https://player.vimeo.com/video/xxxx" dir="ltr" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs font-semibold focus:outline-none focus:border-emerald-500 text-left font-mono">
-</div>
-
-<div class="space-y-1">
-<label class="text-[11px] font-bold text-slate-300 block">📚 ملف الـ PDF/الملزمة الخاصة برابط هذا الجزء</label>
-<input type="file" id="${part.pdfFileId}" accept=".pdf,.doc,.docx" class="w-full py-1.5 px-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-300 file:ml-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
-</div>
-</div>
-
-<div class="bg-slate-900/80 p-3 sm:p-4 rounded-xl border border-slate-700/60 space-y-3">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-2">
-<i class="fa-solid fa-file-signature text-emerald-400 text-sm"></i>
-<span class="text-xs font-bold text-slate-200">إضافة اختبار اجتاز شرطي لهذا الجزء</span>
-</div>
-<label class="relative inline-flex items-center cursor-pointer select-none">
-<input type="checkbox" ${part.hasExam ? 'checked' : ''} onchange="togglePartExam(${pIndex}, this.checked)" class="sr-only peer">
-<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-</label>
-</div>
-
-${part.hasExam ? `
-<div class="space-y-3 pt-3 border-t border-slate-800 animate-fade-in">
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-800">
-<div class="space-y-1">
-<label class="text-[10px] font-bold text-slate-300">عنوان الامتحان</label>
-<input type="text" value="${part.examTitle}" oninput="lectureParts[${pIndex}].examTitle = this.value" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 text-white rounded-xl text-xs">
-</div>
-<div class="space-y-1">
-<label class="text-[10px] font-bold text-slate-300">⏱️ مدة الامتحان (دقائق)</label>
-<input type="number" value="${part.examDuration}" min="1" oninput="lectureParts[${pIndex}].examDuration = parseInt(this.value) || 10" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 text-white rounded-xl text-xs font-bold">
-</div>
-</div>
-
-<div class="space-y-2">
-<span class="text-[10px] font-black text-emerald-400 block">أسئلة الاختيارات المخصصة للعبور للجزء التالي:</span>
-<div id="part-${pIndex}-questions" class="space-y-3"></div>
-<button type="button" onclick="addQuestionToPart(${pIndex})" class="w-full py-2 bg-slate-800 border border-dashed border-slate-600 hover:border-emerald-400 text-slate-300 hover:text-emerald-400 font-bold rounded-xl text-[11px] transition-all flex items-center justify-center gap-1.5">
-<i class="fa-solid fa-plus text-[9px]"></i> إضافة سؤال لهذا الاختبار
-</button>
-</div>
-</div>
-` : ''}
-</div>
-`;
-container.appendChild(partCard);
-
-if(part.hasExam) renderPartQuestions(pIndex);
-});
-}
-
-window.togglePartExam = function(pIndex, isChecked) {
-lectureParts[pIndex].hasExam = isChecked;
-if(isChecked && lectureParts[pIndex].questions.length === 0) {
-addQuestionToPart(pIndex);
-} else {
-renderLectureParts();
-}
-}
-
-window.addQuestionToPart = function(pIndex) {
-lectureParts[pIndex].questions.push({
-passage: '',
-text: '',
-points: 1,
-options: [
-{ text: '', isCorrect: true },
-{ text: '', isCorrect: false },
-{ text: '', isCorrect: false },
-{ text: '', isCorrect: false }
-]
-});
-renderLectureParts();
-}
-
-window.removeQuestionFromPart = function(pIndex, qIndex) {
-lectureParts[pIndex].questions.splice(qIndex, 1);
-renderLectureParts();
-}
-
-function renderPartQuestions(pIndex) {
-const qContainer = document.getElementById(`part-${pIndex}-questions`);
-if(!qContainer) return;
-qContainer.innerHTML = '';
-
-lectureParts[pIndex].questions.forEach((q, qIndex) => {
-const qDiv = document.createElement('div');
-qDiv.className = "bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-slate-800";
-qDiv.innerHTML = `
-<div class="flex justify-between items-center text-slate-200">
-<span class="text-[10px] font-black text-emerald-400">السؤال رقم (${qIndex + 1})</span>
-<button type="button" onclick="removeQuestionFromPart(${pIndex}, ${qIndex})" class="text-red-400 text-[10px] hover:underline font-bold">حذف</button>
-</div>
-<textarea rows="1" oninput="lectureParts[${pIndex}].questions[${qIndex}].passage = this.value" placeholder="النص المقروء/القطعة (اختياري)..." class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-[11px]">${q.passage || ''}</textarea>
-<div class="grid grid-cols-12 gap-2">
-<input type="text" value="${q.text}" oninput="lectureParts[${pIndex}].questions[${qIndex}].text = this.value" required placeholder="نص السؤال..." class="col-span-10 px-2.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-[11px]">
-<input type="number" value="${q.points}" min="1" oninput="lectureParts[${pIndex}].questions[${qIndex}].points = parseInt(this.value)||1" required class="col-span-2 px-1 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-[11px] font-bold text-center">
-</div>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
-${q.options.map((opt, oIndex) => `
-<div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
-<input type="text" value="${opt.text}" oninput="lectureParts[${pIndex}].questions[${qIndex}].options[${oIndex}].text = this.value" required placeholder="الخيار ${oIndex + 1}" class="flex-grow bg-transparent px-1.5 text-[11px] text-white outline-none">
-<button type="button" onclick="setPartCorrectOption(${pIndex}, ${qIndex}, ${oIndex})" class="px-2 py-0.5 rounded text-[9px] font-black ${opt.isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}">
-${opt.isCorrect ? 'صح' : 'خطأ'}
-</button>
-</div>
-`).join('')}
-</div>
-`;
-qContainer.appendChild(qDiv);
-});
-}
-
-window.setPartCorrectOption = function(pIndex, qIndex, oIndex) {
-lectureParts[pIndex].questions[qIndex].options.forEach((opt, idx) => {
-opt.isCorrect = (idx === oIndex);
-});
-renderLectureParts();
-}
-
 // ==========================================
-// رفع ومعالجة المحاضرة والأجزاء في Supabase
+// إدارة التنقل بين اللوحات الرئيسية (Switch Panels)
 // ==========================================
-async function handleCourseUpload(event) {
-    event.preventDefault();
-    if (lectureParts.length === 0) {
-        showNotification("يرجى إضافة جزء واحد على الأقل للمحاضرة", "warning");
-        return;
+function switchPanel(panelId) {
+    const panels = ['course', 'student', 'coupon', 'notification', 'admin', 'archive', 'live'];
+    panels.forEach(id => {
+        const p = document.getElementById(`panel-${id}`);
+        const btn = document.getElementById(`tab-${id}-btn`);
+        if (p) p.classList.add('hidden');
+        if (btn) {
+            if (id === 'live') {
+                btn.className = "flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-700 active:scale-95";
+            } else {
+                btn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 hover:text-slate-700 active:scale-95";
+            }
+        }
+    });
+
+    const activePanel = document.getElementById(`panel-${panelId}`);
+    const activeBtn = document.getElementById(`tab-${panelId}-btn`);
+    if (activePanel) activePanel.classList.remove('hidden');
+    if (activeBtn) {
+        if (panelId === 'live') {
+            activeBtn.className = "flex-1 basis-[100%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-red-600 text-white shadow-lg shadow-red-600/20 active:scale-95";
+        } else {
+            activeBtn.className = "flex-1 basis-[45%] sm:basis-auto min-w-[120px] sm:min-w-[140px] py-2.5 sm:py-3 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow-sm active:scale-95";
+        }
     }
 
-    const title = document.getElementById('titleInput').value.trim();
-    const desc = document.getElementById('descInput').value.trim();
-    const price = parseFloat(document.getElementById('priceInput').value) || 0;
-    const stage = document.getElementById('stageInput').value;
-    const term = document.getElementById('termInput').value;
-    const imageUrl = document.getElementById('imageUrlInput').value.trim();
-    const submitBtn = document.getElementById('submitBtn');
+    if (panelId === 'live') {
+        loadLiveRoomData();
+    } else if (panelId === 'archive') {
+        loadArchivePanelData();
+    } else if (panelId === 'admin') {
+        fetchAdminsList();
+    } else if (panelId === 'student') {
+        loadAllStudents();
+        loadPendingSubscriptions();
+    } else if (panelId === 'coupon') {
+        fetchCouponsList();
+        populateCouponCourseSelect();
+    }
+}
 
+// ==========================================
+// إحصائيات اللوحة الرسمية
+// ==========================================
+async function loadDashboardStats() {
+    try {
+        const [{ count: studentsCount }, { count: pendingCount }, { count: coursesCount }, { count: codesCount }, { count: adminsCount }] = await Promise.all([
+            _supabase.from('profiles').select('*', { count: 'exact', head: true }),
+            _supabase.from('subscription_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+            _supabase.from('courses').select('*', { count: 'exact', head: true }),
+            _supabase.from('center_codes').select('*', { count: 'exact', head: true }).eq('is_used', false),
+            _supabase.from('admins').select('*', { count: 'exact', head: true })
+        ]);
+
+        document.getElementById('stats-students-count').innerText = `${studentsCount || 0} طالب`;
+        document.getElementById('stats-pending-count').innerText = `${pendingCount || 0} طلب`;
+        document.getElementById('stats-count').innerText = `${coursesCount || 0} كورس`;
+        document.getElementById('stats-codes-count').innerText = `${codesCount || 0} كود`;
+        document.getElementById('stats-admins-count').innerText = `${adminsCount || 0} أدمن`;
+    } catch (err) {
+        console.error("Error loading stats:", err);
+    }
+}
+
+// ==========================================
+// معاينة صورة الكورس الحية
+// ==========================================
+function updateImagePreview(url) {
+    const img = document.getElementById('courseImagePreview');
+    const placeholder = document.getElementById('courseImagePlaceholder');
+    if (url && url.trim().length > 5) {
+        img.src = url;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        img.onerror = () => {
+            img.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+        };
+    } else {
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+    }
+}
+
+// ==========================================
+// 1. بناء وإدارة أجزاء المحاضرات رفع الكورسات
+// ==========================================
+function addNewLecturePart() {
+    const container = document.getElementById('lecture-parts-container');
+    const index = lectureParts.length + 1;
+    const partId = `part-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    
+    lectureParts.push({ id: partId, index: index });
+
+    const div = document.createElement('div');
+    div.id = partId;
+    div.className = "bg-slate-800/90 border border-slate-700 p-4 sm:p-5 rounded-2xl space-y-4 animate-fade-in relative";
+    div.innerHTML = `
+        <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+            <span class="text-xs font-black text-emerald-400 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-[10px] font-black">${index}</span>
+                الجزء رقم (${index}) من المحاضرة
+            </span>
+            ${lectureParts.length > 1 ? `
+            <button type="button" onclick="removeLecturePart('${partId}')" class="text-red-400 hover:text-red-300 text-xs font-bold flex items-center gap-1 bg-red-500/10 px-2.5 py-1 rounded-lg border border-red-500/20 transition-all">
+                <i class="fa-solid fa-trash-can"></i> حذف الجزء
+            </button>` : ''}
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1">
+                <label class="text-[11px] font-bold text-slate-300 block">عنوان هذا الجزء</label>
+                <input type="text" class="part-title w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-emerald-500 focus:outline-none" placeholder="مثال: الجزء الأول - مقدمة الأدب" required>
+            </div>
+            <div class="space-y-1">
+                <label class="text-[11px] font-bold text-slate-300 block">رابط الشرح بالفيديو (YouTube / Vimeo / Bunny)</label>
+                <input type="url" class="part-video-url w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-emerald-500 focus:outline-none" placeholder="https://..." dir="ltr" required>
+            </div>
+            <div class="space-y-1 sm:col-span-2">
+                <label class="text-[11px] font-bold text-slate-300 block">رابط ملف الـ PDF (اختياري)</label>
+                <input type="url" class="part-pdf-url w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-emerald-500 focus:outline-none" placeholder="https://..." dir="ltr">
+            </div>
+        </div>
+
+        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700/80 space-y-3">
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-signature"></i> الامتحان الشرطي لهذا الجزء (اختياري)
+                </label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input type="text" class="part-exam-title w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none" placeholder="عنوان الامتحان (مثال: اختبار الجزء الأول)">
+                <input type="number" class="part-exam-duration w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none" placeholder="مدة الامتحان بالدقائق (مثال: 15)">
+            </div>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+function removeLecturePart(partId) {
+    lectureParts = lectureParts.filter(p => p.id !== partId);
+    const el = document.getElementById(partId);
+    if(el) el.remove();
+}
+
+async function handleCourseUpload(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> جاري حفظ الكورس ورفع البيانات...`;
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> جاري حفظ ونشر الكورس بالكامل...`;
 
     try {
-        // 1. إنشاء الكورس الرئيسي
+        const title = document.getElementById('titleInput').value.trim();
+        const imageUrl = document.getElementById('imageUrlInput').value.trim();
+        const description = document.getElementById('descInput').value.trim();
+        const price = parseFloat(document.getElementById('priceInput').value);
+        const stage = document.getElementById('stageInput').value;
+        const term = document.getElementById('termInput').value;
+
+        // 1. إضافة الكورس بالجدول الرئيسي
         const { data: courseData, error: courseErr } = await _supabase
             .from('courses')
-            .insert([{
+            .insert({
                 title,
-                description: desc,
+                description,
                 price,
                 stage,
                 term,
                 image_url: imageUrl || null,
-                is_visible: true
-            }])
+                is_visible: true,
+                created_at: new Date().toISOString()
+            })
             .select()
             .single();
 
         if (courseErr) throw courseErr;
         const courseId = courseData.id;
 
-        // 2. إدراج الأجزاء والامتحانات التابعة مع ربطها بالـ course_id
-        for (let i = 0; i < lectureParts.length; i++) {
-            const part = lectureParts[i];
-            
-            // رفع ملف PDF إذا تم اختياره
-            let pdfUrl = null;
-            const pdfInput = document.getElementById(part.pdfFileId);
-            if (pdfInput && pdfInput.files && pdfInput.files[0]) {
-                const file = pdfInput.files[0];
-                const fileExt = file.name.split('.').pop();
-                const filePath = `lectures/${courseId}/part_${i}_${Date.now()}.${fileExt}`;
-                const { error: uploadErr } = await _supabase.storage.from('pdfs').upload(filePath, file);
-                if (!uploadErr) {
-                    const { data: pubUrl } = _supabase.storage.from('pdfs').getPublicUrl(filePath);
-                    pdfUrl = pubUrl.publicUrl;
-                }
-            }
+        // 2. إدخال الأجزاء والمحاضرات المتتابعة
+        const partElements = document.querySelectorAll('#lecture-parts-container > div');
+        for (let i = 0; i < partElements.length; i++) {
+            const el = partElements[i];
+            const partTitle = el.querySelector('.part-title').value.trim();
+            const partVideo = el.querySelector('.part-video-url').value.trim();
+            const partPdf = el.querySelector('.part-pdf-url').value.trim();
+            const examTitle = el.querySelector('.part-exam-title').value.trim();
+            const examDuration = parseInt(el.querySelector('.part-exam-duration').value) || 15;
 
-            // إدراج المحاضرة/الجزء مع إضافة course_id لضمان ظهورها للطالب داخل الكورس
-            const { data: lecData, error: lecErr } = await _supabase
-                .from('lectures')
-                .insert([{
-                    course_id: courseId,
-                    title: part.title,
-                    description: part.description || title,
-                    video_url: part.video_url,
-                    pdf_url: pdfUrl,
-                    sort_order: i + 1,
-                    is_visible: true
-                }])
-                .select()
-                .single();
+            let prereqExamId = null;
 
-            if (lecErr) throw lecErr;
-            const lectureId = lecData.id;
-
-            // إدراج الاختبار إن وجد
-            if (part.hasExam && part.questions.length > 0) {
+            if (examTitle) {
                 const { data: examData, error: examErr } = await _supabase
                     .from('exams')
-                    .insert([{
-                        title: part.examTitle || `امتحان ${part.title}`,
-                        lecture_id: lectureId,
+                    .insert({
+                        title: examTitle,
+                        duration_minutes: examDuration,
                         course_id: courseId,
-                        duration_minutes: part.examDuration || 15
-                    }])
+                        is_active: true,
+                        exam_type: 'lecture_prerequisite',
+                        created_at: new Date().toISOString()
+                    })
                     .select()
                     .single();
 
-                if (!examErr && examData) {
-                    const examId = examData.id;
-                    for (const q of part.questions) {
-                        const { data: qData, error: qErr } = await _supabase
-                            .from('questions')
-                            .insert([{
-                                exam_id: examId,
-                                question_text: q.text,
-                                passage: q.passage || null,
-                                points: q.points || 1
-                            }])
-                            .select()
-                            .single();
-
-                        if (!qErr && qData) {
-                            const qId = qData.id;
-                            const optionsToInsert = q.options.map(opt => ({
-                                question_id: qId,
-                                option_text: opt.text,
-                                is_correct: opt.isCorrect
-                            }));
-                            await _supabase.from('options').insert(optionsToInsert);
-                        }
-                    }
-                }
+                if (!examErr && examData) prereqExamId = examData.id;
             }
+
+            await _supabase.from('lectures').insert({
+                course_id: courseId,
+                title: partTitle,
+                video_url: partVideo,
+                pdf_url: partPdf || null,
+                sort_order: i + 1,
+                is_visible: true,
+                prerequisite_exam_id: prereqExamId,
+                created_at: new Date().toISOString()
+            });
         }
 
-        showNotification("تم نشر الكورس وتجزيء المحاضرة بنجاح!", "success");
+        showNotification('تم إضافة ونشر الكورس والأجزاء والامتحانات بنجاح! 🎉', 'success');
         document.getElementById('courseForm').reset();
-        document.getElementById('courseImagePreview').classList.add('hidden');
-        document.getElementById('courseImagePlaceholder').classList.remove('hidden');
+        document.getElementById('lecture-parts-container').innerHTML = '';
         lectureParts = [];
         addNewLecturePart();
+        updateImagePreview('');
         fetchCoursesList();
         loadDashboardStats();
 
     } catch (err) {
-        console.error("Course Upload Error:", err);
-        showNotification("حدث خطأ أثناء الرفع: " + err.message, "error");
+        console.error("Course upload failed:", err);
+        showNotification('حدث خطأ أثناء حفظ الكورس: ' + err.message, 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>نشر المحاضرة وربط جميع الأجزاء والامتحانات</span>`;
     }
 }
 
-// ==========================================
-// جلب قائمة الكورسات
-// ==========================================
 async function fetchCoursesList() {
+    const table = document.getElementById('course-list-table');
+    table.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الكورسات...</td></tr>`;
+
     try {
-        // جلب الكورسات مع عدد الاشتراكات المرتبطة بكل كورس باستخدام Supabase Joins
-        const { data, error } = await _supabase
+        const { data: courses, error } = await _supabase
             .from('courses')
-            .select(`
-                *,
-                course_subscriptions (id)
-            `)
+            .select('*, course_subscriptions(count)')
             .eq('is_visible', true)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        const table = document.getElementById('course-list-table');
-        const couponSelect = document.getElementById('couponCourseSelect');
-        const disableSelect = document.getElementById('disableModalCourseSelect');
+        document.getElementById('table-count').innerText = `إجمالي: ${courses ? courses.length : 0}`;
 
-        if (table) table.innerHTML = '';
-        if (couponSelect) couponSelect.innerHTML = '<option value="">-- اختر الكورس --</option>';
-        if (disableSelect) disableSelect.innerHTML = '<option value="">-- اختر الكورس --</option>';
-
-        if (!data || data.length === 0) {
-            if (table) table.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات نشطة حالياً</td></tr>`;
+        if (!courses || courses.length === 0) {
+            table.innerHTML = `<tr><td colspan="6" class="text-center p-8 text-gray-400 font-bold">لا توجد كورسات نشطة حالياً.</td></tr>`;
             return;
         }
 
-        data.forEach(c => {
-            // حساب عدد المشتركين في الكورس الواحد من العلاقة المجلوبة
-            const subscribersCount = c.course_subscriptions ? c.course_subscriptions.length : 0;
-
-            if (table) {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50/85 transition-all duration-200 border-b border-gray-100";
-                tr.innerHTML = `
-                    <td class="p-4 px-5">
-                        <div class="flex items-center gap-3">
-                            <img src="${c.image_url || 'https://via.placeholder.com/80'}" class="w-12 h-10 object-cover rounded-xl border border-gray-200 shadow-sm">
-                            <div>
-                                <span class="font-bold text-slate-900 block">${c.title}</span>
-                                <span class="text-xs text-gray-400">إضافة: ${new Date(c.created_at).toLocaleDateString('ar-EG')}</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-4 font-bold text-gray-700">${c.stage}</td>
-                    <td class="p-4 font-bold text-gray-500">${c.term || '---'}</td>
-                    <td class="p-4 text-center">
-                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-black text-xs">
-                            <i class="fa-solid fa-users text-[10px]"></i>
-                            <span>${subscribersCount} مشترك</span>
-                        </div>
-                    </td>
-                    <td class="p-4 text-center font-black text-emerald-600">${c.price > 0 ? c.price + ' ج.م' : 'مجاني'}</td>
-                    <td class="p-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="archiveCourse(${c.id})" class="bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-amber-200 active:scale-95 shadow-sm flex items-center gap-1">
-                                <i class="fa-solid fa-box-archive text-xs"></i> أرشفة
-                            </button>
-                            <button onclick="deleteCourse(${c.id})" class="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-rose-200 active:scale-95 shadow-sm flex items-center gap-1">
-                                <i class="fa-solid fa-trash-can text-xs"></i> حذف
-                            </button>
-                        </div>
-                    </td>
-                `;
-                table.appendChild(tr);
-            }
-
-            const opt = `<option value="${c.id}">${c.title} (${c.stage}) - [${subscribersCount} مشترك]</option>`;
-            if (couponSelect) couponSelect.innerHTML += opt;
-            if (disableSelect) disableSelect.innerHTML += opt;
-        });
-
-    } catch (err) {
-        console.error("Fetch Courses Error:", err);
-        showNotification("حدث خطأ أثناء تحميل الكورسات والتقارير", "error");
-    }
-}
-
-async function archiveCourse(courseId) {
-    const result = await Swal.fire({
-        title: 'هل أنت متأكد من الأرشفة؟',
-        text: 'سيتم إخفاء الكورس من المنصة مؤقتاً.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'نعم، أرشفة',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#F59E0B',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-        allowOutsideClick: true,
-        allowEscapeKey: true,
-        focusCancel: true
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    try {
-        const { error } = await _supabase.from('courses').update({ is_visible: false }).eq('id', courseId);
-        if (error) throw error;
-        showNotification("تم نقل الكورس إلى الأرشيف بنجاح", "success");
-        fetchCoursesList();
-        loadDashboardStats();
-    } catch (err) {
-        showNotification("خطأ في الأرشفة: " + err.message, "error");
-    }
-}
-
-async function deleteCourse(courseId) {
-    const result = await Swal.fire({
-        title:' تنبيه',
-        text: 'هل أنت متأكد تماماً من الحذف النهائي؟ سيتم حذف الكورس وكل البيانات المرتبطة به بشكل نهائي ولا يمكن استرجاعها.',
-        icon: 'error',
-        showCancelButton: true,
-        confirmButtonText: 'نعم، حذف نهائي',
-        cancelButtonText: 'تراجع',
-        confirmButtonColor: '#E11D48',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        focusCancel: true
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    try {
-        const { error } = await _supabase.from('courses').delete().eq('id', courseId);
-        if (error) throw error;
-        showNotification("تم حذف الكورس نهائياً بنجاح", "success");
-        fetchCoursesList();
-        loadDashboardStats();
-    } catch (err) {
-        showNotification("خطأ في الحذف النهائي: " + err.message, "error");
-    }
-}
-
-// ==========================================
-// لوحة إدارة الأدمن (معدلة ومحسنة بالكامل)
-// ==========================================
-
-async function handleAdminSearch(event) {
-    if (event) event.preventDefault();
-    const input = document.getElementById('adminSearchInput').value.trim();
-    const loader = document.getElementById('admin-search-loader');
-    const resultsBox = document.getElementById('admin-search-results');
-    const tbody = document.getElementById('admin-search-results-table');
-
-    if (!input) {
-        showNotification("يرجى كتابة نص للبحث", "warning");
-        return;
-    }
-
-    loader.classList.remove('hidden');
-    loader.classList.add('flex');
-    resultsBox.classList.add('hidden');
-    tbody.innerHTML = '';
-
-    try {
-        // فحص ما إذا كان البحث عبارة عن UUID
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input);
-
-        let query = _supabase.from('profiles').select('id, full_name, student_code, email');
-
-        if (isUuid) {
-            query = query.eq('id', input);
-        } else {
-            query = query.or(`full_name.ilike.%${input}%,student_code.ilike.%${input}%,email.ilike.%${input}%`);
-        }
-
-        const { data, error } = await query.limit(20);
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-amber-600 font-bold">لم يتم العثور على أي مستخدم يطابق نتائج البحث</td></tr>`;
-        } else {
-            // جلب الأدمينات الحاليين لمقارنة الحالات
-            const { data: adminsData } = await _supabase.from('admins').select('id');
-            const adminIds = new Set((adminsData || []).map(a => a.id));
-
-            tbody.innerHTML = data.map(user => {
-                const isAdmin = adminIds.has(user.id);
-                return `
-                    <tr class="hover:bg-purple-50/30 transition-colors border-b border-gray-100">
-                        <td class="p-3 px-4 font-bold text-slate-800">${user.full_name || 'بدون اسم'}</td>
-                        <td class="p-3 font-mono font-bold text-purple-700">${user.student_code || '---'}</td>
-                        <td class="p-3 text-gray-500">${user.email || '---'}</td>
-                        <td class="p-3 font-mono text-[10px] text-gray-400 text-center">${user.id}</td>
-                        <td class="p-3 text-center">
-                            ${isAdmin ? 
-                                `<span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-[10px] font-black border border-purple-200">أدمن بالفعل</span>` :
-                                `<button type="button" onclick="makeUserAdmin('${user.id}')" class="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-sm flex items-center gap-1 mx-auto">
-                                    <i class="fa-solid fa-user-plus text-[10px]"></i> تعيين كـ أدمن
-                                </button>`
-                            }
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        resultsBox.classList.remove('hidden');
-
-    } catch (err) {
-        console.error("Admin search error:", err);
-        showNotification("حدث خطأ أثناء البحث: " + err.message, "error");
-    } finally {
-        loader.classList.add('hidden');
-        loader.classList.remove('flex');
-    }
-}
-
-async function makeUserAdmin(userId) {
-    const result = await Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'يرجى تأكيد العملية.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'تأكيد',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#10B981',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-        allowOutsideClick: true,
-        allowEscapeKey: true,
-        focusCancel: true
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    try {
-        const { error } = await _supabase.from('admins').insert([{ id: userId }]);
-        if (error) throw error;
-
-        showNotification("تم تعيين المستخدم كـ أدمن بنجاح!", "success");
-        fetchAdminsList();
-        loadDashboardStats();
-        handleAdminSearch(); // إعادة إنعاش نتائج البحث
-    } catch (err) {
-        showNotification("خطأ في تعيين الأدمن: " + err.message, "error");
-    }
-}
-
-async function removeAdmin(adminId) {
-    const result = await Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'يرجى تأكيد العملية.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'تأكيد',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#10B981',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-        allowOutsideClick: true,
-        allowEscapeKey: true,
-        focusCancel: true
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    try {
-        const { error } = await _supabase.from('admins').delete().eq('id', adminId);
-        if (error) throw error;
-
-        showNotification("تم إلغاء صلاحية الأدمن بنجاح", "success");
-        fetchAdminsList();
-        loadDashboardStats();
-    } catch (err) {
-        showNotification("خطأ في إلغاء الصلاحية: " + err.message, "error");
-    }
-}
-
-async function fetchAdminsList() {
-    const tbody = document.getElementById('admins-list-table');
-    if (!tbody) return;
-
-    try {
-        const { data: admins, error: adminErr } = await _supabase.from('admins').select('id');
-        if (adminErr) throw adminErr;
-
-        if (!admins || admins.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد مسؤولين حالياً</td></tr>`;
-            return;
-        }
-
-        const adminIds = admins.map(a => a.id);
-        const { data: profiles, error: profErr } = await _supabase
-            .from('profiles')
-            .select('*')
-            .in('id', adminIds);
-
-        if (profErr) throw profErr;
-
-        tbody.innerHTML = (profiles || []).map(p => `
-            <tr class="hover:bg-gray-50/80 transition-colors border-b border-gray-100">
-                <td class="p-4 px-5 font-bold text-slate-900">${p.full_name || 'مسؤول المنصة'}</td>
-                <td class="p-4 font-bold text-purple-700">${p.student_code || p.student_phone || '---'}</td>
-                <td class="p-4 text-gray-500">${p.email || '---'}</td>
-                <td class="p-4 font-mono text-[10px] text-gray-400">${p.id}</td>
-                <td class="p-4 text-center">
-                    <button onclick="removeAdmin('${p.id}')" class="bg-red-50 hover:bg-red-600 hover:text-white text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold transition-all text-xs active:scale-95">
-                        <i class="fa-solid fa-user-minus ml-1"></i> سحب الصلاحية
-                    </button>
+        table.innerHTML = courses.map(c => `
+            <tr class="hover:bg-gray-50/80 transition-colors">
+                <td class="p-4 px-5 font-bold text-slate-900 flex items-center gap-3">
+                    <img src="${c.image_url || 'https://via.placeholder.com/150'}" class="w-12 h-12 rounded-xl object-cover border border-gray-200 shadow-sm" alt="${c.title}">
+                    <div>
+                        <div class="font-black text-slate-900 text-xs sm:text-sm">${c.title}</div>
+                        <div class="text-[10px] text-gray-400 line-clamp-1">${c.description || ''}</div>
+                    </div>
                 </td>
-            </tr>
-        `).join('');
-
-    } catch (err) {
-        console.error("Fetch Admins Error:", err);
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">حدث خطأ في تحميل القائمة</td></tr>`;
-    }
-}
-
-// ==========================================
-// إدارة الطلبات المعلقة والاشتراكات
-// ==========================================
-
-async function loadPendingSubscriptions() {
-    const tbody = document.getElementById('pending-subscriptions-table');
-    if (!tbody) return;
-
-    try {
-        const { data: reqs, error } = await _supabase
-            .from('subscription_requests')
-            .select(`*, profiles(full_name, student_code, student_phone), courses(title, price)`)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (!reqs || reqs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد طلبات اشتراك معلقة بانتظار الموافقة</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = reqs.map(r => `
-            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                <td class="p-4 px-5 font-bold text-slate-900">${r.profiles?.full_name || 'طالب غير معرف'}</td>
-                <td class="p-4 font-mono font-bold text-emerald-600">${r.profiles?.student_code || '---'}</td>
-                <td class="p-4 font-bold text-gray-800">${r.courses?.title || 'كورس غير معروف'}</td>
-                <td class="p-4 text-xs space-y-0.5">
-                    <div class="font-bold text-slate-700">هاتف: ${r.sender_phone || r.profiles?.student_phone || '---'}</div>
-                    <div class="text-gray-400 text-[10px]">طريقة الدفع: ${r.payment_method || 'فودافون كاش'}</div>
-                </td>
+                <td class="p-4"><span class="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">${c.stage || 'غير محدد'}</span></td>
+                <td class="p-4"><span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">${c.term || 'غير محدد'}</span></td>
+                <td class="p-4 text-center font-bold text-emerald-600">${c.course_subscriptions ? c.course_subscriptions[0]?.count || 0 : 0} مشترك</td>
+                <td class="p-4 text-center font-black text-slate-900">${c.price > 0 ? c.price + ' ج.م' : '<span class="text-emerald-600">مجاني</span>'}</td>
                 <td class="p-4 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button onclick="approveSubscription('${r.id}', '${r.student_id}', ${r.course_id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-sm active:scale-95 transition-all">
-                            <i class="fa-solid fa-check ml-1"></i> موافقة
+                        <button onclick="toggleCourseVisibility('${c.id}', false)" class="bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-amber-200 active:scale-95">
+                            <i class="fa-solid fa-box-archive"></i> أرشفة
                         </button>
-                        <button onclick="rejectSubscription('${r.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200 font-bold px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all">
-                            إلغاء
+                        <button onclick="deleteCourse('${c.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-red-200 active:scale-95">
+                            <i class="fa-solid fa-trash-can"></i> حذف
                         </button>
                     </div>
                 </td>
@@ -1729,562 +1252,66 @@ async function loadPendingSubscriptions() {
         `).join('');
 
     } catch (err) {
-        console.error("Load Pending Subscriptions Error:", err);
+        console.error(err);
+        table.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500 font-bold">حدث خطأ أثناء تحميل الكورسات.</td></tr>`;
     }
 }
 
-async function approveSubscription(reqId, studentId, courseId) {
+async function toggleCourseVisibility(courseId, status) {
     try {
-        await _supabase.from('subscription_requests').update({ status: 'approved' }).eq('id', reqId);
-        await _supabase.from('course_subscriptions').insert([{ student_id: studentId, course_id: courseId, status: 'active' }]);
-        showNotification("تم تفعيل اشتراك الطالب بنجاح!", "success");
-        loadPendingSubscriptions();
-        loadDashboardStats();
-    } catch (err) {
-        showNotification("خطأ في التفعيل: " + err.message, "error");
-    }
-}
-
-async function rejectSubscription(reqId) {
-    try {
-        await _supabase.from('subscription_requests').update({ status: 'rejected' }).eq('id', reqId);
-        showNotification("تم رفض طلب الاشتراك", "info");
-        loadPendingSubscriptions();
-        loadDashboardStats();
-    } catch (err) {
-        showNotification("خطأ في إلغاء الطلب: " + err.message, "error");
-    }
-}
-
-// ==========================================
-// بحث الطلاب الشامل وتقرير البيانات
-// ==========================================
-
-async function handleStudentSearch(event) {
-    event.preventDefault();
-    const query = document.getElementById('studentSearchQuery').value.trim();
-    const loader = document.getElementById('student-search-loader');
-    const resultsArea = document.getElementById('student-results-area');
-    const tbody = document.getElementById('students-results-table');
-
-    if (!query) return;
-
-    loader.classList.remove('hidden');
-    loader.classList.add('flex');
-    resultsArea.classList.add('hidden');
-    tbody.innerHTML = '';
-
-    try {
-        const { data, error } = await _supabase
-            .from('profiles')
-            .select('*')
-            .or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`)
-            .limit(20);
-
+        const { error } = await _supabase.from('courses').update({ is_visible: status }).eq('id', courseId);
         if (error) throw error;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-amber-600 font-bold">لم يتم العثور على أي طالب بهذه البيانات</td></tr>`;
-        } else {
-            tbody.innerHTML = data.map(s => `
-                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                    <td class="p-3 px-4 font-bold text-slate-900">${s.full_name || 'بدون اسم'}</td>
-                    <td class="p-3 font-mono font-bold text-emerald-600">${s.student_code || '---'}</td>
-                    <td class="p-3 font-bold text-gray-600">${s.stage || '---'}</td>
-                    <td class="p-3 text-center font-bold text-gray-700">${s.student_phone || '---'}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="viewStudentReport('${s.id}')" class="bg-slate-900 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all shadow-sm">
-                            <i class="fa-solid fa-chart-pie ml-1"></i> التقرير الشامل
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-        resultsArea.classList.remove('hidden');
-
+        showNotification(status ? 'تم إظهار الكورس' : 'تم أرشفة الكورس بنجاح', 'success');
+        fetchCoursesList();
+        loadArchivePanelData();
+        loadDashboardStats();
     } catch (err) {
-        showNotification("خطأ في الاستعلام: " + err.message, "error");
-    } finally {
-        loader.classList.add('hidden');
-        loader.classList.remove('flex');
+        showNotification('فشل تغيير حالة الكورس: ' + err.message, 'error');
     }
 }
 
-async function viewStudentReport(studentId) {
-    const modal = document.getElementById('student-modal');
-    const content = document.getElementById('modal-student-content');
-    const nameEl = document.getElementById('modal-student-name');
-    const subEl = document.getElementById('modal-student-subtitle');
+async function deleteCourse(courseId) {
+    const res = await Swal.fire({
+        title: 'هل أنت تأكد من حذف هذا الكورس؟',
+        text: "سيتم حذف الكورس وجميع البيانات المتعلقة به نهائياً!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احذف النهائي',
+        cancelButtonText: 'إلغاء'
+    });
 
+    if (res.isConfirmed) {
+        try {
+            const { error } = await _supabase.from('courses').delete().eq('id', courseId);
+            if (error) throw error;
+            showNotification('تم حذف الكورس بنجاح', 'success');
+            fetchCoursesList();
+            loadDashboardStats();
+        } catch (err) {
+            showNotification('فشل الحذف: ' + err.message, 'error');
+        }
+    }
+}
+
+// ==========================================
+// نافذة تعطيل / تفعيل كورس
+// ==========================================
+async function openDisableCourseModal() {
+    const modal = document.getElementById('disable-course-modal');
     modal.classList.remove('hidden');
-    content.innerHTML = `<div class="flex flex-col items-center justify-center py-12 gap-3 text-emerald-600"><i class="fa-solid fa-circle-notch animate-spin text-3xl"></i><span class="text-xs font-bold text-gray-500">جاري تجميع بيانات واستعلامات الطالب من الأنظمة...</span></div>`;
+    const select = document.getElementById('disableModalCourseSelect');
+    select.innerHTML = '<option value="">-- اختر الكورس --</option>';
 
     try {
-        const { data: profile } = await _supabase.from('profiles').select('*').eq('id', studentId).single();
-        const { data: subs } = await _supabase.from('course_subscriptions').select('*, courses(title)').eq('student_id', studentId);
-        const { data: results } = await _supabase.from('student_results').select('*, exams(title)').eq('student_id', studentId);
-
-        if (profile) {
-            nameEl.innerText = profile.full_name || 'طالب';
-            subEl.innerText = `الكود: ${profile.student_code || '---'} | المرحلة: ${profile.stage || '---'}`;
-        }
-
-        content.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white p-4 rounded-2xl border border-gray-200">
-                    <span class="text-xs text-gray-400 font-bold block">رقم الطالب</span>
-                    <span class="text-sm font-black text-slate-800">${profile?.student_phone || 'غير مسجل'}</span>
-                </div>
-                <div class="bg-white p-4 rounded-2xl border border-gray-200">
-                    <span class="text-xs text-gray-400 font-bold block">رقم ولي الأمر</span>
-                    <span class="text-sm font-black text-slate-800">${profile?.parent_phone || 'غير مسجل'}</span>
-                </div>
-                <div class="bg-white p-4 rounded-2xl border border-gray-200">
-                    <span class="text-xs text-gray-400 font-bold block">إجمالي النقاط الأسبوعية</span>
-                    <span class="text-sm font-black text-emerald-600">${profile?.weekly_points || 0} نقطة</span>
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-graduation-cap text-emerald-600 ml-1"></i> الكورسات المشترك بها:</h4>
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
-                    ${(subs && subs.length > 0) ? subs.map(sb => `<div class="p-2 bg-emerald-50 text-emerald-900 rounded-xl font-bold text-xs flex justify-between"><span>${sb.courses?.title || 'كورس'}</span><span class="text-emerald-600">${sb.status}</span></div>`).join('') : '<p class="text-xs text-gray-400 font-bold">لا توجد اشتراكات مفعّلة</p>'}
-                </div>
-            </div>
-
-            <div class="space-y-4 pt-4">
-                <h4 class="font-black text-slate-900 text-sm"><i class="fa-solid fa-square-poll-vertical text-emerald-600 ml-1"></i> نتائج الاختبارات والدرجات:</h4>
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-2">
-                    ${(results && results.length > 0) ? results.map(r => `<div class="p-2 bg-gray-50 rounded-xl font-bold text-xs flex justify-between border border-gray-100"><span>${r.exams?.title || 'امتحان'}</span><span class="text-blue-600 font-black">${r.score} درجة</span></div>`).join('') : '<p class="text-xs text-gray-400 font-bold">لم يؤدِ أي اختبارات حتى الآن</p>'}
-                </div>
-            </div>
-        `;
-
-    } catch (err) {
-        content.innerHTML = `<p class="text-center text-red-500 font-bold p-6">حدث خطأ أثناء تحميل التقرير: ${err.message}</p>`;
-    }
-}
-
-function closeStudentModal() {
-    document.getElementById('student-modal').classList.add('hidden');
-}
-
-// ==========================================
-// توليد الكروت والأكواد (Coupons)
-// ==========================================
-
-async function handleGenerateCoupon() {
-    const price = parseFloat(document.getElementById('couponPriceInput').value);
-    const count = parseInt(document.getElementById('couponCountInput').value) || 1;
-    const courseId = document.getElementById('couponCourseSelect').value;
-
-    if (!price || !courseId) {
-        showNotification("يرجى تحديد السعر والكورس المرتبط بالأكواد", "warning");
-        return;
-    }
-
-    try {
-        const codesToInsert = [];
-        for (let i = 0; i < count; i++) {
-            const randomCode = 'CODE-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-            codesToInsert.push({
-                code: randomCode,
-                price: price,
-                course_id: courseId,
-                is_used: false
+        const { data: courses } = await _supabase.from('courses').select('id, title').order('title');
+        if (courses) {
+            courses.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.title}</option>`;
             });
         }
-
-        const { error } = await _supabase.from('center_codes').insert(codesToInsert);
-        if (error) throw error;
-
-        showNotification(`تم توليد ${count} كود بنجاح!`, "success");
-        fetchCouponsList();
-        loadDashboardStats();
-
-    } catch (err) {
-        showNotification("خطأ في توليد الأكواد: " + err.message, "error");
+    } catch (e) {
+        console.error(e);
     }
-}
-
-async function fetchCouponsList() {
-    const tbody = document.getElementById('coupons-list-table');
-    if (!tbody) return;
-
-    try {
-        const { data, error } = await _supabase
-            .from('center_codes')
-            .select('*, courses(title)')
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد أكواد متوفرة حالياً</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.map(c => `
-            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                <td class="p-3 px-5 font-mono font-black text-amber-600">${c.code}</td>
-                <td class="p-3 font-bold text-gray-800">${c.price} ج.م</td>
-                <td class="p-3 font-bold text-gray-600">${c.courses?.title || 'عام'}</td>
-                <td class="p-3 text-center font-bold">
-                    ${c.is_used ? '<span class="text-red-500 bg-red-50 px-2 py-0.5 rounded-full text-[10px]">مستخدم</span>' : '<span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">متاح</span>'}
-                </td>
-                <td class="p-3 text-center">
-                    <button onclick="navigator.clipboard.writeText('${c.code}'); showNotification('تم نسخ الكود!', 'info')" class="text-gray-400 hover:text-slate-900 transition-colors">
-                        <i class="fa-solid fa-copy"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-    } catch (err) {
-        console.error("Fetch Coupons Error:", err);
-    }
-}
-
-function exportCouponsToTXT() {
-    _supabase.from('center_codes').select('code, price, is_used').eq('is_used', false).then(({ data }) => {
-        if (!data || data.length === 0) return showNotification("لا توجد أكواد غير مستخدمة للتصدير", "warning");
-        const txt = data.map(c => `${c.code} | السعر: ${c.price}`).join('\n');
-        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `center_codes_${Date.now()}.txt`;
-        a.click();
-    });
-}
-
-// ==========================================
-// نظام التنبيهات
-// ==========================================
-
-function toggleNotificationTarget() {
-    const val = document.querySelector('input[name="target_audience"]:checked').value;
-    const box = document.getElementById('specific-student-box');
-    if (val === 'specific') {
-        box.classList.remove('hidden');
-    } else {
-        box.classList.add('hidden');
-        clearSelectedNotifStudent();
-    }
-}
-
-async function handleNotifStudentSearch(val) {
-    const dropdown = document.getElementById('notifStudentDropdown');
-    if (!val || val.length < 2) {
-        dropdown.classList.add('hidden');
-        return;
-    }
-
-    try {
-        const { data } = await _supabase
-            .from('profiles')
-            .select('id, full_name, student_code')
-            .or(`full_name.ilike.%${val}%,student_code.ilike.%${val}%`)
-            .limit(5);
-
-        if (!data || data.length === 0) {
-            dropdown.classList.add('hidden');
-            return;
-        }
-
-        dropdown.innerHTML = data.map(s => `
-            <div onclick="selectNotifStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-emerald-50 cursor-pointer text-xs font-bold text-gray-800 flex justify-between">
-                <span>${s.full_name}</span>
-                <span class="text-emerald-600 font-mono">${s.student_code || ''}</span>
-            </div>
-        `).join('');
-        dropdown.classList.remove('hidden');
-    } catch (err) { console.error(err); }
-}
-
-function selectNotifStudent(id, name) {
-    document.getElementById('targetStudentUuid').value = id;
-    document.getElementById('selectedStudentName').innerText = `الطالب المحدد: ${name}`;
-    document.getElementById('selectedStudentBadge').classList.remove('hidden');
-    document.getElementById('selectedStudentBadge').classList.add('flex');
-    document.getElementById('notifStudentDropdown').classList.add('hidden');
-}
-
-function clearSelectedNotifStudent() {
-    document.getElementById('targetStudentUuid').value = '';
-    document.getElementById('selectedStudentBadge').classList.add('hidden');
-    document.getElementById('notifStudentSearchInput').value = '';
-}
-
-async function handleSendNotification(event) {
-    event.preventDefault();
-    const message = document.getElementById('notificationMessage').value.trim();
-    const targetType = document.querySelector('input[name="target_audience"]:checked').value;
-    const studentId = document.getElementById('targetStudentUuid').value;
-
-    if (!message) return;
-
-    try {
-        const payload = {
-            message: message,
-            student_id: targetType === 'specific' ? studentId : null,
-            is_read: false
-        };
-
-        const { error } = await _supabase.from('notifications').insert([payload]);
-        if (error) throw error;
-
-        showNotification("تم إرسال التنبيه بنجاح!", "success");
-        document.getElementById('notificationForm').reset();
-        clearSelectedNotifStudent();
-        fetchNotificationsList();
-
-    } catch (err) {
-        showNotification("خطأ في إرسال التنبيه: " + err.message, "error");
-    }
-}
-
-async function fetchNotificationsList() {
-    const tbody = document.getElementById('notifications-list-table');
-    if (!tbody) return;
-
-    try {
-        const { data, error } = await _supabase
-            .from('notifications')
-            .select('*, profiles(full_name)')
-            .order('created_at', { ascending: false })
-            .limit(20);
-
-        if (error) throw error;
-
-        tbody.innerHTML = (data || []).map(n => `
-            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                <td class="p-3 px-5 font-bold text-slate-800">${n.message}</td>
-                <td class="p-3 font-bold text-xs">${n.student_id ? `<span class="text-blue-600">خاص: ${n.profiles?.full_name || 'طالب'}</span>` : '<span class="text-emerald-600">عام للجميع</span>'}</td>
-                <td class="p-3 text-gray-400 text-[10px]">${new Date(n.created_at).toLocaleDateString('ar-EG')}</td>
-                <td class="p-3 text-center">
-                    <button onclick="deleteNotification('${n.id}')" class="text-red-500 hover:text-red-700">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-    } catch (err) { console.error(err); }
-}
-
-async function deleteNotification(id) {
-    await _supabase.from('notifications').delete().eq('id', id);
-    fetchNotificationsList();
-}
-
-// ==========================================
-// لوحة الأرشيف الأكاديمي المطور
-// ==========================================
-
-async function loadArchivePanelData() {
-    loadHonorRollArchives();
-    loadArchivedCourses();
-    loadSubscriptionHistoryArchive();
-}
-
-async function loadHonorRollArchives() {
-    const tbody = document.getElementById('honor-roll-archives-table');
-    if (!tbody) return;
-
-    try {
-        const { data, error } = await _supabase
-            .from('honor_roll_archives')
-            .select('*, profiles(full_name)')
-            .order('archived_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold">لا يوجد أرشيف محفوظ للأوائل حتى الآن</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.map(h => `
-            <tr class="hover:bg-slate-900 transition-colors border-b border-slate-800">
-                <td class="p-3.5 px-4 font-black text-amber-400">المركز ${h.rank}</td>
-                <td class="p-3.5 font-bold text-slate-100">${h.profiles?.full_name || 'طالب متفوق'}</td>
-                <td class="p-3.5 font-black text-emerald-400">${h.weekly_points} نقطة</td>
-                <td class="p-3.5 font-bold text-slate-400">أسبوع ${h.week_number || 1} / ${h.year || 2026}</td>
-                <td class="p-3.5 text-slate-300">${h.stage || '---'}</td>
-                <td class="p-3.5 text-slate-500 text-[10px]">${new Date(h.archived_at).toLocaleDateString('ar-EG')}</td>
-                <td class="p-3.5 text-center">
-                    <button onclick="deleteHonorArchive('${h.id}')" class="text-red-400 hover:text-red-300">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-    } catch (err) { console.error(err); }
-}
-
-async function archiveCurrentWeekHonorRoll() {
-    const result = await Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'يرجى تأكيد العملية.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'تأكيد',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#10B981',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-        allowOutsideClick: true,
-        allowEscapeKey: true,
-        focusCancel: true
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    try {
-        const { data: topStudents } = await _supabase
-            .from('profiles')
-            .select('id, weekly_points, stage')
-            .gt('weekly_points', 0)
-            .order('weekly_points', { ascending: false })
-            .limit(20);
-
-        if (!topStudents || topStudents.length === 0) {
-            showNotification("لا يوجد طلاب لديهم نقاط أسبوعية لأرشفتها", "warning");
-            return;
-        }
-
-        const archives = topStudents.map((s, idx) => ({
-            student_id: s.id,
-            weekly_points: s.weekly_points,
-            rank: idx + 1,
-            week_number: 1,
-            year: 2026,
-            stage: s.stage,
-            archived_at: new Date().toISOString()
-        }));
-
-        await _supabase.from('honor_roll_archives').insert(archives);
-        await _supabase.from('profiles').update({ weekly_points: 0 }).gt('weekly_points', 0);
-
-        showNotification("تمت أرشفة المتفوقين وتصفير النقاط بنجاح!", "success");
-        loadHonorRollArchives();
-
-    } catch (err) {
-        showNotification("خطأ في الأرشفة: " + err.message, "error");
-    }
-}
-
-async function deleteHonorArchive(id) {
-    await _supabase.from('honor_roll_archives').delete().eq('id', id);
-    loadHonorRollArchives();
-}
-
-async function loadArchivedCourses() {
-    const tbody = document.getElementById('archived-courses-table');
-    if (!tbody) return;
-
-    try {
-        const { data } = await _supabase.from('courses').select('*').eq('is_visible', false);
-        document.getElementById('archived-courses-count').innerText = `${data ? data.length : 0} كورس`;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات مؤرشفة</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.map(c => `
-            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                <td class="p-4 px-5 font-bold text-slate-800">${c.title}</td>
-                <td class="p-4 font-bold text-gray-600">${c.stage}</td>
-                <td class="p-4 text-gray-500">${c.term || '---'}</td>
-                <td class="p-4 text-center font-bold text-emerald-600">${c.price} ج.م</td>
-                <td class="p-4 text-center">
-                    <button onclick="restoreCourse(${c.id})" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1 rounded-xl text-xs font-bold border border-emerald-200 transition-all ml-2">
-                        <i class="fa-solid fa-rotate-left"></i> استعادة
-                    </button>
-                    <button onclick="deleteCoursePermanently(${c.id})" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1 rounded-xl text-xs font-bold border border-red-200 transition-all">
-                        <i class="fa-solid fa-trash"></i> حذف نهائي
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-    } catch (err) { console.error(err); }
-}
-
-async function restoreCourse(courseId) {
-    await _supabase.from('courses').update({ is_visible: true }).eq('id', courseId);
-    showNotification("تمت استعادة الكورس إلى القائمة النشطة", "success");
-    loadArchivedCourses();
-    fetchCoursesList();
-}
-
-async function deleteCoursePermanently(courseId) {
-    const result = await Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'يرجى تأكيد العملية.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'تأكيد',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#10B981',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-        allowOutsideClick: true,
-        allowEscapeKey: true,
-        focusCancel: true
-    });
-
-    if (!result.isConfirmed) {
-        return;
-    }
-
-    await _supabase.from('courses').delete().eq('id', courseId);
-    showNotification("تم حذف الكورس نهائياً", "info");
-    loadArchivedCourses();
-}
-
-async function loadSubscriptionHistoryArchive() {
-    const tbody = document.getElementById('subscription-history-archive-table');
-    if (!tbody) return;
-
-    try {
-        const { data } = await _supabase
-            .from('subscription_requests')
-            .select('*, profiles(full_name), courses(title)')
-            .neq('status', 'pending')
-            .order('created_at', { ascending: false })
-            .limit(30);
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">لا يوجد سجل تاريخي للاشتراكات والمعاملات</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = data.map(s => `
-            <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                <td class="p-3.5 px-4 font-bold text-slate-800">${s.profiles?.full_name || 'طالب'}</td>
-                <td class="p-3.5 font-bold text-gray-700">${s.courses?.title || 'كورس'}</td>
-                <td class="p-3.5 text-center font-bold text-emerald-600">${s.amount_paid || 0} ج.م</td>
-                <td class="p-3.5 text-center text-xs text-gray-500">${s.payment_method || 'فودافون كاش'}</td>
-                <td class="p-3.5 text-center font-black">${s.status === 'approved' ? '<span class="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full text-[10px]">مقبول ومفعّل</span>' : '<span class="text-red-500 bg-red-50 px-2.5 py-1 rounded-full text-[10px]">مرفوض</span>'}</td>
-                <td class="p-3.5 text-center text-gray-400 text-[10px]">${new Date(s.created_at).toLocaleDateString('ar-EG')}</td>
-            </tr>
-        `).join('');
-
-    } catch (err) { console.error(err); }
-}
-
-// ==========================================
-// النافذة المنبثقة لتعطيل / تفعيل الكورسات
-// ==========================================
-
-function openDisableCourseModal() {
-    document.getElementById('disable-course-modal').classList.remove('hidden');
 }
 
 function closeDisableCourseModal() {
@@ -2298,42 +1325,48 @@ function toggleDisableScope() {
         box.classList.remove('hidden');
     } else {
         box.classList.add('hidden');
-        clearSelectedDisableStudent();
     }
 }
 
-async function handleDisableStudentSearch(val) {
+let disableSearchTimeout = null;
+function handleDisableStudentSearch(query) {
+    clearTimeout(disableSearchTimeout);
     const dropdown = document.getElementById('disableStudentDropdown');
-    if (!val || val.length < 2) {
+    if (!query || query.trim().length < 2) {
         dropdown.classList.add('hidden');
         return;
     }
 
-    try {
-        const { data } = await _supabase
-            .from('profiles')
-            .select('id, full_name, student_code')
-            .or(`full_name.ilike.%${val}%,student_code.ilike.%${val}%`)
-            .limit(5);
+    disableSearchTimeout = setTimeout(async () => {
+        try {
+            const { data: students } = await _supabase
+                .from('profiles')
+                .select('id, full_name, student_code')
+                .or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
+                .limit(6);
 
-        if (!data || data.length === 0) {
-            dropdown.classList.add('hidden');
-            return;
+            if (students && students.length > 0) {
+                dropdown.innerHTML = students.map(s => `
+                    <div onclick="selectDisableStudent('${s.id}', '${s.full_name.replace(/'/g, "\\'")}', '${s.student_code || ''}')"
+                         class="p-3 hover:bg-red-50 cursor-pointer text-xs font-bold text-gray-800 flex justify-between items-center transition-colors">
+                        <span>${s.full_name}</span>
+                        <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-md font-mono">${s.student_code || 'بدون كود'}</span>
+                    </div>
+                `).join('');
+                dropdown.classList.remove('hidden');
+            } else {
+                dropdown.innerHTML = `<div class="p-3 text-xs font-bold text-gray-400 text-center">لا توجد نتائج</div>`;
+                dropdown.classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error(e);
         }
-
-        dropdown.innerHTML = data.map(s => `
-            <div onclick="selectDisableStudent('${s.id}', '${s.full_name}')" class="p-2.5 hover:bg-red-50 cursor-pointer text-xs font-bold text-gray-800 flex justify-between">
-                <span>${s.full_name}</span>
-                <span class="text-red-600 font-mono">${s.student_code || ''}</span>
-            </div>
-        `).join('');
-        dropdown.classList.remove('hidden');
-    } catch (err) { console.error(err); }
+    }, 300);
 }
 
-function selectDisableStudent(id, name) {
+function selectDisableStudent(id, name, code) {
     document.getElementById('targetDisableStudentUuid').value = id;
-    document.getElementById('selectedDisableStudentName').innerText = `الطالب المحدد: ${name}`;
+    document.getElementById('selectedDisableStudentName').innerText = `الطالب المحدد: ${name} (${code})`;
     document.getElementById('selectedDisableStudentBadge').classList.remove('hidden');
     document.getElementById('selectedDisableStudentBadge').classList.add('flex');
     document.getElementById('disableStudentDropdown').classList.add('hidden');
@@ -2345,186 +1378,1105 @@ function clearSelectedDisableStudent() {
     document.getElementById('disableStudentSearchInput').value = '';
 }
 
-async function executeDisableCourseAction(targetStatus) {
+async function executeDisableCourseAction(status) {
     const courseId = document.getElementById('disableModalCourseSelect').value;
+    if (!courseId) {
+        showNotification('يرجى اختيار الكورس أولاً', 'error');
+        return;
+    }
+
     const scope = document.querySelector('input[name="disable_scope"]:checked').value;
     const studentId = document.getElementById('targetDisableStudentUuid').value;
 
-    if (!courseId) {
-        showNotification("يرجى اختيار الكورس المراد التعديل عليه", "warning");
+    try {
+        if (scope === 'all') {
+            const { error } = await _supabase
+                .from('course_subscriptions')
+                .update({ status: status })
+                .eq('course_id', courseId);
+
+            if (error) throw error;
+            showNotification(`تم تحديث حالة جميع اشتراكات الكورس إلى (${status === 'disabled' ? 'معطل' : 'مفعل'}) بنجاح`, 'success');
+        } else {
+            if (!studentId) {
+                showNotification('يرجى تحديد الطالب المطلوب', 'error');
+                return;
+            }
+
+            const { error } = await _supabase
+                .from('course_subscriptions')
+                .update({ status: status })
+                .eq('course_id', courseId)
+                .eq('student_id', studentId);
+
+            if (error) throw error;
+            showNotification(`تم تحديث اشتراك الطالب لهذا الكورس إلى (${status === 'disabled' ? 'معطل' : 'مفعل'}) بنجاح`, 'success');
+        }
+
+        closeDisableCourseModal();
+    } catch (e) {
+        showNotification('حدث خطأ: ' + e.message, 'error');
+    }
+}
+
+// ==========================================
+// 2. إدارة طلبات الطلاب والاشتراكات
+// ==========================================
+async function loadPendingSubscriptions() {
+    const tbody = document.getElementById('pending-subscriptions-table');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري جلب الطلبات المعلقة...</td></tr>`;
+
+    try {
+        const { data: requests, error } = await _supabase
+            .from('subscription_requests')
+            .select('*, profiles(full_name, student_code, student_phone), courses(title)')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!requests || requests.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-emerald-600 font-bold">🎉 لا توجد طلبات اشتراك معلقة بانتظار الموافقة حالياً.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = requests.map(req => `
+            <tr class="hover:bg-amber-50/40 transition-colors">
+                <td class="p-4 px-5 font-bold text-slate-900">${req.profiles?.full_name || 'طالب غير معرف'}</td>
+                <td class="p-4 font-mono text-emerald-600 font-bold">${req.profiles?.student_code || '---'}</td>
+                <td class="p-4 font-bold text-slate-800">${req.courses?.title || 'كورس غير معروف'}</td>
+                <td class="p-4">
+                    <div class="text-[11px] font-semibold text-gray-600">
+                        <span>المبلغ: <strong class="text-slate-900">${req.amount_paid || 0} ج.م</strong></span> | 
+                        <span>وسيلة: <strong class="text-blue-600">${req.payment_method || 'فودافون كاش'}</strong></span>
+                        ${req.sender_phone ? `<div class="text-[10px] text-gray-500">رقم المحول: ${req.sender_phone}</div>` : ''}
+                    </div>
+                </td>
+                <td class="p-4 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="approveSubscription('${req.id}', '${req.student_id}', '${req.course_id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95">
+                            <i class="fa-solid fa-check"></i> قبول وتفعيل
+                        </button>
+                        <button onclick="rejectSubscription('${req.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-red-200 active:scale-95">
+                            <i class="fa-solid fa-xmark"></i> رفض
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">خطأ في استعلام طلبات التفعيل.</td></tr>`;
+    }
+}
+
+async function approveSubscription(requestId, studentId, courseId) {
+    try {
+        await _supabase.from('subscription_requests').update({ status: 'approved' }).eq('id', requestId);
+        await _supabase.from('course_subscriptions').insert({
+            student_id: studentId,
+            course_id: courseId,
+            status: 'active',
+            created_at: new Date().toISOString()
+        });
+
+        showNotification('تم قبول الطلب وتفعيل الكورس للطالب بنجاح!', 'success');
+        loadPendingSubscriptions();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification('فشل قبول الطلب: ' + err.message, 'error');
+    }
+}
+
+async function rejectSubscription(requestId) {
+    try {
+        await _supabase.from('subscription_requests').update({ status: 'rejected' }).eq('id', requestId);
+        showNotification('تم رفض طلب الاشتراك', 'info');
+        loadPendingSubscriptions();
+        loadDashboardStats();
+    } catch (err) {
+        showNotification('حدث خطأ: ' + err.message, 'error');
+    }
+}
+
+async function loadAllStudents() {
+    const loader = document.getElementById('student-search-loader');
+    const area = document.getElementById('student-results-area');
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+    area.classList.add('hidden');
+
+    try {
+        const { data: students, error } = await _supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+        renderStudentsTable(students);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        loader.classList.add('hidden');
+        loader.classList.remove('flex');
+        area.classList.remove('hidden');
+    }
+}
+
+function renderStudentsTable(students) {
+    const tbody = document.getElementById('students-results-table');
+    if (!students || students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد طلاب مطابقين للبحث.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = students.map(s => `
+        <tr class="hover:bg-gray-50 transition-colors">
+            <td class="p-3 px-4 font-bold text-slate-900">${s.full_name || 'بدون اسم'}</td>
+            <td class="p-3 font-mono text-emerald-600 font-bold">${s.student_code || '---'}</td>
+            <td class="p-3 text-gray-600 font-semibold">${s.stage || 'غير محدد'}</td>
+            <td class="p-3 text-center font-mono text-gray-700">${s.student_phone || '---'}</td>
+            <td class="p-3 text-center">
+                <button onclick="openStudentModal('${s.id}')" class="bg-slate-900 hover:bg-emerald-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 mx-auto">
+                    <i class="fa-solid fa-chart-pie text-emerald-400 hover:text-white"></i> تقرير شامل والتحكم
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function handleStudentSearch(e) {
+    e.preventDefault();
+    const query = document.getElementById('studentSearchQuery').value.trim();
+    if (!query) {
+        loadAllStudents();
+        return;
+    }
+
+    const loader = document.getElementById('student-search-loader');
+    const area = document.getElementById('student-results-area');
+    loader.classList.remove('hidden');
+    area.classList.add('hidden');
+
+    try {
+        const { data: students, error } = await _supabase
+            .from('profiles')
+            .select('*')
+            .or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`);
+
+        if (error) throw error;
+        renderStudentsTable(students);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        loader.classList.add('hidden');
+        area.classList.remove('hidden');
+    }
+}
+
+async function openStudentModal(studentId) {
+    const modal = document.getElementById('student-modal');
+    const content = document.getElementById('modal-student-content');
+    modal.classList.remove('hidden');
+
+    content.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 gap-3 text-emerald-600">
+            <i class="fa-solid fa-circle-notch animate-spin text-3xl"></i>
+            <span class="text-xs font-bold text-gray-500">جاري تجميع بيانات واستعلامات الطالب من الأنظمة...</span>
+        </div>
+    `;
+
+    try {
+        const [{ data: profile }, { data: subs }, { data: results }] = await Promise.all([
+            _supabase.from('profiles').select('*').eq('id', studentId).single(),
+            _supabase.from('course_subscriptions').select('*, courses(title)').eq('student_id', studentId),
+            _supabase.from('student_results').select('*, exams(title)').eq('student_id', studentId)
+        ]);
+
+        document.getElementById('modal-student-name').innerText = profile?.full_name || 'بيانات الطالب';
+        document.getElementById('modal-student-subtitle').innerText = `كود الطالب: ${profile?.student_code || '---'} | هاتف: ${profile?.student_phone || '---'} | ولي الأمر: ${profile?.parent_phone || '---'}`;
+
+        content.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-1">
+                    <span class="text-[10px] text-gray-400 font-bold block">إجمالي النقاط</span>
+                    <span class="text-xl font-black text-emerald-600 block">${profile?.total_points || 0} نقطة</span>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-1">
+                    <span class="text-[10px] text-gray-400 font-bold block">النقاط الأسبوعية</span>
+                    <span class="text-xl font-black text-amber-600 block">${profile?.weekly_points || 0} نقطة</span>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-1">
+                    <span class="text-[10px] text-gray-400 font-bold block">سلسلة التواجد (Streak)</span>
+                    <span class="text-xl font-black text-blue-600 block">${profile?.current_streak || 0} يوم</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
+                <h4 class="text-xs font-black text-slate-900"><i class="fa-solid fa-graduation-cap text-emerald-600 ml-1"></i> الكورسات المشترك بها:</h4>
+                <div class="flex flex-wrap gap-2">
+                    ${subs && subs.length > 0 ? subs.map(s => `
+                        <span class="bg-emerald-50 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                            <i class="fa-solid fa-check-circle text-emerald-600"></i> ${s.courses?.title || 'كورس'}
+                        </span>
+                    `).join('') : '<span class="text-xs text-gray-400 font-semibold">غير مشترك بأي كورس حالياً.</span>'}
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
+                <h4 class="text-xs font-black text-slate-900"><i class="fa-solid fa-square-poll-vertical text-emerald-600 ml-1"></i> سجل نتائج الامتحانات:</h4>
+                <div class="overflow-x-auto w-full">
+                    <table class="w-full text-right text-xs font-semibold whitespace-nowrap">
+                        <thead class="bg-gray-50 text-gray-700">
+                            <tr>
+                                <th class="p-2.5 px-3">الامتحان</th>
+                                <th class="p-2.5 text-center">الدرجة الحاصل عليها</th>
+                                <th class="p-2.5 text-center">تاريخ تقديم الامتحان</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-gray-600">
+                            ${results && results.length > 0 ? results.map(r => `
+                                <tr>
+                                    <td class="p-2.5 px-3 font-bold">${r.exams?.title || 'امتحان'}</td>
+                                    <td class="p-2.5 text-center font-black text-emerald-600">${r.score || 0}%</td>
+                                    <td class="p-2.5 text-center text-[10px] text-gray-400">${new Date(r.submission_date || r.created_at).toLocaleDateString('ar-EG')}</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="3" class="text-center p-4 text-gray-400">لم يؤد الطالب أي امتحانات بعد.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+    } catch (err) {
+        content.innerHTML = `<div class="p-6 text-center text-red-500 font-bold">حدث خطأ أثناء تحميل كشف حساب الطالب.</div>`;
+    }
+}
+
+function closeStudentModal() {
+    document.getElementById('student-modal').classList.add('hidden');
+}
+
+// ==========================================
+// 3. أكواد كروت السناتر (Coupons)
+// ==========================================
+async function populateCouponCourseSelect() {
+    const select = document.getElementById('couponCourseSelect');
+    select.innerHTML = '<option value="">-- اختر الكورس المرتبط --</option>';
+    try {
+        const { data: courses } = await _supabase.from('courses').select('id, title').eq('is_visible', true);
+        if (courses) {
+            courses.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.title}</option>`;
+            });
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function fetchCouponsList() {
+    const tbody = document.getElementById('coupons-list-table');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الكروت...</td></tr>`;
+
+    try {
+        const { data: codes, error } = await _supabase
+            .from('center_codes')
+            .select('*, courses(title)')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+
+        if (!codes || codes.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد أكواد مولدة.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = codes.map(c => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4 px-5 font-mono font-black text-slate-900 tracking-wider">${c.code}</td>
+                <td class="p-4 font-bold text-emerald-600">${c.price || 0} ج.م</td>
+                <td class="p-4 font-bold text-slate-700">${c.courses?.title || 'عام'}</td>
+                <td class="p-4 text-center">
+                    ${c.is_used ? '<span class="bg-red-50 text-red-600 px-2.5 py-1 rounded-lg text-[10px] font-bold">مستخدم</span>' : '<span class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-bold">متاح للاستخدام</span>'}
+                </td>
+                <td class="p-4 text-center">
+                    <button onclick="navigator.clipboard.writeText('${c.code}'); showNotification('تم نسخ الكود!', 'success')" class="bg-gray-100 hover:bg-slate-900 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95">
+                        <i class="fa-regular fa-copy"></i> نسخ
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function handleGenerateCoupon() {
+    const price = parseFloat(document.getElementById('couponPriceInput').value);
+    const count = parseInt(document.getElementById('couponCountInput').value) || 1;
+    const courseId = document.getElementById('couponCourseSelect').value;
+
+    if (!price || price <= 0) {
+        showNotification('يرجى تحديد السعر بوضوح', 'error');
         return;
     }
 
     try {
-        if (scope === 'all') {
-            await _supabase.from('course_subscriptions').update({ status: targetStatus }).eq('course_id', courseId);
-            showNotification(`تمت تحديث حالة الكورس لجميع الطلاب إلى: ${targetStatus === 'disabled' ? 'معطل' : 'نشط'}`, "success");
-        } else {
-            if (!studentId) return showNotification("يرجى تحديد الطالب المطلوب", "warning");
-            await _supabase.from('course_subscriptions').update({ status: targetStatus }).eq('course_id', courseId).eq('student_id', studentId);
-            showNotification(`تمت تعديل حالة الكورس لهذا الطالب بنجاح`, "success");
+        const newCodes = [];
+        for (let i = 0; i < count; i++) {
+            const randomCode = 'CENTER-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
+            newCodes.push({
+                code: randomCode,
+                price: price,
+                course_id: courseId ? parseInt(courseId) : null,
+                is_used: false,
+                created_at: new Date().toISOString()
+            });
         }
-        closeDisableCourseModal();
-    } catch (err) {
-        showNotification("خطأ في العملية: " + err.message, "error");
+
+        const { error } = await _supabase.from('center_codes').insert(newCodes);
+        if (error) throw error;
+
+        showNotification(`تم توليد (${count}) كود سنتر بنجاح! 🎉`, 'success');
+        fetchCouponsList();
+        loadDashboardStats();
+    } catch (e) {
+        showNotification('فشل التوليد: ' + e.message, 'error');
+    }
+}
+
+async function exportCouponsToTXT() {
+    try {
+        const { data: codes } = await _supabase.from('center_codes').select('code, price, is_used').eq('is_used', false);
+        if (!codes || codes.length === 0) {
+            showNotification('لا توجد أكواد غير مستخدمة للتصدير', 'amber');
+            return;
+        }
+
+        const textContent = codes.map(c => `الكود: ${c.code} | القيمة: ${c.price} ج.م`).join('\n');
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Center_Codes_${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        showNotification('حدث خطأ أثناء التصدير', 'error');
     }
 }
 
 // ==========================================
-// لوحة البث المباشر (Jitsi Live Stream)
+// 4. نظام إرسال التنبيهات
 // ==========================================
-
-async function loadLiveStreamDetails() {
-    try {
-        const { data } = await _supabase.from('live_rooms').select('*').eq('id', LIVE_ROOM_ID).single();
-        if (data) {
-            document.getElementById('liveTitleInput').value = data.title || '';
-            document.getElementById('liveDescInput').value = data.description || '';
-            document.getElementById('liveChannelInput').value = data.channel_name || 'MagdyLiveClass2026';
-            isLiveActive = (data.status === 'live');
-            updateLiveUI();
-        }
-    } catch (err) { console.error(err); }
+function toggleNotificationTarget() {
+    const target = document.querySelector('input[name="target_audience"]:checked').value;
+    const box = document.getElementById('specific-student-box');
+    if (target === 'specific') {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+    }
 }
 
-function updateLiveUI() {
+let notifSearchTimeout = null;
+function handleNotifStudentSearch(query) {
+    clearTimeout(notifSearchTimeout);
+    const dropdown = document.getElementById('notifStudentDropdown');
+    if (!query || query.trim().length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+
+    notifSearchTimeout = setTimeout(async () => {
+        try {
+            const { data: students } = await _supabase
+                .from('profiles')
+                .select('id, full_name, student_code')
+                .or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
+                .limit(6);
+
+            if (students && students.length > 0) {
+                dropdown.innerHTML = students.map(s => `
+                    <div onclick="selectNotifStudent('${s.id}', '${s.full_name.replace(/'/g, "\\'")}', '${s.student_code || ''}')"
+                         class="p-3 hover:bg-emerald-50 cursor-pointer text-xs font-bold text-gray-800 flex justify-between items-center transition-colors">
+                        <span>${s.full_name}</span>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-mono">${s.student_code || 'بدون كود'}</span>
+                    </div>
+                `).join('');
+                dropdown.classList.remove('hidden');
+            } else {
+                dropdown.innerHTML = `<div class="p-3 text-xs font-bold text-gray-400 text-center">لا توجد نتائج</div>`;
+                dropdown.classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, 300);
+}
+
+function selectNotifStudent(id, name, code) {
+    document.getElementById('targetStudentUuid').value = id;
+    document.getElementById('selectedStudentName').innerText = `الطالب المحدد: ${name} (${code})`;
+    document.getElementById('selectedStudentBadge').classList.remove('hidden');
+    document.getElementById('selectedStudentBadge').classList.add('flex');
+    document.getElementById('notifStudentDropdown').classList.add('hidden');
+}
+
+function clearSelectedNotifStudent() {
+    document.getElementById('targetStudentUuid').value = '';
+    document.getElementById('selectedStudentBadge').classList.add('hidden');
+    document.getElementById('notifStudentSearchInput').value = '';
+}
+
+async function handleSendNotification(e) {
+    e.preventDefault();
+    const msg = document.getElementById('notificationMessage').value.trim();
+    const target = document.querySelector('input[name="target_audience"]:checked').value;
+    const studentId = document.getElementById('targetStudentUuid').value;
+
+    if (!msg) return;
+
+    try {
+        if (target === 'specific') {
+            if (!studentId) {
+                showNotification('يرجى اختيار طالب محدد من القائمة', 'error');
+                return;
+            }
+            await _supabase.from('notifications').insert({
+                student_id: studentId,
+                message: msg,
+                is_read: false,
+                created_at: new Date().toISOString()
+            });
+        } else {
+            const { data: students } = await _supabase.from('profiles').select('id');
+            if (students && students.length > 0) {
+                const notifs = students.map(s => ({
+                    student_id: s.id,
+                    message: msg,
+                    is_read: false,
+                    created_at: new Date().toISOString()
+                }));
+                await _supabase.from('notifications').insert(notifs);
+            }
+        }
+
+        showNotification('تم إرسال التنبيه بنجاح! 🔔', 'success');
+        document.getElementById('notificationForm').reset();
+        clearSelectedNotifStudent();
+        fetchNotificationsList();
+    } catch (err) {
+        showNotification('فشل الإرسال: ' + err.message, 'error');
+    }
+}
+
+async function fetchNotificationsList() {
+    const tbody = document.getElementById('notifications-list-table');
+    try {
+        const { data: notifs } = await _supabase
+            .from('notifications')
+            .select('*, profiles(full_name)')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (!notifs || notifs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-400 font-bold">لا توجد تنبيهات سابقة.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = notifs.map(n => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4 px-5 font-bold text-slate-900">${n.message}</td>
+                <td class="p-4"><span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">${n.profiles?.full_name || 'عام لجميع الطلاب'}</span></td>
+                <td class="p-4 text-[11px] text-gray-400 font-semibold">${new Date(n.created_at).toLocaleDateString('ar-EG')}</td>
+                <td class="p-4 text-center">
+                    <button onclick="deleteNotification('${n.id}')" class="text-red-500 hover:text-red-700 text-xs">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function deleteNotification(id) {
+    try {
+        await _supabase.from('notifications').delete().eq('id', id);
+        showNotification('تم حذف التنبيه', 'success');
+        fetchNotificationsList();
+    } catch (e) {
+        showNotification('فشل الحذف: ' + e.message, 'error');
+    }
+}
+
+// ==========================================
+// 5. إدارة مسؤولين المنصة (Admins)
+// ==========================================
+async function fetchAdminsList() {
+    const tbody = document.getElementById('admins-list-table');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الأدمن...</td></tr>`;
+
+    try {
+        // 1. جلب أرقام (IDs) الأدمنز من جدول admins
+        const { data: adminsData, error: adminsError } = await _supabase
+            .from('admins')
+            .select('id');
+
+        if (adminsError) throw adminsError;
+
+        if (!adminsData || adminsData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد مسؤولي أدمن حالياً.</td></tr>`;
+            return;
+        }
+
+        // استخراج قائمة الـ IDs للبحث بها في جدول profiles
+        const adminIds = adminsData.map(admin => admin.id);
+
+        // 2. جلب بيانات الأدمنز من جدول profiles بناءً على الـ IDs
+        const { data: profilesData, error: profilesError } = await _supabase
+            .from('profiles')
+            .select('id, full_name, email, student_code, student_phone')
+            .in('id', adminIds);
+
+        if (profilesError) throw profilesError;
+
+        // 3. دمج البيانات لتتناسب مع الكود القديم وعرضها بنفس الطريقة
+        const adminRows = adminsData.map(admin => {
+            const profile = profilesData.find(p => p.id === admin.id);
+            return {
+                id: admin.id,
+                profiles: profile || {} // دمج البيانات لتعمل مع HTML القديم
+            };
+        });
+
+        // طباعة البيانات في الجدول
+        tbody.innerHTML = adminRows.map(a => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4 px-5 font-black text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-purple-600"></i> ${a.profiles?.full_name || 'مسؤول المنصة'}
+                </td>
+                <td class="p-4 font-mono text-purple-700 font-bold">${a.profiles?.student_code || '---'}</td>
+                <td class="p-4 text-gray-600 font-semibold">${a.profiles?.email || '---'}</td>
+                <td class="p-4 font-mono text-[11px] text-gray-400">${a.id}</td>
+                <td class="p-4 text-center">
+                    <button onclick="removeAdmin('${a.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-red-200 active:scale-95">
+                        <i class="fa-solid fa-user-minus"></i> إلغاء الصلاحية
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (e) {
+        console.error("Fetch Admins Error: ", e);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold">خطأ في جلب بيانات الأدمن.</td></tr>`;
+    }
+}
+
+async function handleAdminSearch(e) {
+    e.preventDefault();
+    const query = document.getElementById('adminSearchInput').value.trim();
+    if (!query) return;
+
+    const loader = document.getElementById('admin-search-loader');
+    const resultsArea = document.getElementById('admin-search-results');
+    const tbody = document.getElementById('admin-search-results-table');
+
+    loader.classList.remove('hidden');
+    loader.classList.add('flex');
+    resultsArea.classList.add('hidden');
+
+    try {
+        const { data: users, error } = await _supabase
+            .from('profiles')
+            .select('id, full_name, student_code, email')
+            .or(`id.eq.${query.length === 36 ? query : '00000000-0000-0000-0000-000000000000'},full_name.ilike.%${query}%,student_code.ilike.%${query}%`)
+            .limit(5);
+
+        if (error) throw error;
+
+        if (!users || users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400">لا توجد نتائج متطابقة للبحث.</td></tr>`;
+        } else {
+            tbody.innerHTML = users.map(u => `
+                <tr class="hover:bg-purple-50/30 transition-colors">
+                    <td class="p-3 px-4 font-bold text-slate-900">${u.full_name}</td>
+                    <td class="p-3 font-mono text-emerald-600 font-bold">${u.student_code || '---'}</td>
+                    <td class="p-3 text-gray-600 font-semibold">${u.email || '---'}</td>
+                    <td class="p-3 text-center font-mono text-[10px] text-gray-400">${u.id}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="promoteToAdmin('${u.id}')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95">
+                            <i class="fa-solid fa-user-plus"></i> ترقية لأدمن
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        loader.classList.add('hidden');
+        resultsArea.classList.remove('hidden');
+    }
+}
+
+async function promoteToAdmin(userId) {
+    try {
+        const { error } = await _supabase.from('admins').insert({ id: userId });
+        if (error) throw error;
+        showNotification('تم ترقية المستخدم إلى أدمن بنجاح! 👑', 'success');
+        fetchAdminsList();
+        loadDashboardStats();
+    } catch (e) {
+        showNotification('فشل الترقية (ربما يكون أدمن بالفعل): ' + e.message, 'error');
+    }
+}
+
+async function removeAdmin(userId) {
+    try {
+        const { error } = await _supabase.from('admins').delete().eq('id', userId);
+        if (error) throw error;
+        showNotification('تم سحب صلاحية الأدمن من المستخدم', 'info');
+        fetchAdminsList();
+        loadDashboardStats();
+    } catch (e) {
+        showNotification('حدث خطأ: ' + e.message, 'error');
+    }
+}
+
+// ==========================================
+// 6. مركز الأرشيف الأكاديمي الشامل
+// ==========================================
+async function loadArchivePanelData() {
+    fetchHonorRollArchives();
+    fetchArchivedCourses();
+    fetchProcessedSubscriptionsArchive();
+}
+
+async function fetchHonorRollArchives() {
+    const tbody = document.getElementById('honor-roll-archives-table');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري التحميل...</td></tr>`;
+
+    try {
+        const { data: archives, error } = await _supabase
+            .from('honor_roll_archives')
+            .select('*, profiles(full_name)')
+            .order('archived_at', { ascending: false })
+            .limit(30);
+
+        if (error) throw error;
+
+        if (!archives || archives.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-500 font-bold">لا توجد سجلات أسبوعية مؤرشفة بعد.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = archives.map(a => `
+            <tr class="hover:bg-slate-900 transition-colors">
+                <td class="p-3.5 px-4 font-black text-amber-400">#${a.rank}</td>
+                <td class="p-3.5 font-bold text-white">${a.profiles?.full_name || 'طالب متفوق'}</td>
+                <td class="p-3.5 font-black text-emerald-400">${a.weekly_points} نقطة</td>
+                <td class="p-3.5 font-bold text-slate-400">أسبوع ${a.week_number} / ${a.year}</td>
+                <td class="p-3.5 text-slate-400">${a.stage || '---'}</td>
+                <td class="p-3.5 text-[10px] text-slate-500">${new Date(a.archived_at).toLocaleDateString('ar-EG')}</td>
+                <td class="p-3.5 text-center">
+                    <button onclick="deleteHonorArchiveRow('${a.id}')" class="text-red-400 hover:text-red-300 text-xs">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-red-400 font-bold">خطأ في الأرشيف.</td></tr>`;
+    }
+}
+
+async function archiveCurrentWeekHonorRoll() {
+    try {
+        const { data: topStudents } = await _supabase
+            .from('profiles')
+            .select('id, weekly_points, stage')
+            .gt('weekly_points', 0)
+            .order('weekly_points', { ascending: false })
+            .limit(10);
+
+        if (!topStudents || topStudents.length === 0) {
+            showNotification('لا يوجد طلاب بنقاط أسبوعية للأرشفة حالياً', 'amber');
+            return;
+        }
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const startOfYear = new Date(currentYear, 0, 1);
+        const weekNum = Math.ceil((((now - startOfYear) / 86400000) + startOfYear.getDay() + 1) / 7);
+
+        const archivesToInsert = topStudents.map((s, idx) => ({
+            student_id: s.id,
+            weekly_points: s.weekly_points,
+            rank: idx + 1,
+            week_number: weekNum,
+            year: currentYear,
+            stage: s.stage,
+            archived_at: now.toISOString()
+        }));
+
+        await _supabase.from('honor_roll_archives').insert(archivesToInsert);
+        await _supabase.from('profiles').update({ weekly_points: 0 }).neq('weekly_points', 0);
+
+        showNotification('تم أرشفة أوائل الأسبوع وتصفير النقاط لبدء أسبوع جديد بنجاح! 🏆', 'success');
+        fetchHonorRollArchives();
+    } catch (e) {
+        showNotification('فشل الأرشفة: ' + e.message, 'error');
+    }
+}
+
+async function deleteHonorArchiveRow(id) {
+    try {
+        await _supabase.from('honor_roll_archives').delete().eq('id', id);
+        fetchHonorRollArchives();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function fetchArchivedCourses() {
+    const tbody = document.getElementById('archived-courses-table');
+    try {
+        const { data: courses } = await _supabase
+            .from('courses')
+            .select('*')
+            .eq('is_visible', false)
+            .order('created_at', { ascending: false });
+
+        document.getElementById('archived-courses-count').innerText = `${courses ? courses.length : 0} كورس`;
+
+        if (!courses || courses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا توجد كورسات مؤرشفة حالياً.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = courses.map(c => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-4 px-5 font-bold text-slate-900">${c.title}</td>
+                <td class="p-4 text-gray-600 font-semibold">${c.stage || '---'}</td>
+                <td class="p-4 text-gray-600 font-semibold">${c.term || '---'}</td>
+                <td class="p-4 text-center font-bold text-slate-900">${c.price || 0} ج.م</td>
+                <td class="p-4 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="toggleCourseVisibility('${c.id}', true)" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-emerald-200 active:scale-95">
+                            <i class="fa-solid fa-rotate-left"></i> استعادة للعرض
+                        </button>
+                        <button onclick="deleteCourse('${c.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-red-200 active:scale-95">
+                            <i class="fa-solid fa-trash-can"></i> حذف نهائي
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function fetchProcessedSubscriptionsArchive() {
+    const tbody = document.getElementById('subscription-history-archive-table');
+    try {
+        const { data: history } = await _supabase
+            .from('subscription_requests')
+            .select('*, profiles(full_name), courses(title)')
+            .neq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+        if (!history || history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-gray-400 font-bold">لا يوجد سجل طلبات معالجة.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = history.map(h => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-3.5 px-4 font-bold text-slate-900">${h.profiles?.full_name || 'طالب'}</td>
+                <td class="p-3.5 font-bold text-slate-700">${h.courses?.title || 'كورس'}</td>
+                <td class="p-3.5 text-center font-bold">${h.amount_paid || 0} ج.م</td>
+                <td class="p-3.5 text-center text-gray-600 font-semibold">${h.payment_method || '---'}</td>
+                <td class="p-3.5 text-center">
+                    ${h.status === 'approved' ? '<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">مقبول ومفعل</span>' : '<span class="bg-red-50 text-red-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">مرفوض</span>'}
+                </td>
+                <td class="p-3.5 text-center text-[10px] text-gray-400">${new Date(h.created_at).toLocaleDateString('ar-EG')}</td>
+            </tr>
+        `).join('');
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ==========================================
+// 7. نظام البث المباشر (OBS + YouTube Live) الشات اللحظي
+// ==========================================
+function extractYouTubeId(url) {
+    if (!url) return '';
+    url = url.trim();
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|live\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : url;
+}
+
+async function loadLiveRoomData() {
+    try {
+        const { data: room, error } = await _supabase
+            .from('live_rooms')
+            .select('*')
+            .eq('id', LIVE_ROOM_ID)
+            .maybeSingle();
+
+        if (room) {
+            document.getElementById('liveTitleInput').value = room.title || '';
+            document.getElementById('liveDescInput').value = room.description || '';
+            document.getElementById('liveYoutubeInput').value = room.channel_name || '';
+
+            isLiveActive = (room.status === 'live');
+            updateLiveUIState(room.channel_name);
+
+            // تفعيل الشات المباشر اللحظي
+            initLiveChat(room.id);
+        } else {
+            const { data: newRoom } = await _supabase.from('live_rooms').insert({
+                id: LIVE_ROOM_ID,
+                title: 'الحصة المباشرة',
+                description: 'حصة البث المباشر التفاعلي',
+                status: 'ended',
+                channel_name: ''
+            }).select().single();
+
+            if (newRoom) initLiveChat(newRoom.id);
+        }
+    } catch (e) {
+        console.error("Error loading live room:", e);
+    }
+}
+
+function updateLiveUIState(youtubeInput) {
     const badge = document.getElementById('liveStatusBadge');
     const startBtn = document.getElementById('startLiveBtn');
+    const frame = document.getElementById('youtubePreviewFrame');
     const placeholder = document.getElementById('noVideoPlaceholder');
 
+    const videoId = extractYouTubeId(youtubeInput);
+
     if (isLiveActive) {
-        badge.className = "bg-red-50 text-red-600 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-red-200 animate-pulse";
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-600"></span> مباشر الآن (جارٍ البث)`;
-        startBtn.className = "flex-1 bg-gray-800 hover:bg-gray-900 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md";
-        startBtn.innerHTML = `<i class="fa-solid fa-stop"></i> إنهاء البث المباشر`;
-        placeholder.classList.add('hidden');
-        if (!jitsiAPI) initJitsiFrame();
+        badge.className = "bg-red-500 text-white text-[11px] sm:text-xs font-black px-3.5 py-1.5 rounded-full flex items-center gap-1.5 border border-red-600 animate-pulse shadow-md shadow-red-500/20";
+        badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-white"></span> مباشر الآن للطلاب 🔴`;
+
+        startBtn.className = "flex-1 bg-gray-800 hover:bg-slate-900 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md order-1 sm:order-2";
+        startBtn.innerHTML = `<i class="fa-solid fa-stop"></i> إنهاء البث الآن (إغلاق)`;
     } else {
-        badge.className = "bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200";
+        badge.className = "bg-gray-100 text-gray-500 text-[11px] sm:text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-gray-200 transition-all";
         badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-400"></span> مغلق حالياً`;
-        startBtn.className = "flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20";
-        startBtn.innerHTML = `<i class="fa-solid fa-play"></i> بدء البث المباشر (تفعيل الآن)`;
+
+        startBtn.className = "flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 shadow-md shadow-red-600/20 order-1 sm:order-2";
+        startBtn.innerHTML = `<i class="fa-solid fa-play"></i> بدء البث للطلاب (تفعيل الآن)`;
+    }
+
+    if (videoId) {
+        frame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        frame.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    } else {
+        frame.src = '';
+        frame.classList.add('hidden');
         placeholder.classList.remove('hidden');
-        if (jitsiAPI) { jitsiAPI.dispose(); jitsiAPI = null; }
     }
 }
 
-function initJitsiFrame() {
-    const domain = "meet.jit.si";
-    const channelName = document.getElementById('liveChannelInput').value.trim() || 'MagdyLiveClass2026';
-    const options = {
-        roomName: channelName,
-        width: '100%',
-        height: '100%',
-        parentNode: document.getElementById('jitsiContainer'),
-        userInfo: { displayName: "الأستاذ (المعلم)" }
-    };
-    jitsiAPI = new JitsiMeetExternalAPI(domain, options);
+async function handleUpdateLiveDetails(e) {
+    e.preventDefault();
+    const title = document.getElementById('liveTitleInput').value.trim();
+    const description = document.getElementById('liveDescInput').value.trim();
+    const rawYoutube = document.getElementById('liveYoutubeInput').value.trim();
+
+    const videoId = extractYouTubeId(rawYoutube);
+
+    try {
+        const { error } = await _supabase.from('live_rooms').upsert({
+            id: LIVE_ROOM_ID,
+            title: title,
+            description: description,
+            channel_name: videoId || rawYoutube,
+            status: isLiveActive ? 'live' : 'ended'
+        });
+
+        if (error) throw error;
+
+        updateLiveUIState(videoId);
+        showNotification('تم حفظ إعدادات البث وإظهار المعاينة بنجاح! 🎬', 'success');
+    } catch (e) {
+        showNotification('حدث خطأ أثناء تفاصيل البث: ' + e.message, 'error');
+    }
 }
 
 async function toggleLiveStatus() {
+    const rawYoutube = document.getElementById('liveYoutubeInput').value.trim();
+    const videoId = extractYouTubeId(rawYoutube);
+    const title = document.getElementById('liveTitleInput').value.trim() || 'البث المباشر';
+
+    if (!isLiveActive && !videoId) {
+        showNotification('يرجى كتابة رابط بث يوتيوب صحيح أولاً قبل البدء', 'error');
+        return;
+    }
+
     isLiveActive = !isLiveActive;
+
     try {
-        await _supabase.from('live_rooms').upsert({
+        const { error } = await _supabase.from('live_rooms').upsert({
             id: LIVE_ROOM_ID,
-            title: document.getElementById('liveTitleInput').value.trim() || 'حصة مباشرة',
-            description: document.getElementById('liveDescInput').value.trim() || '',
-            channel_name: document.getElementById('liveChannelInput').value.trim() || 'MagdyLiveClass2026',
+            title: title,
+            description: document.getElementById('liveDescInput').value.trim(),
+            channel_name: videoId || rawYoutube,
             status: isLiveActive ? 'live' : 'ended',
             started_at: isLiveActive ? new Date().toISOString() : null,
             ended_at: !isLiveActive ? new Date().toISOString() : null
         });
 
-        showNotification(isLiveActive ? "تم بدء البث المباشر بنجاح!" : "تم إغلاق البث المباشر", isLiveActive ? "success" : "info");
-        updateLiveUI();
-    } catch (err) {
-        showNotification("خطأ في تغيير حالة البث: " + err.message, "error");
+        if (error) throw error;
+
+        updateLiveUIState(videoId);
+        showNotification(isLiveActive ? 'تم فتح وتفعيل البث المباشر للطلاب بنجاح! 🔴' : 'تم إنهاء البث المباشر وتحويله للحالة المغلقة ⬛', isLiveActive ? 'success' : 'info');
+    } catch (e) {
+        isLiveActive = !isLiveActive;
+        showNotification('حدث خطأ أثناء تغيير حالة البث: ' + e.message, 'error');
     }
 }
 
-async function handleUpdateLiveDetails(event) {
-    event.preventDefault();
-    try {
-        await _supabase.from('live_rooms').upsert({
-            id: LIVE_ROOM_ID,
-            title: document.getElementById('liveTitleInput').value.trim(),
-            description: document.getElementById('liveDescInput').value.trim(),
-            channel_name: document.getElementById('liveChannelInput').value.trim(),
-            status: isLiveActive ? 'live' : 'ended'
-        });
-        showNotification("تم تفاصيل البث المباشر بنجاح", "success");
-    } catch (err) {
-        showNotification("خطأ في حفظ البيانات: " + err.message, "error");
-    }
-}
+let liveChatSubscription = null;
 
-function toggleChatStatus() {
-    const isChecked = document.getElementById('chatStatusToggle').checked;
-    document.getElementById('chatStatusLabel').innerText = isChecked ? "مفتوحة" : "مغلقة";
-    document.getElementById('chatStatusLabel').className = isChecked ? "text-[9px] sm:text-[10px] text-emerald-400 font-bold w-6 text-center" : "text-[9px] sm:text-[10px] text-red-400 font-bold w-6 text-center";
-}
-
-async function loadLivePreviousMessages() {
-    const container = document.getElementById('liveChatMessages');
-    if (!container) return;
+async function initLiveChat(roomId) {
+    const chatContainer = document.getElementById('liveChatMessages');
+    chatContainer.innerHTML = `<div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">جاري تحضير الشات والمحادثات المباشرة...</div>`;
 
     try {
-        const { data } = await _supabase
+        // جلب الرسائل السابقة
+        const { data: messages, error } = await _supabase
             .from('live_messages')
             .select('*')
-            .eq('room_id', LIVE_ROOM_ID)
+            .eq('room_id', roomId)
             .order('created_at', { ascending: true })
-            .limit(50);
+            .limit(100);
 
-        if (data) {
-            data.forEach(m => appendChatMessage(m));
+        if (!error && messages) {
+            chatContainer.innerHTML = '';
+            messages.forEach(msg => appendLiveChatMessage(msg));
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-    } catch (err) { console.error(err); }
+
+        // إلغاء أي قناة سابقة
+        if (liveChatSubscription) {
+            _supabase.removeChannel(liveChatSubscription);
+        }
+
+        // الاشتراك اللحظي Realtime في إرسال الرسائل
+        liveChatSubscription = _supabase
+            .channel(`live_messages:${roomId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'live_messages',
+                filter: `room_id=eq.${roomId}`
+            }, payload => {
+                appendLiveChatMessage(payload.new);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            })
+            .subscribe();
+
+    } catch (e) {
+        console.error("Chat Error:", e);
+    }
 }
 
-function appendChatMessage(m) {
-    const container = document.getElementById('liveChatMessages');
-    if (!container) return;
+function appendLiveChatMessage(msg) {
+    const chatContainer = document.getElementById('liveChatMessages');
+    const isAdmin = (msg.sender_role === 'admin');
 
-    const div = document.createElement('div');
-    const isAdmin = (m.sender_role === 'admin' || m.sender_name?.includes('الأستاذ'));
-    
-    div.className = `flex flex-col p-2.5 rounded-2xl text-xs max-w-[85%] ${isAdmin ? 'bg-red-50 text-red-900 border border-red-100 self-start mr-auto' : 'bg-white text-gray-800 border border-gray-100 self-end ml-auto'}`;
-    div.innerHTML = `
-        <span class="font-black text-[10px] ${isAdmin ? 'text-red-600' : 'text-slate-900'}">${m.sender_name || 'طالب'} ${isAdmin ? '⭐' : ''}</span>
-        <p class="font-bold mt-0.5">${m.message}</p>
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `flex flex-col ${isAdmin ? 'items-start' : 'items-end'} animate-fade-in group`;
+
+    msgDiv.innerHTML = `
+        <div class="flex items-center gap-1.5 mb-1 px-1">
+            <span class="text-[10px] font-black ${isAdmin ? 'text-red-600' : 'text-slate-700'}">${msg.sender_name || (isAdmin ? 'المستر / الأدمن' : 'طالب')}</span>
+            ${isAdmin ? '<span class="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.2 rounded-md">أدمن</span>' : ''}
+            <span class="text-[9px] text-gray-400">${new Date(msg.created_at || Date.now()).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+            <button onclick="deleteChatMessage('${msg.id}')" class="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-[10px] mr-2 transition-opacity">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+        <div class="p-3 rounded-2xl text-xs font-semibold leading-relaxed max-w-[85%] break-words shadow-sm ${isAdmin ? 'bg-slate-900 text-white rounded-tr-none border border-slate-800' : 'bg-white text-gray-800 rounded-tl-none border border-gray-200'}">
+            ${msg.message}
+        </div>
     `;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+
+    chatContainer.appendChild(msgDiv);
 }
 
-async function sendAdminLiveMessage(event) {
-    event.preventDefault();
+async function sendAdminLiveMessage(e) {
+    e.preventDefault();
     const input = document.getElementById('liveAdminChatInput');
     const text = input.value.trim();
     if (!text) return;
 
-    const msg = {
-        room_id: LIVE_ROOM_ID,
-        sender_name: "الأستاذ / الأدمن",
-        sender_role: "admin",
-        message: text,
-        created_at: new Date().toISOString()
-    };
-
     input.value = '';
+
     try {
-        await _supabase.from('live_messages').insert([msg]);
-    } catch (err) { console.error(err); }
+        await _supabase.from('live_messages').insert({
+            room_id: LIVE_ROOM_ID,
+            sender_name: 'المستر / إدارة المنصة 🎓',
+            sender_role: 'admin',
+            message: text,
+            created_at: new Date().toISOString()
+        });
+    } catch (e) {
+        showNotification('فشل إرسال الرسالة: ' + e.message, 'error');
+    }
 }
 
-function subscribeToLiveMessages() {
-    _supabase
-        .channel('live_messages_realtime')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages' }, payload => {
-            appendChatMessage(payload.new);
-        })
-        .subscribe();
+async function deleteChatMessage(msgId) {
+    try {
+        await _supabase.from('live_messages').delete().eq('id', msgId);
+        showNotification('تم حذف الرسالة من الشات', 'success');
+        loadLiveRoomData();
+    } catch (e) {
+        showNotification('فشل الحذف: ' + e.message, 'error');
+    }
+}
+
+async function clearChatScreen() {
+    const res = await Swal.fire({
+        title: 'تصفية محادثات البث المباشر؟',
+        text: "سيتم حذف جميع الرسائل السابقة من شات البث!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'مسح الكل',
+        cancelButtonText: 'إلغاء'
+    });
+
+    if (res.isConfirmed) {
+        try {
+            await _supabase.from('live_messages').delete().eq('room_id', LIVE_ROOM_ID);
+            document.getElementById('liveChatMessages').innerHTML = '<div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">تم تنظيف شاشة الدردشة بالكامل ✨</div>';
+            showNotification('تم تنظيف الشات بنجاح', 'success');
+        } catch (e) {
+            showNotification('حدث خطأ: ' + e.message, 'error');
+        }
+    }
 }
 </script>
 </body>
