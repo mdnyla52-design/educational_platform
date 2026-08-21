@@ -386,10 +386,10 @@
                 أنشئ حسابك الآن على منصة <span class="text-emerald-400 font-bold">العلم والإيمان</span> واستمتع بتجربة تعليمية حديثة تشمل امتحانات دورية وتقارير كاملة لولي أمرك.
             </p>
             <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <a href="auth.html" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-8 py-3.5 rounded-xl shadow-xl shadow-emerald-950/50 transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                <a href="signup.html" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-8 py-3.5 rounded-xl shadow-xl shadow-emerald-950/50 transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm">
                     <i class="fa-solid fa-user-plus ml-1"></i> أنشئ حسابك مجاناً
                 </a>
-                <a href="auth.html" class="bg-white/10 hover:bg-white/20 text-white font-bold px-8 py-3.5 rounded-xl border border-white/10 backdrop-blur-md transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                <a href="login.html" class="bg-white/10 hover:bg-white/20 text-white font-bold px-8 py-3.5 rounded-xl border border-white/10 backdrop-blur-md transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm">
                     تسجيل الدخول
                 </a>
             </div>
@@ -699,20 +699,20 @@
                     if (guestCtaSection) guestCtaSection.classList.remove('hidden');
 
                     desktopAuthContainer.innerHTML = `
-                        <a href="auth.html" class="text-gray-700 hover:text-emerald-600 font-bold px-3 sm:px-4 py-2 sm:py-2.5 transition-all duration-300 text-xs sm:text-sm">تسجيل الدخول</a>
-                        <a href="auth.html" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl shadow-md hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm">إنشاء حساب جديد</a>
+                        <a href="login.html" class="text-gray-700 hover:text-emerald-600 font-bold px-3 sm:px-4 py-2 sm:py-2.5 transition-all duration-300 text-xs sm:text-sm">تسجيل الدخول</a>
+                        <a href="signup.html" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl shadow-md hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300 transform hover:-translate-y-0.5 text-xs sm:text-sm">إنشاء حساب جديد</a>
                     `;
                     mobileAuthContainer.innerHTML = `
-                        <a href="auth.html" class="text-center text-gray-700 py-3 rounded-xl border border-gray-200 text-sm transition-all duration-200">تسجيل الدخول</a>
-                        <a href="auth.html" class="text-center bg-emerald-600 text-white py-3 rounded-xl text-sm transition-all duration-200">إنشاء حساب</a>
+                        <a href="login.html" class="text-center text-gray-700 py-3 rounded-xl border border-gray-200 text-sm transition-all duration-200">تسجيل الدخول</a>
+                        <a href="signup.html" class="text-center bg-emerald-600 text-white py-3 rounded-xl text-sm transition-all duration-200">إنشاء حساب</a>
                     `;
 
                     if (heroAuthActions) {
                         heroAuthActions.innerHTML = `
-                            <a href="auth.html" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-100 hover:shadow-emerald-200 transition-all duration-300 transform hover:-translate-y-0.5 text-sm flex items-center gap-2">
+                            <a href="signup.html" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-100 hover:shadow-emerald-200 transition-all duration-300 transform hover:-translate-y-0.5 text-sm flex items-center gap-2">
                                 <i class="fa-solid fa-user-plus"></i> سجل حسابك مجاناً الآن
                             </a>
-                            <a href="auth.html" class="bg-white hover:bg-gray-50 text-gray-800 font-bold px-6 py-3.5 rounded-xl border border-gray-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 text-sm flex items-center gap-2">
+                            <a href="login.html" class="bg-white hover:bg-gray-50 text-gray-800 font-bold px-6 py-3.5 rounded-xl border border-gray-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 text-sm flex items-center gap-2">
                                 <i class="fa-solid fa-right-to-bracket text-emerald-600"></i> تسجيل الدخول
                             </a>
                         `;
@@ -741,7 +741,7 @@
                 
                 if (authError || !user) {
                     showCustomModal('danger', 'تنبيه هام', 'يجب عليك تسجيل الدخول أولاً لتتمكن من الاشتراك في الكورس.', [
-                        { text: 'تسجيل الدخول', callback: () => window.location.href = 'auth.html', primary: true },
+                        { text: 'تسجيل الدخول', callback: () => window.location.href = 'login.html', primary: true },
                         { text: 'إلغاء', primary: false }
                     ]);
                     return;
@@ -1040,7 +1040,7 @@
                     }
                 } else {
                     buttonHTML = `
-                        <a href="auth.html" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-1">
+                        <a href="login.html" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs transition-all duration-300 shadow-sm hover:shadow-md flex items-center gap-1">
                             <i class="fa-solid fa-lock text-[10px] ml-0.5"></i> سجل لتشترك
                         </a>`;
                 }

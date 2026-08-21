@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إنشاء حساب جديد | منصة العلم والإيمان</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .gradient-bg {
+            background: linear-gradient(-45deg, #f0fdf4, #ffffff, #ecfeff, #ffffff);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+            background-repeat: no-repeat;
+            background-position: left 1rem center;
+            background-size: 1.2em;
+        }
+        .notification-toast {
+            position: fixed;
+            top: 2rem;
+            right: 1.5rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            border-left: 5px solid #059669;
+            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 9999;
+        }
+        .notification-toast.error { border-left-color: #dc2626; }
+        .notification-toast.warning { border-left-color: #f59e0b; }
+        .notification-toast.success { border-left-color: #10b981; }
+        .notification-toast.info { border-left-color: #3b82f6; }
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        .notification-toast.exit {
+            animation: slideOutRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+    </style>
+</head>
+<body class="font-cairo gradient-bg min-h-screen flex items-center justify-center p-3 sm:p-6 relative overflow-x-hidden antialiased">
+
+    <div class="absolute top-[-5%] left-[-5%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-emerald-400/10 blur-[80px] sm:blur-[130px] rounded-full pointer-events-none"></div>
+    <div class="absolute bottom-[-5%] right-[-5%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-teal-400/10 blur-[80px] sm:blur-[130px] rounded-full pointer-events-none"></div>
+
+    <div id="auth-card" class="w-full max-w-md md:max-w-2xl bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-900/5 border border-white p-5 sm:p-10 relative z-10 transition-all duration-500 ease-in-out mx-auto">
+
+        <div class="text-center space-y-2 mb-6 sm:mb-8">
+            <div class="inline-flex items-center gap-2 group select-none">
+                <div class="bg-emerald-600 text-white p-2 rounded-xl shadow-md shadow-emerald-100">
+                    <i class="fa-solid fa-book-open text-lg sm:text-xl"></i>
+                </div>
+                <span class="text-base sm:text-lg font-black text-gray-950">
+                    منصة <span class="text-emerald-600">العلم والإيمان</span>
+                </span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-gray-950 pt-1">إنشاء حساب طالب جديد</h2>
+            <p class="text-[11px] sm:text-sm text-gray-500 font-medium">انضم إلينا الآن وابدأ رحلة التفوق في اللغة العربية</p>
+        </div>
+
+        <form id="signup-form" class="space-y-4 sm:space-y-5" onsubmit="handleSignup(event)">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+
+                <div class="space-y-1.5 md:col-span-2">
+                    <label for="signup-fullname" class="text-xs font-bold text-gray-700 block pr-1">اسم الطالب رباعي</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-signature text-sm"></i>
+                        </div>
+                        <input type="text" id="signup-fullname" required placeholder="محمد أحمد محمود علي"
+                            class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="signup-student-phone" class="text-xs font-bold text-gray-700 block pr-1">رقم هاتف الطالب</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-phone text-sm"></i>
+                        </div>
+                        <input type="tel" id="signup-student-phone" required placeholder="01xxxxxxxxx"
+                            class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="signup-parent-phone" class="text-xs font-bold text-gray-700 block pr-1">رقم هاتف ولي الأمر (اختياري)</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-user-shield text-sm"></i>
+                        </div>
+                        <input type="tel" id="signup-parent-phone" placeholder="01xxxxxxxxx"
+                            class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="signup-email" class="text-xs font-bold text-gray-700 block pr-1">البريد الإلكتروني (اختياري)</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-envelope text-sm"></i>
+                        </div>
+                        <input type="email" id="signup-email" placeholder="your-email@gmail.com"
+                            class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                    </div>
+                </div>
+
+                <!-- خانة المحافظة -->
+                <div class="space-y-1.5">
+                    <label for="signup-governorate" class="text-xs font-bold text-gray-700 block pr-1">المحافظة</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-location-dot text-sm"></i>
+                        </div>
+                        <select id="signup-governorate" required class="w-full pl-10 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 cursor-pointer">
+                            <option value="" disabled selected hidden>اختر المحافظة...</option>
+                            <option value="القاهرة">القاهرة</option>
+                            <option value="الجيزة">الجيزة</option>
+                            <option value="الإسكندرية">الإسكندرية</option>
+                            <option value="الدقهلية">الدقهلية</option>
+                            <option value="البحر الأحمر">البحر الأحمر</option>
+                            <option value="البحيرة">البحيرة</option>
+                            <option value="الفيوم">الفيوم</option>
+                            <option value="الغربية">الغربية</option>
+                            <option value="الإسماعيلية">الإسماعيلية</option>
+                            <option value="المنوفية">المنوفية</option>
+                            <option value="المنيا">المنيا</option>
+                            <option value="القليوبية">القليوبية</option>
+                            <option value="الوادي الجديد">الوادي الجديد</option>
+                            <option value="السويس">السويس</option>
+                            <option value="أسوان">أسوان</option>
+                            <option value="أسيوط">أسيوط</option>
+                            <option value="بني سويف">بني سويف</option>
+                            <option value="بورسعيد">بورسعيد</option>
+                            <option value="دمياط">دمياط</option>
+                            <option value="الشرقية">الشرقية</option>
+                            <option value="جنوب سيناء">جنوب سيناء</option>
+                            <option value="كفر الشيخ">كفر الشيخ</option>
+                            <option value="مطروح">مطروح</option>
+                            <option value="الأقصر">الأقصر</option>
+                            <option value="قنا">قنا</option>
+                            <option value="شمال سيناء">شمال سيناء</option>
+                            <option value="سوهاج">سوهاج</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- الصف الدراسي شامل الإعدادي والثانوي -->
+                <div class="space-y-1.5">
+                    <label for="signup-stage" class="text-xs font-bold text-gray-700 block pr-1">الصف الدراسي</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-graduation-cap text-sm"></i>
+                        </div>
+                        <select id="signup-stage" required class="w-full pl-10 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 cursor-pointer">
+                            <option value="" disabled selected hidden>اختر صفك الدراسي...</option>
+                            <option value="prep1">الصف الأول الإعدادي</option>
+                            <option value="prep2">الصف الثاني الإعدادي</option>
+                            <option value="prep3">الصف الثالث الإعدادي</option>
+                            <option value="sec1">الصف الأول الثانوي</option>
+                            <option value="sec2">الصف الثاني الثانوي</option>
+                            <option value="sec3">الصف الثالث الثانوي</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 md:col-span-2">
+                    <label for="signup-password" class="text-xs font-bold text-gray-700 block pr-1">كلمة المرور</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
+                            <i class="fa-solid fa-lock text-sm"></i>
+                        </div>
+                        <input type="password" id="signup-password" required placeholder="••••••••"
+                            class="w-full pl-12 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                        <button type="button" onclick="togglePassword('signup-password', 'signup-password-icon')" class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 hover:text-emerald-600 transition-colors duration-200">
+                            <i id="signup-password-icon" class="fa-solid fa-eye text-xs sm:text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-600/10 hover:shadow-emerald-600/20 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.99] flex items-center justify-center gap-2 group text-sm sm:text-base pt-3">
+                <span>إنشاء الحساب والانطلاق</span>
+                <i class="fa-solid fa-rocket text-xs transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"></i>
+            </button>
+        </form>
+
+        <p class="text-center text-xs text-gray-500 font-semibold mt-6 sm:mt-8 border-t border-gray-100 pt-5">
+            لديك حساب طالب بالفعل؟
+            <a href="login.html" class="text-emerald-600 hover:text-emerald-700 font-bold hover:underline transition-colors duration-200 mr-1">سجل دخولك الآن</a>
+        </p>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://equefefnimfaqkyckbep.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk";
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function togglePassword(inputId, iconId) {
+            const passwordInput = document.getElementById(inputId);
+            const toggleIcon = document.getElementById(iconId);
+            if (passwordInput && toggleIcon) {
+                toggleIcon.style.opacity = '0';
+                setTimeout(() => {
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        toggleIcon.className = 'fa-solid fa-eye-slash text-xs sm:text-sm text-emerald-600';
+                    } else {
+                        passwordInput.type = 'password';
+                        toggleIcon.className = 'fa-solid fa-eye text-xs sm:text-sm';
+                    }
+                    toggleIcon.style.opacity = '1';
+                }, 100);
+            }
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            const button = event.target.querySelector('button[type="submit"]');
+
+            const fullName = document.getElementById('signup-fullname').value.trim();
+            const emailInput = document.getElementById('signup-email').value.trim();
+            const studentPhone = document.getElementById('signup-student-phone').value.trim();
+            const parentPhone = document.getElementById('signup-parent-phone').value.trim();
+            const governorate = document.getElementById('signup-governorate').value;
+            const academicStage = document.getElementById('signup-stage').value;
+            const password = document.getElementById('signup-password').value;
+
+            // في حال لم يقم الطالب بإدخال إيميل، نقوم بإنشاء إيميل وهمي ليتمكن من التسجيل عبر رقم الهاتف
+            const authEmail = emailInput !== '' ? emailInput : `${studentPhone}@student.alim.com`;
+
+            if (parentPhone !== '' && studentPhone === parentPhone) {
+                showNotification('يجب أن يكون رقم هاتف ولي الأمر مختلفاً عن رقم الطالب.', 'warning');
+                return;
+            }
+
+            button.disabled = true;
+            button.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin text-sm sm:text-lg"></i> <span>جاري إنشاء الحساب...</span>`;
+
+            try {
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: authEmail,
+                    password: password
+                });
+
+                if (authError) throw authError;
+
+                const { error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .insert([
+                        {
+                            id: authData.user.id,
+                            full_name: fullName,
+                            student_phone: studentPhone,
+                            parent_phone: parentPhone !== '' ? parentPhone : null,
+                            governorate: governorate,
+                            stage: academicStage,
+                            email: authEmail
+                        }
+                    ]);
+
+                if (profileError) throw profileError;
+
+                showNotification('تم إنشاء حسابك بنجاح! ✨ يمكنك تسجيل الدخول الآن باستخدام رقمك أو بريدك.', 'success');
+                document.getElementById('signup-form').reset();
+                setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+
+            } catch (error) {
+                console.error("Signup Error:", error);
+                const errorMsg = error.message || "حاول مرة أخرى";
+                if (errorMsg.includes('already registered')) {
+                    showNotification('هذا الرقم أو البريد مسجل بالفعل! جرب استخدام "نسيت كلمة المرور".', 'error');
+                } else {
+                    showNotification('فشل التسجيل: ' + errorMsg, 'error');
+                }
+            } finally {
+                button.disabled = false;
+                button.innerHTML = `<span>إنشاء الحساب والانطلاق</span> <i class="fa-solid fa-rocket text-xs"></i>`;
+            }
+        }
+
+        function showNotification(message, type = 'info', duration = 5000) {
+            const container = document.createElement('div');
+            container.className = `notification-toast ${type}`;
+
+            let icon = '';
+            let title = '';
+
+            switch(type) {
+                case 'success':
+                    icon = '<i class="fa-solid fa-circle-check"></i>';
+                    title = '✨ تم بنجاح';
+                    break;
+                case 'error':
+                    icon = '<i class="fa-solid fa-circle-exclamation"></i>';
+                    title = '⚠️ خطأ';
+                    break;
+                case 'warning':
+                    icon = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                    title = '⏰ تنبيه';
+                    break;
+                case 'info':
+                    icon = '<i class="fa-solid fa-circle-info"></i>';
+                    title = 'ℹ️ معلومة';
+                    break;
+            }
+
+            container.innerHTML = `
+                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                    <div style="font-size: 1.5rem; color: ${type === 'success' ? '#10b981' : type === 'error' ? '#dc2626' : type === 'warning' ? '#f59e0b' : '#3b82f6'}; flex-shrink: 0;">
+                        ${icon}
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: 700; color: #111827; margin-bottom: 0.25rem; font-size: 0.95rem;">${title}</div>
+                        <div style="color: #6b7280; font-size: 0.875rem; line-height: 1.5;">${message}</div>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.classList.add('exit'); setTimeout(() => this.parentElement.parentElement.remove(), 400);" style="background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 1.2rem; flex-shrink: 0;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(container);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    container.classList.add('exit');
+                    setTimeout(() => container.remove(), 400);
+                }, duration);
+            }
+        }
+    </script>
+</body>
+</html>
