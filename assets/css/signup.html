@@ -71,6 +71,9 @@
         .notification-toast.exit {
             animation: slideOutRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
     </style>
 </head>
 <body class="font-cairo gradient-bg min-h-screen flex items-center justify-center p-3 sm:p-6 relative overflow-x-hidden antialiased">
@@ -90,7 +93,7 @@
                 </span>
             </div>
             <h2 class="text-xl sm:text-2xl font-black text-gray-950 pt-1">إنشاء حساب طالب جديد</h2>
-            <p class="text-[11px] sm:text-sm text-gray-500 font-medium">انضم إلينا الآن وابدأ رحلة التفوق في اللغة العربية</p>
+            <p class="text-[11px] sm:text-sm text-gray-500 font-medium">انضم إلينا الآن وابدأ رحلة التفوق</p>
         </div>
 
         <form id="signup-form" class="space-y-4 sm:space-y-5" onsubmit="handleSignup(event)">
@@ -102,7 +105,7 @@
                         <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
                             <i class="fa-solid fa-signature text-sm"></i>
                         </div>
-                        <input type="text" id="signup-fullname" required placeholder="محمد أحمد محمود علي"
+                        <input type="text" id="signup-fullname" required minlength="10" placeholder="محمد أحمد محمود علي"
                             class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
                     </div>
                 </div>
@@ -113,7 +116,7 @@
                         <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
                             <i class="fa-solid fa-phone text-sm"></i>
                         </div>
-                        <input type="tel" id="signup-student-phone" required placeholder="01xxxxxxxxx"
+                        <input type="tel" id="signup-student-phone" required placeholder="01xxxxxxxxx" maxlength="11"
                             class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
                     </div>
                 </div>
@@ -124,7 +127,7 @@
                         <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
                             <i class="fa-solid fa-user-shield text-sm"></i>
                         </div>
-                        <input type="tel" id="signup-parent-phone" placeholder="01xxxxxxxxx"
+                        <input type="tel" id="signup-parent-phone" placeholder="01xxxxxxxxx" maxlength="11"
                             class="w-full pl-4 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
                     </div>
                 </div>
@@ -140,7 +143,6 @@
                     </div>
                 </div>
 
-                <!-- خانة المحافظة -->
                 <div class="space-y-1.5">
                     <label for="signup-governorate" class="text-xs font-bold text-gray-700 block pr-1">المحافظة</label>
                     <div class="relative group">
@@ -180,7 +182,6 @@
                     </div>
                 </div>
 
-                <!-- الصف الدراسي شامل الإعدادي والثانوي -->
                 <div class="space-y-1.5">
                     <label for="signup-stage" class="text-xs font-bold text-gray-700 block pr-1">الصف الدراسي</label>
                     <div class="relative group">
@@ -205,7 +206,7 @@
                         <div class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 group-focus-within:text-emerald-600 transition-colors duration-300">
                             <i class="fa-solid fa-lock text-sm"></i>
                         </div>
-                        <input type="password" id="signup-password" required placeholder="••••••••"
+                        <input type="password" id="signup-password" required minlength="6" placeholder="••••••••"
                             class="w-full pl-12 pr-11 py-3 bg-gray-50/50 border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
                         <button type="button" onclick="togglePassword('signup-password', 'signup-password-icon')" class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 hover:text-emerald-600 transition-colors duration-200">
                             <i id="signup-password-icon" class="fa-solid fa-eye text-xs sm:text-sm"></i>
@@ -215,9 +216,9 @@
 
             </div>
 
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-600/10 hover:shadow-emerald-600/20 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.99] flex items-center justify-center gap-2 group text-sm sm:text-base pt-3">
-                <span>إنشاء الحساب والانطلاق</span>
-                <i class="fa-solid fa-rocket text-xs transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"></i>
+            <button type="submit" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-600/10 hover:shadow-emerald-600/20 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.99] flex items-center justify-center gap-2 group text-sm sm:text-base pt-3 mt-6">
+                <span id="btn-text">إنشاء الحساب والانطلاق</span>
+                <i id="btn-icon" class="fa-solid fa-rocket text-xs transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"></i>
             </button>
         </form>
 
@@ -232,6 +233,12 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk";
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // دالة التحقق من صحة رقم الهاتف المصري
+        function isValidEgyptianPhone(phone) {
+            const regex = /^01[0125][0-9]{8}$/;
+            return regex.test(phone);
+        }
 
         function togglePassword(inputId, iconId) {
             const passwordInput = document.getElementById(inputId);
@@ -251,10 +258,29 @@
             }
         }
 
+        // دالة مساعدة لإدارة حالة زر الإرسال بشكل احترافي
+        function toggleButtonState(isLoading) {
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnIcon = document.getElementById('btn-icon');
+
+            if (isLoading) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                btnText.innerText = 'جاري إنشاء الحساب...';
+                btnIcon.className = 'fa-solid fa-circle-notch animate-spin text-xs';
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btnText.innerText = 'إنشاء الحساب والانطلاق';
+                btnIcon.className = 'fa-solid fa-rocket text-xs transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5';
+            }
+        }
+
         async function handleSignup(event) {
             event.preventDefault();
-            const button = event.target.querySelector('button[type="submit"]');
 
+            // 1. تنظيف البيانات المدخلة من المسافات
             const fullName = document.getElementById('signup-fullname').value.trim();
             const emailInput = document.getElementById('signup-email').value.trim();
             const studentPhone = document.getElementById('signup-student-phone').value.trim();
@@ -263,59 +289,73 @@
             const academicStage = document.getElementById('signup-stage').value;
             const password = document.getElementById('signup-password').value;
 
-            // في حال لم يقم الطالب بإدخال إيميل، نقوم بإنشاء إيميل وهمي ليتمكن من التسجيل عبر رقم الهاتف
-            const authEmail = emailInput !== '' ? emailInput : `${studentPhone}@student.alim.com`;
+            // 2. التحقق من البيانات
+            if (!isValidEgyptianPhone(studentPhone)) {
+                showNotification('رقم هاتف الطالب غير صحيح. يجب أن يكون 11 رقماً ويبدأ بـ 01', 'warning');
+                return;
+            }
+
+            if (parentPhone !== '' && !isValidEgyptianPhone(parentPhone)) {
+                showNotification('رقم هاتف ولي الأمر غير صحيح.', 'warning');
+                return;
+            }
 
             if (parentPhone !== '' && studentPhone === parentPhone) {
                 showNotification('يجب أن يكون رقم هاتف ولي الأمر مختلفاً عن رقم الطالب.', 'warning');
                 return;
             }
 
-            button.disabled = true;
-            button.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin text-sm sm:text-lg"></i> <span>جاري إنشاء الحساب...</span>`;
+            // 3. إصلاح الثغرة الأمنية والمنطقية: استخدام بريد ثابت بناءً على رقم الهاتف
+            const cleanPhone = studentPhone.replace(/[^0-9]/g, '');
+            // قمنا بإزالة Date.now() لكي يكون البريد ثابتاً (مثال: stu_010xxxxxx@alim.com)
+            const authEmail = emailInput !== '' ? emailInput : `stu_${cleanPhone}@alim.com`;
+
+            // 4. تغيير حالة الزر
+            toggleButtonState(true);
 
             try {
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                     email: authEmail,
-                    password: password
-                });
-
-                if (authError) throw authError;
-
-                const { error: profileError } = await supabaseClient
-                    .from('profiles')
-                    .insert([
-                        {
-                            id: authData.user.id,
+                    password: password,
+                    options: {
+                        data: {
                             full_name: fullName,
                             student_phone: studentPhone,
                             parent_phone: parentPhone !== '' ? parentPhone : null,
                             governorate: governorate,
-                            stage: academicStage,
-                            email: authEmail
+                            stage: academicStage
                         }
-                    ]);
+                    }
+                });
 
-                if (profileError) throw profileError;
+                if (authError) throw authError;
 
-                showNotification('تم إنشاء حسابك بنجاح! ✨ يمكنك تسجيل الدخول الآن باستخدام رقمك أو بريدك.', 'success');
+                showNotification('تم إنشاء حسابك بنجاح! ✨ جاري تحويلك...', 'success');
                 document.getElementById('signup-form').reset();
-                setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+                
+                setTimeout(() => { 
+                    window.location.href = 'login.html'; 
+                }, 2000);
 
             } catch (error) {
                 console.error("Signup Error:", error);
-                const errorMsg = error.message || "حاول مرة أخرى";
+                const errorMsg = error.message || "";
+                
+                // معالجة الأخطاء بشكل دقيق للمستخدم
                 if (errorMsg.includes('already registered')) {
-                    showNotification('هذا الرقم أو البريد مسجل بالفعل! جرب استخدام "نسيت كلمة المرور".', 'error');
+                    showNotification('هذا الرقم أو البريد مسجل بالفعل! جرب تسجيل الدخول.', 'error');
+                } else if (errorMsg.includes('Database error saving new user')) {
+                    showNotification('عذراً، الخادم لا يقبل التسجيل لهذا الصف الدراسي حالياً. يرجى مراجعة الإدارة.', 'error', 7000);
                 } else {
-                    showNotification('فشل التسجيل: ' + errorMsg, 'error');
+                    showNotification('حدث خطأ أثناء التسجيل: ' + errorMsg, 'error');
                 }
             } finally {
-                button.disabled = false;
-                button.innerHTML = `<span>إنشاء الحساب والانطلاق</span> <i class="fa-solid fa-rocket text-xs"></i>`;
+                // إعادة حالة الزر إلى الوضع الطبيعي
+                toggleButtonState(false);
             }
         }
 
+        // دالة عرض الإشعارات (لم يتم تغييرها لأنها ممتازة)
         function showNotification(message, type = 'info', duration = 5000) {
             const container = document.createElement('div');
             container.className = `notification-toast ${type}`;
@@ -361,8 +401,10 @@
 
             if (duration > 0) {
                 setTimeout(() => {
-                    container.classList.add('exit');
-                    setTimeout(() => container.remove(), 400);
+                    if(container.parentElement) {
+                        container.classList.add('exit');
+                        setTimeout(() => container.remove(), 400);
+                    }
                 }, duration);
             }
         }
