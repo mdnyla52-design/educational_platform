@@ -55,6 +55,10 @@
         @media screen and (max-width: 768px) {
             input, select { font-size: 16px !important; }
         }
+
+        /* تأثير ظهور الـ Modal */
+        .modal-enter { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-enter > div { transform: scale(1) !important; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased pb-12 min-h-screen">
@@ -65,7 +69,6 @@
             <div class="loader mb-4"></div>
             <p class="text-slate-600 font-medium text-base md:text-lg animate-pulse">جاري جلب بياناتك من المنصة...</p>
         </div>
-
         <!-- صندوق الخطأ -->
         <div id="loader-error-box" class="hidden text-center max-w-sm w-full bg-red-50 border border-red-200 p-6 rounded-2xl shadow-sm">
             <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -103,10 +106,10 @@
     </nav>
 
     <!-- المحتوى -->
-    <main class="max-w-4xl mx-auto px-4 mt-6 md:mt-10">
+    <main class="max-w-4xl mx-auto px-4 mt-6 md:mt-10 space-y-6">
         
         <!-- كارت الترحيب -->
-        <div class="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center gap-5 md:gap-6 mb-6 relative overflow-hidden">
+        <div class="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center gap-5 md:gap-6 relative overflow-hidden">
             <div class="absolute -right-20 -top-20 w-64 h-64 bg-blue-50/60 rounded-full blur-3xl pointer-events-none"></div>
 
             <div class="relative z-10 flex-shrink-0">
@@ -125,28 +128,39 @@
                 </div>
             </div>
 
-            <div id="edit-btn-container" class="w-full md:w-auto z-10 mt-2 md:mt-0">
+            <div id="edit-btn-container" class="w-full md:w-auto z-10 mt-2 md:mt-0 flex flex-col gap-2">
                 <button onclick="toggleEditMode(true)" class="w-full md:w-auto bg-slate-900 hover:bg-blue-600 text-white px-5 py-2.5 md:py-3 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm text-sm md:text-base">
                     <i data-lucide="edit-3" class="w-4 h-4"></i> تحديث البيانات
                 </button>
             </div>
         </div>
 
-        <!-- كارت البيانات -->
-        <div class="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm border border-slate-200 relative">
-            <div class="flex items-center gap-2.5 mb-6 pb-4 border-b border-slate-100">
-                <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
-                    <i data-lucide="user" class="w-5 h-5"></i>
+        <!-- كارت البيانات الأساسية -->
+        <div class="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm border border-slate-200 relative mb-12">
+            
+            <!-- الهيدر مع زر تغيير الباسورد -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                        <i data-lucide="user" class="w-5 h-5"></i>
+                    </div>
+                    <h2 class="text-lg md:text-xl font-bold text-slate-900">البيانات الأساسية</h2>
                 </div>
-                <h2 class="text-lg md:text-xl font-bold text-slate-900">البيانات الأساسية</h2>
+                
+                <button onclick="openPasswordModal()" class="flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all border border-slate-200">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-slate-600"></i>
+                    <span>إعدادات الأمان والمرور</span>
+                </button>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <!-- اسم الطالب -->
                 <div>
                     <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">اسم الطالب بالكامل</label>
                     <input type="text" id="input-full-name" disabled class="form-input w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-75 disabled:cursor-not-allowed">
                 </div>
 
+                <!-- البريد الإلكتروني -->
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
                         <label class="block text-xs md:text-sm font-bold text-slate-700">البريد الإلكتروني</label>
@@ -155,19 +169,21 @@
                     <input type="email" id="input-email" disabled class="w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-100/60 text-slate-500 cursor-not-allowed focus:outline-none text-left" dir="ltr">
                 </div>
 
+                <!-- رقم الطالب -->
                 <div>
                     <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">رقم هاتف الطالب (واتساب)</label>
                     <input type="tel" id="input-student-phone" disabled class="form-input w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-75 disabled:cursor-not-allowed text-left" dir="ltr">
                 </div>
 
+                <!-- رقم ولي الأمر -->
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
                         <label class="block text-xs md:text-sm font-bold text-slate-700">رقم هاتف ولي الأمر</label>
-                        <span class="text-[10px] md:text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><i data-lucide="shield-alert" class="w-3 h-3"></i> محمي بـ RLS</span>
                     </div>
-                    <input type="tel" id="input-parent-phone" disabled class="w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-100/60 text-slate-500 cursor-not-allowed focus:outline-none text-left" dir="ltr">
+                    <input type="tel" id="input-parent-phone" disabled class="form-input w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-75 disabled:cursor-not-allowed text-left" dir="ltr">
                 </div>
 
+                <!-- المرحلة الدراسية -->
                 <div class="relative">
                     <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">المرحلة الدراسية</label>
                     <div class="relative">
@@ -190,16 +206,17 @@
                     </div>
                 </div>
 
+                <!-- كود المنصة -->
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
                         <label class="block text-xs md:text-sm font-bold text-slate-700">كود المنصة</label>
                         <span class="text-[10px] md:text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">فريد ومحمي</span>
                     </div>
-                    <input type="text" id="input-student-code" disabled class="w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-100/60 text-slate-500 font-mono cursor-not-allowed focus:outline-none">
+                    <input type="text" id="input-student-code" disabled class="w-full px-3.5 py-2.5 md:py-3 rounded-xl border border-slate-200 bg-slate-100/60 text-slate-500 font-mono cursor-not-allowed focus:outline-none text-left" dir="ltr">
                 </div>
             </div>
 
-            <!-- أزرار التحكم -->
+            <!-- أزرار التحكم بالحفظ (تظهر عند وضع التعديل) -->
             <div id="action-buttons" class="hidden flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-6 mt-6 border-t border-slate-100">
                 <button onclick="cancelEdit()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-all text-center text-sm md:text-base">
                     إلغاء
@@ -209,13 +226,76 @@
                     <span id="save-btn-text">حفظ التغييرات</span>
                 </button>
             </div>
-
         </div>
     </main>
 
-    <!-- يجب وضع الكود البرمجي في نهاية الـ body لتجنب التوقف أثناء بناء الصفحة -->
+    <!-- نافذة تغيير الباسورد (Modal) المنبثقة -->
+    <div id="password-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-full max-w-md mx-4 rounded-3xl shadow-2xl p-6 transform scale-95 transition-all duration-300">
+            <!-- الهيدر الخاص بالنافذة -->
+            <div class="flex items-center justify-between mb-5 border-b border-slate-100 pb-4">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="shield" class="w-5 h-5 text-blue-600"></i> تغيير كلمة المرور
+                </h3>
+                <button onclick="closePasswordModal()" class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- الخطوة الأولى: التحقق من الباسورد القديم -->
+            <div id="modal-step-1" class="space-y-4">
+                <p class="text-sm text-slate-500 mb-4">يرجى إدخال كلمة المرور الحالية للتأكد من هويتك.</p>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الحالية</label>
+                    <div class="relative">
+                        <input type="password" id="modal-old-password" placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-left" dir="ltr">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i data-lucide="unlock" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-verify-old" onclick="verifyOldPassword()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 text-sm mt-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    <span id="text-verify-old">التحقق والمتابعة</span>
+                </button>
+            </div>
+
+            <!-- الخطوة الثانية: إدخال الباسورد الجديد -->
+            <div id="modal-step-2" class="hidden space-y-4">
+                <div class="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-xs font-bold flex items-center gap-2 mb-2">
+                    <i data-lucide="check" class="w-4 h-4"></i> تمت المصادقة بنجاح. أدخل كلمتك الجديدة.
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الجديدة</label>
+                    <div class="relative">
+                        <input type="password" id="modal-new-password" placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-left" dir="ltr">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i data-lucide="key" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">تأكيد كلمة المرور</label>
+                    <div class="relative">
+                        <input type="password" id="modal-confirm-password" placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-left" dir="ltr">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-change-password" onclick="updatePassword()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 text-sm mt-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span id="text-change-password">حفظ كلمة المرور الجديدة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- أكواد الجافاسكربت المعدلة والمحمية -->
     <script>
-        // إعداد المتغيرات الرئيسية
         const SUPABASE_URL = 'https://equefefnimfaqkyckbep.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk';
         
@@ -223,13 +303,13 @@
         let currentUserData = null;
         let originalInputs = {};
 
-        // 1. تفعيل الأيقونات برمجياً بأمان
+        // 1. تفعيل الأيقونات
         function renderIcons() {
             try { if (typeof lucide !== 'undefined') lucide.createIcons(); } 
             catch(e) { console.error("Lucide Error", e); }
         }
 
-        // 2. دوال التحكم باللودر (إخفاء / خطأ)
+        // 2. دوال التحكم باللودر
         function forceHideLoader() {
             const loader = document.getElementById('page-loader');
             if (loader) {
@@ -245,28 +325,28 @@
             if (msg) document.getElementById('error-msg').innerText = msg;
         }
 
-        // 3. الدالة الرئيسية للتشغيل (تعمل فور تحميل الصفحة بالكامل)
+        // 3. التشغيل المبدئي للبرنامج مع مراقبة التغير للجلسات
         async function bootApplication() {
             renderIcons();
 
-            // قاطع الأمان: بعد 4.5 ثوانٍ يتم إخفاء اللودر إجبارياً مهما حدث لمنع التعليق
             const fallbackTimer = setTimeout(() => {
                 forceHideLoader();
                 fillUIData(null, null);
                 showToast("حدث بطء في الاتصال، نعرض النسخة المخبأة", "clock", "bg-slate-700");
-            }, 4500);
+            }, 5000);
 
             try {
                 if (!window.supabase) throw new Error("تعذر الوصول لشبكة الخوادم (CDN)");
                 
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-                // استخدام getSession لأنها تعتمد على التخزين المحلي أولاً ولا تعلق الصفحة
-                const { data: authData, error: authError } = await supabaseClient.auth.getSession();
-                if (authError) throw authError;
+                // الاستماع التلقائي لمزامنة الجلسة
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    if (session?.user) currentUserData = session.user;
+                });
 
-                const user = authData?.session?.user;
-                if (!user) {
+                const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+                if (authError || !user) {
                     clearTimeout(fallbackTimer);
                     forceHideLoader();
                     fillUIData(null, null);
@@ -276,14 +356,13 @@
 
                 currentUserData = user;
 
-                // استدعاء بيانات جدول profiles مع مطابقة الحقول التي تفضلت بذكرها
                 const { data: profileRow, error: dbError } = await supabaseClient
                     .from('profiles')
                     .select('id, full_name, student_phone, parent_phone, stage, student_code, email')
                     .eq('id', user.id)
-                    .single();
+                    .maybeSingle();
 
-                if (dbError && dbError.code !== 'PGRST116') throw dbError;
+                if (dbError) throw dbError;
 
                 clearTimeout(fallbackTimer);
                 forceHideLoader();
@@ -291,7 +370,7 @@
 
             } catch (err) {
                 clearTimeout(fallbackTimer);
-                console.error(err);
+                console.error("Booting Error:", err);
                 showFatalError(err.message || "فشل مزامنة البيانات، يرجى المحاولة لاحقاً.");
             }
         }
@@ -299,7 +378,6 @@
         // 4. تعبئة البيانات في الشاشة
         function fillUIData(profile, userObj) {
             const fullName = profile?.full_name || "طالب بدون اسم";
-            // استخدم الإيميل من جدول profiles إن وجد، أو من الـ Auth User
             const email = profile?.email || userObj?.email || "";
             const studentPhone = profile?.student_phone || "";
             const parentPhone = profile?.parent_phone || "";
@@ -308,20 +386,17 @@
             
             const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=eff6ff&color=2563eb&size=150&font-size=0.4&bold=true`;
 
-            // العناوين العلوية
             document.getElementById('display-name').innerText = fullName;
             document.getElementById('display-stage').querySelector('span').innerText = stage || "لم يتم تحديد مرحلة";
             document.getElementById('display-code').querySelector('span').innerText = studentCode ? `كود: ${studentCode}` : "لا يوجد كود";
             document.getElementById('profile-img').src = avatarUrl;
 
-            // الحقول
             document.getElementById('input-full-name').value = fullName;
             document.getElementById('input-email').value = email;
             document.getElementById('input-student-phone').value = studentPhone;
             document.getElementById('input-parent-phone').value = parentPhone;
             document.getElementById('input-student-code').value = studentCode;
             
-            // ضبط قائمة الاختيار
             const selectEl = document.getElementById('input-stage');
             if (selectEl) {
                 const optExists = Array.from(selectEl.options).some(o => o.value === stage);
@@ -329,17 +404,17 @@
             }
         }
 
-        // 5. التحكم بوضع التعديل
+        // 5. وضع التعديل للبيانات الأساسية
         function toggleEditMode(state) {
             const editableInputs = document.querySelectorAll('.form-input');
             const btnsBox = document.getElementById('action-buttons');
             const editBtnBox = document.getElementById('edit-btn-container');
 
             if (state) {
-                // حفظ النسخة الحالية للتراجع
                 originalInputs = {
                     name: document.getElementById('input-full-name').value,
-                    phone: document.getElementById('input-student-phone').value,
+                    studentPhone: document.getElementById('input-student-phone').value,
+                    parentPhone: document.getElementById('input-parent-phone').value,
                     stage: document.getElementById('input-stage').value
                 };
                 
@@ -361,53 +436,164 @@
 
         function cancelEdit() {
             document.getElementById('input-full-name').value = originalInputs.name;
-            document.getElementById('input-student-phone').value = originalInputs.phone;
+            document.getElementById('input-student-phone').value = originalInputs.studentPhone;
+            document.getElementById('input-parent-phone').value = originalInputs.parentPhone;
             document.getElementById('input-stage').value = originalInputs.stage;
             toggleEditMode(false);
         }
 
-        // 6. حفظ البيانات بقاعدة البيانات (متوافق 100% مع سياسة RLS المذكورة)
+        // 6. حفظ البيانات الأساسية (دالة التحديث المضمونة والمحمية)
         async function saveData() {
-            if (!supabaseClient || !currentUserData) return showToast("قم بتسجيل الدخول أولاً", "x-circle", "bg-red-600");
+            if (!supabaseClient) return showToast("تعذر الاتصال ببيانات المنصة", "x-circle", "bg-red-600");
 
             const btn = document.getElementById('save-btn');
             const btnText = document.getElementById('save-btn-text');
-            btn.disabled = true; btnText.innerText = "جاري الحفظ...";
-
-            const newName = document.getElementById('input-full-name').value.trim();
-            const newPhone = document.getElementById('input-student-phone').value.trim();
-            const newStage = document.getElementById('input-stage').value;
+            btn.disabled = true; 
+            btnText.innerText = "جاري الحفظ...";
 
             try {
-                // نحدث الحقول المسموحة فقط لتجاوز سياسة المنع RLS "منع الطلاب من تعديل كود الطالب ورق"
-                const { error } = await supabaseClient
+                // 1. التحقق من صحة جلسة المستخدم النشطة لتجديد التوكن
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+                if (userError || !user) {
+                    showToast("انتهت جلستك، يرجى إعادة تسجيل الدخول", "alert-circle", "bg-amber-600");
+                    return;
+                }
+
+                currentUserData = user;
+
+                // 2. تجميد وقراءة البيانات المراد تحديثها
+                const newName = document.getElementById('input-full-name').value.trim();
+                const newStudentPhone = document.getElementById('input-student-phone').value.trim();
+                const newParentPhone = document.getElementById('input-parent-phone').value.trim();
+                const newStage = document.getElementById('input-stage').value;
+
+                if (!newName) {
+                    showToast("يرجى كتابة اسم الطالب", "alert-circle", "bg-amber-600");
+                    return;
+                }
+
+                // 3. تجهيز كائن التعديل بدون إرسال حقل id لمنع تعارض RLS
+                const updatePayload = {
+                    full_name: newName,
+                    student_phone: newStudentPhone,
+                    parent_phone: newParentPhone,
+                    stage: newStage
+                };
+
+                // 4. تنفيذ التحديث المباشر وقصرها بشرط eq لـ id المستخدم
+                const { error: updateError } = await supabaseClient
                     .from('profiles')
-                    .update({
-                        full_name: newName,
-                        student_phone: newPhone,
-                        stage: newStage
-                    })
-                    .eq('id', currentUserData.id);
+                    .update(updatePayload)
+                    .eq('id', user.id);
 
-                if (error) throw error;
+                if (updateError) throw updateError;
 
-                // تحديث الواجهة فوراً
+                // 5. التحديث اللحظي للواجهة بعد النجاح
                 document.getElementById('display-name').innerText = newName;
                 document.getElementById('display-stage').querySelector('span').innerText = newStage || "بدون مرحلة";
                 document.getElementById('profile-img').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(newName)}&background=eff6ff&color=2563eb&size=150&font-size=0.4&bold=true`;
                 
                 toggleEditMode(false);
-                showToast("تم الحفظ بنجاح", "check-circle", "bg-green-600");
+                showToast("تم حفظ البيانات بنجاح", "check-circle", "bg-green-600");
 
             } catch (err) {
-                console.error("Save Error:", err);
-                showToast("خطأ أثناء الحفظ! راجع الاتصال", "alert-triangle", "bg-red-600");
+                console.error("Supabase Save Error Details:", err);
+                showToast("خطأ أثناء الحفظ! تأكد من صلاحيات قاعدة البيانات.", "alert-triangle", "bg-red-600");
             } finally {
-                btn.disabled = false; btnText.innerText = "حفظ التغييرات";
+                btn.disabled = false; 
+                btnText.innerText = "حفظ التغييرات";
             }
         }
 
-        // 7. عرض الإشعارات
+        // ==========================================
+        // 7. وظائف تغيير كلمة المرور عبر النافذة (Modal)
+        // ==========================================
+
+        const modalEl = document.getElementById('password-modal');
+        const step1 = document.getElementById('modal-step-1');
+        const step2 = document.getElementById('modal-step-2');
+
+        function openPasswordModal() {
+            document.getElementById('modal-old-password').value = '';
+            document.getElementById('modal-new-password').value = '';
+            document.getElementById('modal-confirm-password').value = '';
+            
+            step1.classList.remove('hidden');
+            step2.classList.add('hidden');
+
+            modalEl.classList.add('modal-enter');
+        }
+
+        function closePasswordModal() {
+            modalEl.classList.remove('modal-enter');
+        }
+
+        async function verifyOldPassword() {
+            if (!supabaseClient) return showToast("تعذر الوصول لشبكة الخوادم", "x-circle", "bg-red-600");
+
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return showToast("قم بتسجيل الدخول أولاً", "x-circle", "bg-red-600");
+
+            const oldPassword = document.getElementById('modal-old-password').value;
+            if (!oldPassword) {
+                return showToast("يرجى إدخال كلمة المرور الحالية", "alert-circle", "bg-amber-600");
+            }
+
+            const btn = document.getElementById('btn-verify-old');
+            const btnText = document.getElementById('text-verify-old');
+            btn.disabled = true; 
+            btnText.innerText = "جاري التحقق...";
+
+            try {
+                const { error } = await supabaseClient.auth.signInWithPassword({
+                    email: user.email,
+                    password: oldPassword
+                });
+
+                if (error) throw error;
+
+                step1.classList.add('hidden');
+                step2.classList.remove('hidden');
+                renderIcons(); 
+                
+            } catch (err) {
+                showToast("كلمة المرور الحالية غير صحيحة!", "x-octagon", "bg-red-600");
+            } finally {
+                btn.disabled = false; 
+                btnText.innerText = "التحقق والمتابعة";
+            }
+        }
+
+        async function updatePassword() {
+            const newPassword = document.getElementById('modal-new-password').value;
+            const confirmPassword = document.getElementById('modal-confirm-password').value;
+
+            if (!newPassword || !confirmPassword) return showToast("يرجى إدخال كلمة المرور في الحقلين", "alert-circle", "bg-amber-600");
+            if (newPassword !== confirmPassword) return showToast("كلمتا المرور غير متطابقتين!", "x-octagon", "bg-red-600");
+            if (newPassword.length < 6) return showToast("يجب أن تتكون من 6 أحرف على الأقل", "shield-alert", "bg-amber-600");
+
+            const btn = document.getElementById('btn-change-password');
+            const btnText = document.getElementById('text-change-password');
+            btn.disabled = true; 
+            btnText.innerText = "جاري الحفظ...";
+
+            try {
+                const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+
+                showToast("تم تغيير كلمة المرور بنجاح!", "check-circle", "bg-green-600");
+                closePasswordModal();
+
+            } catch (err) {
+                showToast(err.message || "حدث خطأ أثناء تغيير كلمة المرور", "alert-triangle", "bg-red-600");
+            } finally {
+                btn.disabled = false; 
+                btnText.innerText = "حفظ كلمة المرور الجديدة";
+            }
+        }
+
+        // 8. عرض الإشعارات
         let toastTimer;
         function showToast(msg, icon, bgClass) {
             const t = document.getElementById('toast');
@@ -421,7 +607,7 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
         }
 
-        // إطلاق السكربت عند انتهاء تحميل المتصفح
+        // إطلاق البرنامج
         window.addEventListener('load', bootApplication);
     </script>
 </body>
