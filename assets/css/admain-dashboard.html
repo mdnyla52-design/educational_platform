@@ -145,6 +145,92 @@ button, input, select, textarea {
     </div>
 </div>
 
+<!-- ============================================== -->
+<!-- NEW: النافذة المنبثقة لتعديل الكورس ومحتوياته -->
+<!-- ============================================== -->
+<div id="edit-course-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
+    <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh] my-auto">
+        <div class="bg-slate-900 text-white p-5 flex justify-between items-center border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-lg font-black">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-white">تعديل بيانات الكورس والأجزاء</h3>
+                    <p class="text-xs text-blue-400 font-bold mt-0.5">يمكنك تعديل التفاصيل أو روابط الفيديوهات</p>
+                </div>
+            </div>
+            <button onclick="closeEditCourseModal()" class="w-8 h-8 bg-slate-800 hover:bg-red-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="p-5 sm:p-6 overflow-y-auto bg-slate-50/50 flex-grow space-y-6">
+            <!-- فورم تعديل بيانات الكورس الأساسية -->
+            <form id="editCourseForm" class="space-y-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm" onsubmit="handleEditCourse(event)">
+                <h4 class="text-sm font-black text-slate-900 border-b border-gray-100 pb-2 mb-4"><i class="fa-solid fa-sliders text-blue-600 ml-1"></i> البيانات الأساسية للكورس</h4>
+                <input type="hidden" id="editCourseId">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5 sm:col-span-2">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">اسم الكورس / المحاضرة</label>
+                        <input type="text" id="editTitleInput" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    </div>
+
+                    <div class="space-y-1.5 sm:col-span-2">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">رابط صورة الكورس (Image URL)</label>
+                        <input type="url" id="editImageUrlInput" dir="ltr" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-left">
+                    </div>
+
+                    <div class="space-y-1.5 sm:col-span-2">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">وصف شامل</label>
+                        <textarea id="editDescInput" rows="2" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"></textarea>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">سعر الكورس</label>
+                        <input type="number" id="editPriceInput" required min="0" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">الصف الدراسي</label>
+                        <select id="editStageInput" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer">
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5 sm:col-span-2">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">الترم الدراسي</label>
+                        <select id="editTermInput" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer">
+                            <option value="الترم الأول">الترم الأول</option>
+                            <option value="الترم الثاني">الترم الثاني</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" id="editCourseSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ تعديلات الكورس
+                    </button>
+                </div>
+            </form>
+
+            <!-- قسم تعديل الأجزاء (المحاضرات) التابعة للكورس -->
+            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                <h4 class="text-sm font-black text-emerald-400 border-b border-slate-700 pb-2"><i class="fa-solid fa-list-ol ml-1"></i> إدارة وتعديل أجزاء المحاضرة</h4>
+                <div id="edit-lectures-container" class="space-y-3">
+                    <div class="text-center p-4 text-gray-400 font-bold text-xs"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الأجزاء...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- النافذة المنبثقة لتقرير الطالب الشامل -->
 <div id="student-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
     <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] my-auto">
@@ -323,6 +409,9 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 <div class="space-y-1.5">
 <label class="text-xs font-bold text-gray-700 block pr-1">الصف الدراسي</label>
 <select id="stageInput" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer">
+<option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+<option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+<option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
 <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
 <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
 <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
@@ -370,7 +459,7 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 </div>
 </div>
 <div class="overflow-x-auto w-full rounded-2xl border border-gray-100">
-<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[600px]">
+<table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[700px]">
 <thead class="bg-gray-50 text-slate-700">
 <tr>
 <th class="p-4 px-5 font-black">اسم الكورس والصورة</th>
@@ -1053,7 +1142,7 @@ function updateImagePreview(url) {
 }
 
 // ==========================================
-// 1. بناء وإدارة أجزاء المحاضرات رفع الكورسات
+// 1. بناء وإدارة أجزاء المحاضرات ورفع الأسئلة
 // ==========================================
 function addNewLecturePart() {
     const container = document.getElementById('lecture-parts-container');
@@ -1065,6 +1154,8 @@ function addNewLecturePart() {
     const div = document.createElement('div');
     div.id = partId;
     div.className = "bg-slate-800/90 border border-slate-700 p-4 sm:p-5 rounded-2xl space-y-4 animate-fade-in relative";
+    
+    // تصميم الجزء بما يتضمن بناء الأسئلة
     div.innerHTML = `
         <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
             <span class="text-xs font-black text-emerald-400 flex items-center gap-2">
@@ -1102,6 +1193,13 @@ function addNewLecturePart() {
                 <input type="text" class="part-exam-title w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none" placeholder="عنوان الامتحان (مثال: اختبار الجزء الأول)">
                 <input type="number" class="part-exam-duration w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none" placeholder="مدة الامتحان بالدقائق (مثال: 15)">
             </div>
+            
+            <!-- حاوية الأسئلة للامتحان -->
+            <div class="questions-container space-y-3 mt-3"></div>
+            
+            <button type="button" onclick="addQuestionToPart(this)" class="mt-2 text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-2.5 rounded-lg hover:bg-amber-500/20 transition-all flex items-center gap-1.5 w-full justify-center">
+                <i class="fa-solid fa-plus"></i> إضافة سؤال جديد لهذا الامتحان
+            </button>
         </div>
     `;
     container.appendChild(div);
@@ -1111,6 +1209,44 @@ function removeLecturePart(partId) {
     lectureParts = lectureParts.filter(p => p.id !== partId);
     const el = document.getElementById(partId);
     if(el) el.remove();
+}
+
+function addQuestionToPart(btnElement) {
+    const container = btnElement.previousElementSibling; 
+    const qId = 'q-' + Date.now() + '-' + Math.random().toString(36).substr(2,5);
+    
+    const questionDiv = document.createElement('div');
+    questionDiv.className = "question-block bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3 animate-fade-in";
+    questionDiv.innerHTML = `
+        <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+            <span class="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-circle-question"></i> إعداد السؤال
+            </span>
+            <button type="button" onclick="this.closest('.question-block').remove()" class="text-red-400 hover:text-red-300 text-[10px] flex items-center gap-1 bg-red-500/10 px-2 py-1 rounded-lg">
+                <i class="fa-solid fa-trash"></i> حذف السؤال
+            </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <div class="sm:col-span-3 space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 block">نص السؤال</label>
+                <input type="text" class="q-text w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none" placeholder="اكتب سؤالك هنا..." required>
+            </div>
+            <div class="sm:col-span-1 space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 block">درجة السؤال</label>
+                <input type="number" class="q-points w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none" placeholder="النقاط" value="1" min="1" required>
+            </div>
+        </div>
+        <div class="space-y-2 mt-2">
+            <span class="text-[10px] text-amber-300 font-bold block bg-amber-500/10 px-2 py-1 rounded w-fit">حدد الإجابة الصحيحة عبر النقر على الدائرة:</span>
+            ${[1, 2, 3, 4].map(i => `
+            <div class="flex items-center gap-2 opt-row bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+                <input type="radio" name="correct_${qId}" class="opt-correct w-4 h-4 text-emerald-500 bg-slate-900 border-slate-700 focus:ring-emerald-500 cursor-pointer" ${i === 1 ? 'checked' : ''}>
+                <input type="text" class="opt-text w-full px-3 py-1.5 bg-transparent text-[11px] text-white placeholder-slate-500 outline-none" placeholder="الخيار رقم ${i}" required>
+            </div>
+            `).join('')}
+        </div>
+    `;
+    container.appendChild(questionDiv);
 }
 
 async function handleCourseUpload(e) {
@@ -1146,8 +1282,9 @@ async function handleCourseUpload(e) {
         if (courseErr) throw courseErr;
         const courseId = courseData.id;
 
-        // 2. إدخال الأجزاء والمحاضرات المتتابعة
-        const partElements = document.querySelectorAll('#lecture-parts-container > div');
+        // 2. إدخال الأجزاء والمحاضرات المتتابعة مع الامتحانات والأسئلة
+        const partElements = document.querySelectorAll('#lecture-parts-container > div.bg-slate-800\\/90');
+        
         for (let i = 0; i < partElements.length; i++) {
             const el = partElements[i];
             const partTitle = el.querySelector('.part-title').value.trim();
@@ -1158,6 +1295,7 @@ async function handleCourseUpload(e) {
 
             let prereqExamId = null;
 
+            // إذا كان هناك امتحان لهذا الجزء
             if (examTitle) {
                 const { data: examData, error: examErr } = await _supabase
                     .from('exams')
@@ -1172,9 +1310,53 @@ async function handleCourseUpload(e) {
                     .select()
                     .single();
 
-                if (!examErr && examData) prereqExamId = examData.id;
+                if (!examErr && examData) {
+                    prereqExamId = examData.id;
+
+                    // رفع الأسئلة الخاصة بهذا الامتحان
+                    const questionBlocks = el.querySelectorAll('.question-block');
+                    for (let qBlock of questionBlocks) {
+                        const qText = qBlock.querySelector('.q-text').value.trim();
+                        const qPoints = parseInt(qBlock.querySelector('.q-points').value) || 1;
+
+                        if (qText) {
+                            const { data: qData, error: qErr } = await _supabase
+                                .from('questions')
+                                .insert({
+                                    exam_id: prereqExamId,
+                                    question_text: qText,
+                                    points: qPoints,
+                                    created_at: new Date().toISOString()
+                                })
+                                .select()
+                                .single();
+
+                            if (qData && !qErr) {
+                                // رفع خيارات الإجابة للسؤال الحالي
+                                const optRows = qBlock.querySelectorAll('.opt-row');
+                                const optionsToInsert = [];
+                                optRows.forEach(row => {
+                                    const optText = row.querySelector('.opt-text').value.trim();
+                                    const isCorrect = row.querySelector('.opt-correct').checked;
+                                    if (optText) {
+                                        optionsToInsert.push({
+                                            question_id: qData.id,
+                                            option_text: optText,
+                                            is_correct: isCorrect
+                                        });
+                                    }
+                                });
+
+                                if (optionsToInsert.length > 0) {
+                                    await _supabase.from('options').insert(optionsToInsert);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
+            // أخيراً، رفع المحاضرة وربطها بالامتحان إن وُجد
             await _supabase.from('lectures').insert({
                 course_id: courseId,
                 title: partTitle,
@@ -1187,7 +1369,7 @@ async function handleCourseUpload(e) {
             });
         }
 
-        showNotification('تم إضافة ونشر الكورس والأجزاء والامتحانات بنجاح! 🎉', 'success');
+        showNotification('تم إضافة ونشر الكورس، وتكوين الامتحانات والأسئلة بنجاح! 🎉', 'success');
         document.getElementById('courseForm').reset();
         document.getElementById('lecture-parts-container').innerHTML = '';
         lectureParts = [];
@@ -1240,6 +1422,10 @@ async function fetchCoursesList() {
                 <td class="p-4 text-center font-black text-slate-900">${c.price > 0 ? c.price + ' ج.م' : '<span class="text-emerald-600">مجاني</span>'}</td>
                 <td class="p-4 text-center">
                     <div class="flex items-center justify-center gap-2">
+                        <!-- زر تعديل الكورس المضاف حديثاً -->
+                        <button onclick="openEditCourseModal('${c.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-blue-200 active:scale-95">
+                            <i class="fa-solid fa-pen-to-square"></i> تعديل
+                        </button>
                         <button onclick="toggleCourseVisibility('${c.id}', false)" class="bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-amber-200 active:scale-95">
                             <i class="fa-solid fa-box-archive"></i> أرشفة
                         </button>
@@ -1256,6 +1442,141 @@ async function fetchCoursesList() {
         table.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500 font-bold">حدث خطأ أثناء تحميل الكورسات.</td></tr>`;
     }
 }
+
+// ==========================================
+// وظائف التعديل المضافة حديثاً (تعديل الكورس والأجزاء)
+// ==========================================
+async function openEditCourseModal(courseId) {
+    const modal = document.getElementById('edit-course-modal');
+    modal.classList.remove('hidden');
+
+    try {
+        // 1. جلب بيانات الكورس الأساسية
+        const { data: course, error } = await _supabase.from('courses').select('*').eq('id', courseId).single();
+        if (error) throw error;
+        
+        if(course) {
+            document.getElementById('editCourseId').value = course.id;
+            document.getElementById('editTitleInput').value = course.title || '';
+            document.getElementById('editImageUrlInput').value = course.image_url || '';
+            document.getElementById('editDescInput').value = course.description || '';
+            document.getElementById('editPriceInput').value = course.price || 0;
+            document.getElementById('editStageInput').value = course.stage || '';
+            document.getElementById('editTermInput').value = course.term || '';
+        }
+
+        // 2. جلب وتحديث واجهة "تعديل أجزاء المحاضرة"
+        await loadCourseLecturesForEdit(courseId);
+
+    } catch (e) {
+        showNotification('خطأ في جلب بيانات الكورس: ' + e.message, 'error');
+        closeEditCourseModal();
+    }
+}
+
+function closeEditCourseModal() {
+    document.getElementById('edit-course-modal').classList.add('hidden');
+}
+
+async function handleEditCourse(e) {
+    e.preventDefault();
+    const btn = document.getElementById('editCourseSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> جاري الحفظ...`;
+
+    const id = document.getElementById('editCourseId').value;
+    const title = document.getElementById('editTitleInput').value.trim();
+    const imageUrl = document.getElementById('editImageUrlInput').value.trim();
+    const desc = document.getElementById('editDescInput').value.trim();
+    const price = document.getElementById('editPriceInput').value;
+    const stage = document.getElementById('editStageInput').value;
+    const term = document.getElementById('editTermInput').value;
+
+    try {
+        const { error } = await _supabase.from('courses').update({
+            title: title,
+            image_url: imageUrl || null,
+            description: desc,
+            price: parseFloat(price),
+            stage: stage,
+            term: term
+        }).eq('id', id);
+
+        if (error) throw error;
+
+        showNotification('تم تحديث بيانات الكورس الأساسية بنجاح 📝', 'success');
+        fetchCoursesList(); // تحديث الجدول الخارجي
+    } catch (err) {
+        showNotification('فشل تحديث الكورس: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> حفظ تعديلات الكورس`;
+    }
+}
+
+// دالة جلب الأجزاء وعرضها للتعديل السريع
+async function loadCourseLecturesForEdit(courseId) {
+    const container = document.getElementById('edit-lectures-container');
+    container.innerHTML = `<div class="text-center p-4 text-gray-400 font-bold text-xs"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الأجزاء...</div>`;
+
+    try {
+        const { data: lectures, error } = await _supabase.from('lectures').select('*').eq('course_id', courseId).order('sort_order', { ascending: true });
+        if (error) throw error;
+
+        if (!lectures || lectures.length === 0) {
+            container.innerHTML = `<div class="text-center p-4 text-gray-400 font-bold text-xs">لا توجد أجزاء (فيديوهات) تابعة لهذا الكورس.</div>`;
+            return;
+        }
+
+        container.innerHTML = lectures.map((l, index) => `
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700/50 space-y-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="w-5 h-5 bg-emerald-500/20 text-emerald-400 flex items-center justify-center rounded text-[10px] font-black">${index + 1}</span>
+                    <span class="text-xs font-bold text-gray-300">تعديل بيانات الجزء</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-gray-400 font-bold block">العنوان</label>
+                        <input type="text" id="edit-lec-title-${l.id}" value="${l.title}" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-gray-400 font-bold block">رابط الفيديو</label>
+                        <input type="url" id="edit-lec-video-${l.id}" value="${l.video_url || ''}" dir="ltr" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 font-mono text-left">
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end">
+                    <button onclick="saveLectureEdit('${l.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> حفظ تعديل الجزء
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (e) {
+        container.innerHTML = `<div class="text-center p-4 text-red-500 font-bold text-xs">خطأ في تحميل الأجزاء.</div>`;
+    }
+}
+
+async function saveLectureEdit(lectureId) {
+    const title = document.getElementById(`edit-lec-title-${lectureId}`).value.trim();
+    const video = document.getElementById(`edit-lec-video-${lectureId}`).value.trim();
+
+    try {
+        const { error } = await _supabase.from('lectures').update({
+            title: title,
+            video_url: video
+        }).eq('id', lectureId);
+
+        if (error) throw error;
+        showNotification('تم تحديث بيانات الجزء بنجاح! ✔️', 'success');
+    } catch (e) {
+        showNotification('حدث خطأ أثناء حفظ الجزء: ' + e.message, 'error');
+    }
+}
+
+// ==========================================
+// باقي الوظائف (الأرشفة، الحذف، الخ)
+// ==========================================
 
 async function toggleCourseVisibility(courseId, status) {
     try {
@@ -1293,9 +1614,6 @@ async function deleteCourse(courseId) {
     }
 }
 
-// ==========================================
-// نافذة تعطيل / تفعيل كورس
-// ==========================================
 async function openDisableCourseModal() {
     const modal = document.getElementById('disable-course-modal');
     modal.classList.remove('hidden');
@@ -1419,9 +1737,6 @@ async function executeDisableCourseAction(status) {
     }
 }
 
-// ==========================================
-// 2. إدارة طلبات الطلاب والاشتراكات والتحكم (تعديل + حذف)
-// ==========================================
 async function loadPendingSubscriptions() {
     const tbody = document.getElementById('pending-subscriptions-table');
     tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري جلب الطلبات المعلقة...</td></tr>`;
@@ -1604,7 +1919,6 @@ async function openStudentModal(studentId) {
         const stageOptions = standardStages.map(s => `<option value="${s}" ${currentStage === s ? 'selected' : ''}>${s}</option>`).join('');
 
         content.innerHTML = `
-            <!-- قسم تعديل بيانات الطالب والحذف (تمت إضافته بناءً على الطلب) -->
             <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-4 shadow-sm mb-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-gray-100 pb-3">
                     <h4 class="text-xs sm:text-sm font-black text-slate-900"><i class="fa-solid fa-user-pen text-emerald-600 ml-1"></i> إدارة بيانات الطالب والتحكم</h4>
@@ -1705,7 +2019,6 @@ function closeStudentModal() {
     document.getElementById('student-modal').classList.add('hidden');
 }
 
-// دالة تحديث بيانات الطالب التي تمت إضافتها
 async function updateStudentAdmin(studentId) {
     const newName = document.getElementById('admin-edit-name').value.trim();
     const newCode = document.getElementById('admin-edit-code').value.trim();
@@ -1730,13 +2043,12 @@ async function updateStudentAdmin(studentId) {
         document.getElementById('modal-student-name').innerText = newName;
         document.getElementById('modal-student-subtitle').innerText = `كود الطالب: ${newCode || '---'} | هاتف: ${newPhone || '---'} | ولي الأمر: ${newParent || '---'}`;
         
-        loadAllStudents(); // تحديث الجدول في الخلفية
+        loadAllStudents();
     } catch (err) {
         showNotification('خطأ أثناء التحديث: ' + err.message, 'error');
     }
 }
 
-// دالة حذف الطالب نهائياً التي تمت إضافتها
 async function deleteStudentAdmin(studentId) {
     const res = await Swal.fire({
         title: 'هل أنت متأكد من الحذف؟',
@@ -1764,9 +2076,6 @@ async function deleteStudentAdmin(studentId) {
     }
 }
 
-// ==========================================
-// 3. أكواد كروت السناتر (Coupons)
-// ==========================================
 async function populateCouponCourseSelect() {
     const select = document.getElementById('couponCourseSelect');
     select.innerHTML = '<option value="">-- اختر الكورس المرتبط --</option>';
@@ -1876,9 +2185,6 @@ async function exportCouponsToTXT() {
     }
 }
 
-// ==========================================
-// 4. نظام إرسال التنبيهات
-// ==========================================
 function toggleNotificationTarget() {
     const target = document.querySelector('input[name="target_audience"]:checked').value;
     const box = document.getElementById('specific-student-box');
@@ -2022,15 +2328,11 @@ async function deleteNotification(id) {
     }
 }
 
-// ==========================================
-// 5. إدارة مسؤولين المنصة (Admins)
-// ==========================================
 async function fetchAdminsList() {
     const tbody = document.getElementById('admins-list-table');
     tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الأدمن...</td></tr>`;
 
     try {
-        // 1. جلب أرقام (IDs) الأدمنز من جدول admins
         const { data: adminsData, error: adminsError } = await _supabase
             .from('admins')
             .select('id');
@@ -2042,10 +2344,8 @@ async function fetchAdminsList() {
             return;
         }
 
-        // استخراج قائمة الـ IDs للبحث بها في جدول profiles
         const adminIds = adminsData.map(admin => admin.id);
 
-        // 2. جلب بيانات الأدمنز من جدول profiles بناءً على الـ IDs
         const { data: profilesData, error: profilesError } = await _supabase
             .from('profiles')
             .select('id, full_name, email, student_code, student_phone')
@@ -2053,16 +2353,14 @@ async function fetchAdminsList() {
 
         if (profilesError) throw profilesError;
 
-        // 3. دمج البيانات لتتناسب مع الكود القديم وعرضها بنفس الطريقة
         const adminRows = adminsData.map(admin => {
             const profile = profilesData.find(p => p.id === admin.id);
             return {
                 id: admin.id,
-                profiles: profile || {} // دمج البيانات لتعمل مع HTML القديم
+                profiles: profile || {}
             };
         });
 
-        // طباعة البيانات في الجدول
         tbody.innerHTML = adminRows.map(a => `
             <tr class="hover:bg-gray-50 transition-colors">
                 <td class="p-4 px-5 font-black text-slate-900 flex items-center gap-2">
@@ -2156,9 +2454,6 @@ async function removeAdmin(userId) {
     }
 }
 
-// ==========================================
-// 6. مركز الأرشيف الأكاديمي الشامل
-// ==========================================
 async function loadArchivePanelData() {
     fetchHonorRollArchives();
     fetchArchivedCourses();
@@ -2325,9 +2620,6 @@ async function fetchProcessedSubscriptionsArchive() {
     }
 }
 
-// ==========================================
-// 7. نظام البث المباشر (OBS + YouTube Live) الشات اللحظي
-// ==========================================
 function extractYouTubeId(url) {
     if (!url) return '';
     url = url.trim();
@@ -2352,8 +2644,6 @@ async function loadLiveRoomData() {
 
             isLiveActive = (room.status === 'live');
             updateLiveUIState(room.channel_name);
-
-            // تفعيل الشات المباشر اللحظي
             initLiveChat(room.id);
         } else {
             const { data: newRoom } = await _supabase.from('live_rooms').insert({
@@ -2470,7 +2760,6 @@ async function initLiveChat(roomId) {
     chatContainer.innerHTML = `<div class="text-center text-xs text-gray-400 font-bold my-4 bg-white py-2 rounded-full shadow-sm border border-gray-100 w-3/4 mx-auto">جاري تحضير الشات والمحادثات المباشرة...</div>`;
 
     try {
-        // جلب الرسائل السابقة
         const { data: messages, error } = await _supabase
             .from('live_messages')
             .select('*')
@@ -2484,12 +2773,10 @@ async function initLiveChat(roomId) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // إلغاء أي قناة سابقة
         if (liveChatSubscription) {
             _supabase.removeChannel(liveChatSubscription);
         }
 
-        // الاشتراك اللحظي Realtime في إرسال الرسائل
         liveChatSubscription = _supabase
             .channel(`live_messages:${roomId}`)
             .on('postgres_changes', {
