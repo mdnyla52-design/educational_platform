@@ -146,7 +146,7 @@ button, input, select, textarea {
 </div>
 
 <!-- ============================================== -->
-<!-- NEW: النافذة المنبثقة لتعديل الكورس ومحتوياته -->
+<!-- النافذة المنبثقة لتعديل الكورس ومحتوياته -->
 <!-- ============================================== -->
 <div id="edit-course-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
     <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh] my-auto">
@@ -157,7 +157,7 @@ button, input, select, textarea {
                 </div>
                 <div>
                     <h3 class="text-base font-black text-white">تعديل بيانات الكورس والأجزاء</h3>
-                    <p class="text-xs text-blue-400 font-bold mt-0.5">يمكنك تعديل التفاصيل أو روابط الفيديوهات</p>
+                    <p class="text-xs text-blue-400 font-bold mt-0.5">يمكنك تعديل التفاصيل أو روابط الفيديوهات والامتحانات</p>
                 </div>
             </div>
             <button onclick="closeEditCourseModal()" class="w-8 h-8 bg-slate-800 hover:bg-red-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all text-xs">
@@ -178,8 +178,9 @@ button, input, select, textarea {
                     </div>
 
                     <div class="space-y-1.5 sm:col-span-2">
-                        <label class="text-xs font-bold text-gray-700 block pr-1">رابط صورة الكورس (Image URL)</label>
-                        <input type="url" id="editImageUrlInput" dir="ltr" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-left">
+                        <label class="text-xs font-bold text-gray-700 block pr-1">تغيير صورة الغلاف (اختياري)</label>
+                        <input type="file" id="editImageFileInput" accept="image/*" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-500/10 file:text-blue-600 hover:file:bg-blue-500/20 transition-all">
+                        <input type="hidden" id="existingImageUrl">
                     </div>
 
                     <div class="space-y-1.5 sm:col-span-2">
@@ -222,7 +223,7 @@ button, input, select, textarea {
 
             <!-- قسم تعديل الأجزاء (المحاضرات) التابعة للكورس -->
             <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-sm space-y-4">
-                <h4 class="text-sm font-black text-emerald-400 border-b border-slate-700 pb-2"><i class="fa-solid fa-list-ol ml-1"></i> إدارة وتعديل أجزاء المحاضرة</h4>
+                <h4 class="text-sm font-black text-emerald-400 border-b border-slate-700 pb-2"><i class="fa-solid fa-list-ol ml-1"></i> إدارة وتعديل أجزاء المحاضرة والامتحانات</h4>
                 <div id="edit-lectures-container" class="space-y-3">
                     <div class="text-center p-4 text-gray-400 font-bold text-xs"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الأجزاء...</div>
                 </div>
@@ -267,7 +268,7 @@ button, input, select, textarea {
 </div>
 <div>
 <span class="text-sm sm:text-base font-black block leading-none tracking-wide">لوحة تحكم المنصة</span>
-<span class="text-[10px] sm:text-xs text-emerald-400 font-bold mt-1 block">نظام إدارة المحتوى والمسؤولين والبث V3.5</span>
+<span class="text-[10px] sm:text-xs text-emerald-400 font-bold mt-1 block">نظام إدارة المحتوى والمسؤولين والبث V4.0</span>
 </div>
 </div>
 <div class="flex items-center gap-4">
@@ -383,10 +384,10 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 </div>
 
 <div class="space-y-1.5 sm:col-span-2">
-<label class="text-xs font-bold text-gray-700 block pr-1">🖼️ رابط صورة الكورس (Image URL)</label>
+<label class="text-xs font-bold text-gray-700 block pr-1">🖼️ صورة غلاف الكورس (رفع من الجهاز)</label>
 <div class="flex flex-col sm:flex-row gap-3 items-center">
-<input type="url" id="imageUrlInput" placeholder="https://example.com/course-banner.jpg" dir="ltr" oninput="updateImagePreview(this.value)"
-class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-left">
+<input type="file" id="imageFileInput" accept="image/*" onchange="updateFileImagePreview(this)"
+class="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-500/10 file:text-emerald-600 hover:file:bg-emerald-500/20">
 <div class="w-full sm:w-24 h-16 rounded-xl border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner relative">
 <img id="courseImagePreview" src="" alt="معاينة" class="w-full h-full object-cover hidden">
 <span id="courseImagePlaceholder" class="text-[10px] text-gray-400 font-bold flex flex-col items-center gap-1">
@@ -1122,19 +1123,40 @@ async function loadDashboardStats() {
 }
 
 // ==========================================
-// معاينة صورة الكورس الحية
+// منظومة الرفع السحابي (Supabase Storage) للملفات والصور
 // ==========================================
-function updateImagePreview(url) {
+async function uploadToSupabase(file, folder) {
+    if (!file) return null;
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+    
+    // ملاحظة: تأكد من إنشاء Bucket باسم platform_files داخل Supabase Storage وجعله Public
+    const { data, error } = await _supabase.storage.from('platform_files').upload(filePath, file);
+    
+    if (error) {
+        console.error('Upload Error:', error);
+        throw new Error('فشل الرفع. تأكد من إنشاء Storage Bucket باسم (platform_files) في Supabase وجعله عام (Public)');
+    }
+    
+    const { data: publicUrlData } = _supabase.storage.from('platform_files').getPublicUrl(filePath);
+    return publicUrlData.publicUrl;
+}
+
+// ==========================================
+// معاينة صورة الكورس الحية عند رفعها
+// ==========================================
+function updateFileImagePreview(input) {
     const img = document.getElementById('courseImagePreview');
     const placeholder = document.getElementById('courseImagePlaceholder');
-    if (url && url.trim().length > 5) {
-        img.src = url;
-        img.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        img.onerror = () => {
-            img.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-        };
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            img.src = e.target.result;
+            img.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
     } else {
         img.classList.add('hidden');
         placeholder.classList.remove('hidden');
@@ -1155,7 +1177,7 @@ function addNewLecturePart() {
     div.id = partId;
     div.className = "bg-slate-800/90 border border-slate-700 p-4 sm:p-5 rounded-2xl space-y-4 animate-fade-in relative";
     
-    // تصميم الجزء بما يتضمن بناء الأسئلة
+    // تم استبدال رابط الـ PDF بزر رفع ملف (File Input)
     div.innerHTML = `
         <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
             <span class="text-xs font-black text-emerald-400 flex items-center gap-2">
@@ -1178,8 +1200,8 @@ function addNewLecturePart() {
                 <input type="url" class="part-video-url w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-emerald-500 focus:outline-none" placeholder="https://..." dir="ltr" required>
             </div>
             <div class="space-y-1 sm:col-span-2">
-                <label class="text-[11px] font-bold text-slate-300 block">رابط ملف الـ PDF (اختياري)</label>
-                <input type="url" class="part-pdf-url w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-emerald-500 focus:outline-none" placeholder="https://..." dir="ltr">
+                <label class="text-[11px] font-bold text-slate-300 block">ملف الـ PDF (اختياري)</label>
+                <input type="file" class="part-pdf-file w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-emerald-500 focus:outline-none file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-emerald-500/10 file:text-emerald-500 hover:file:bg-emerald-500/20 transition-all" accept="application/pdf">
             </div>
         </div>
 
@@ -1217,6 +1239,8 @@ function addQuestionToPart(btnElement) {
     
     const questionDiv = document.createElement('div');
     questionDiv.className = "question-block bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3 animate-fade-in";
+    
+    // تم التعديل: الخيارات رقم 1 و 2 إجبارية فقط، و 3 و 4 اختيارية لتوفير المرونة!
     questionDiv.innerHTML = `
         <div class="flex justify-between items-center border-b border-slate-700 pb-2">
             <span class="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
@@ -1237,11 +1261,11 @@ function addQuestionToPart(btnElement) {
             </div>
         </div>
         <div class="space-y-2 mt-2">
-            <span class="text-[10px] text-amber-300 font-bold block bg-amber-500/10 px-2 py-1 rounded w-fit">حدد الإجابة الصحيحة عبر النقر على الدائرة:</span>
+            <span class="text-[10px] text-amber-300 font-bold block bg-amber-500/10 px-2 py-1 rounded w-fit">حدد الإجابة الصحيحة عبر النقر على الدائرة: (يكفي إضافة خيارين فقط)</span>
             ${[1, 2, 3, 4].map(i => `
             <div class="flex items-center gap-2 opt-row bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
                 <input type="radio" name="correct_${qId}" class="opt-correct w-4 h-4 text-emerald-500 bg-slate-900 border-slate-700 focus:ring-emerald-500 cursor-pointer" ${i === 1 ? 'checked' : ''}>
-                <input type="text" class="opt-text w-full px-3 py-1.5 bg-transparent text-[11px] text-white placeholder-slate-500 outline-none" placeholder="الخيار رقم ${i}" required>
+                <input type="text" class="opt-text w-full px-3 py-1.5 bg-transparent text-[11px] text-white placeholder-slate-500 outline-none" placeholder="الخيار رقم ${i} ${i > 2 ? '(اختياري)' : ''}" ${i <= 2 ? 'required' : ''}>
             </div>
             `).join('')}
         </div>
@@ -1253,15 +1277,21 @@ async function handleCourseUpload(e) {
     e.preventDefault();
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> جاري حفظ ونشر الكورس بالكامل...`;
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> جاري رفع الملفات ونشر الكورس بالكامل...`;
 
     try {
         const title = document.getElementById('titleInput').value.trim();
-        const imageUrl = document.getElementById('imageUrlInput').value.trim();
         const description = document.getElementById('descInput').value.trim();
         const price = parseFloat(document.getElementById('priceInput').value);
         const stage = document.getElementById('stageInput').value;
         const term = document.getElementById('termInput').value;
+
+        // رفع صورة الغلاف إن وجدت
+        const imageFile = document.getElementById('imageFileInput').files[0];
+        let imageUrl = null;
+        if (imageFile) {
+            imageUrl = await uploadToSupabase(imageFile, 'courses');
+        }
 
         // 1. إضافة الكورس بالجدول الرئيسي
         const { data: courseData, error: courseErr } = await _supabase
@@ -1272,7 +1302,7 @@ async function handleCourseUpload(e) {
                 price,
                 stage,
                 term,
-                image_url: imageUrl || null,
+                image_url: imageUrl,
                 is_visible: true,
                 created_at: new Date().toISOString()
             })
@@ -1289,7 +1319,15 @@ async function handleCourseUpload(e) {
             const el = partElements[i];
             const partTitle = el.querySelector('.part-title').value.trim();
             const partVideo = el.querySelector('.part-video-url').value.trim();
-            const partPdf = el.querySelector('.part-pdf-url').value.trim();
+            
+            // معالجة ورفع ملف الـ PDF إن وجد
+            const pdfInput = el.querySelector('.part-pdf-file');
+            const pdfFile = pdfInput.files.length > 0 ? pdfInput.files[0] : null;
+            let partPdfUrl = null;
+            if (pdfFile) {
+                partPdfUrl = await uploadToSupabase(pdfFile, 'lectures');
+            }
+
             const examTitle = el.querySelector('.part-exam-title').value.trim();
             const examDuration = parseInt(el.querySelector('.part-exam-duration').value) || 15;
 
@@ -1361,7 +1399,7 @@ async function handleCourseUpload(e) {
                 course_id: courseId,
                 title: partTitle,
                 video_url: partVideo,
-                pdf_url: partPdf || null,
+                pdf_url: partPdfUrl,
                 sort_order: i + 1,
                 is_visible: true,
                 prerequisite_exam_id: prereqExamId,
@@ -1374,7 +1412,7 @@ async function handleCourseUpload(e) {
         document.getElementById('lecture-parts-container').innerHTML = '';
         lectureParts = [];
         addNewLecturePart();
-        updateImagePreview('');
+        updateFileImagePreview(document.getElementById('imageFileInput'));
         fetchCoursesList();
         loadDashboardStats();
 
@@ -1444,7 +1482,7 @@ async function fetchCoursesList() {
 }
 
 // ==========================================
-// وظائف التعديل المضافة حديثاً (تعديل الكورس والأجزاء)
+// وظائف التعديل المضافة حديثاً (تعديل الكورس، الأجزاء والامتحانات)
 // ==========================================
 async function openEditCourseModal(courseId) {
     const modal = document.getElementById('edit-course-modal');
@@ -1458,7 +1496,8 @@ async function openEditCourseModal(courseId) {
         if(course) {
             document.getElementById('editCourseId').value = course.id;
             document.getElementById('editTitleInput').value = course.title || '';
-            document.getElementById('editImageUrlInput').value = course.image_url || '';
+            document.getElementById('existingImageUrl').value = course.image_url || '';
+            document.getElementById('editImageFileInput').value = ''; // تصفير الملف في حالة لم يرد تغييره
             document.getElementById('editDescInput').value = course.description || '';
             document.getElementById('editPriceInput').value = course.price || 0;
             document.getElementById('editStageInput').value = course.stage || '';
@@ -1486,13 +1525,19 @@ async function handleEditCourse(e) {
 
     const id = document.getElementById('editCourseId').value;
     const title = document.getElementById('editTitleInput').value.trim();
-    const imageUrl = document.getElementById('editImageUrlInput').value.trim();
     const desc = document.getElementById('editDescInput').value.trim();
     const price = document.getElementById('editPriceInput').value;
     const stage = document.getElementById('editStageInput').value;
     const term = document.getElementById('editTermInput').value;
 
     try {
+        // فحص لو تم رفع صورة جديدة عبر الـ File
+        const newImageFile = document.getElementById('editImageFileInput').files[0];
+        let imageUrl = document.getElementById('existingImageUrl').value;
+        if (newImageFile) {
+            imageUrl = await uploadToSupabase(newImageFile, 'courses');
+        }
+
         const { error } = await _supabase.from('courses').update({
             title: title,
             image_url: imageUrl || null,
@@ -1514,7 +1559,7 @@ async function handleEditCourse(e) {
     }
 }
 
-// دالة جلب الأجزاء وعرضها للتعديل السريع
+// دالة جلب الأجزاء وعرضها للتعديل الشامل مع الامتحانات
 async function loadCourseLecturesForEdit(courseId) {
     const container = document.getElementById('edit-lectures-container');
     container.innerHTML = `<div class="text-center p-4 text-gray-400 font-bold text-xs"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الأجزاء...</div>`;
@@ -1532,9 +1577,9 @@ async function loadCourseLecturesForEdit(courseId) {
             <div class="bg-slate-800 p-4 rounded-xl border border-slate-700/50 space-y-3">
                 <div class="flex items-center gap-2 mb-2">
                     <span class="w-5 h-5 bg-emerald-500/20 text-emerald-400 flex items-center justify-center rounded text-[10px] font-black">${index + 1}</span>
-                    <span class="text-xs font-bold text-gray-300">تعديل بيانات الجزء</span>
+                    <span class="text-xs font-bold text-gray-300">تعديل بيانات الجزء وملفاته</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div class="space-y-1">
                         <label class="text-[10px] text-gray-400 font-bold block">العنوان</label>
                         <input type="text" id="edit-lec-title-${l.id}" value="${l.title}" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500">
@@ -1543,12 +1588,25 @@ async function loadCourseLecturesForEdit(courseId) {
                         <label class="text-[10px] text-gray-400 font-bold block">رابط الفيديو</label>
                         <input type="url" id="edit-lec-video-${l.id}" value="${l.video_url || ''}" dir="ltr" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 font-mono text-left">
                     </div>
+                    <div class="space-y-1 relative">
+                        <label class="text-[10px] text-gray-400 font-bold block">تحديث ملف الـ PDF</label>
+                        <input type="file" id="edit-lec-pdf-${l.id}" accept="application/pdf" class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-emerald-500/10 file:text-emerald-500 hover:file:bg-emerald-500/20 transition-all focus:outline-none">
+                        <input type="hidden" id="existing-lec-pdf-${l.id}" value="${l.pdf_url || ''}">
+                        ${l.pdf_url ? `<a href="${l.pdf_url}" target="_blank" class="absolute left-1 top-1 text-[9px] text-emerald-400 underline font-bold px-2 py-0.5 bg-emerald-500/10 rounded">عرض الملف الحالي</a>` : ''}
+                    </div>
                 </div>
-                <div class="pt-2 flex justify-end">
-                    <button onclick="saveLectureEdit('${l.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
-                        <i class="fa-solid fa-check"></i> حفظ تعديل الجزء
+                <div class="pt-2 flex justify-end gap-2">
+                    ${l.prerequisite_exam_id ? `
+                        <button onclick="loadExamForEdit('${l.prerequisite_exam_id}')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-signature"></i> تعديل الامتحان والأسئلة
+                        </button>
+                    ` : ''}
+                    <button onclick="saveLectureEdit('${l.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> حفظ بيانات الجزء
                     </button>
                 </div>
+                <!-- نافذة أسئلة الامتحان -->
+                <div id="exam-container-${l.prerequisite_exam_id}" class="hidden mt-4 border-t border-slate-700 pt-4"></div>
             </div>
         `).join('');
 
@@ -1560,17 +1618,144 @@ async function loadCourseLecturesForEdit(courseId) {
 async function saveLectureEdit(lectureId) {
     const title = document.getElementById(`edit-lec-title-${lectureId}`).value.trim();
     const video = document.getElementById(`edit-lec-video-${lectureId}`).value.trim();
+    const pdfInput = document.getElementById(`edit-lec-pdf-${lectureId}`);
+    let pdfUrl = document.getElementById(`existing-lec-pdf-${lectureId}`).value;
 
     try {
+        if (pdfInput.files && pdfInput.files.length > 0) {
+            showNotification('جاري رفع الملف السحابي للحفظ...', 'info');
+            pdfUrl = await uploadToSupabase(pdfInput.files[0], 'lectures');
+        }
+
         const { error } = await _supabase.from('lectures').update({
             title: title,
-            video_url: video
+            video_url: video,
+            pdf_url: pdfUrl || null
         }).eq('id', lectureId);
 
         if (error) throw error;
-        showNotification('تم تحديث بيانات الجزء بنجاح! ✔️', 'success');
+        showNotification('تم تحديث بيانات وملفات الجزء بنجاح! ✔️', 'success');
+        
+        if (pdfInput.files && pdfInput.files.length > 0) {
+            document.getElementById(`existing-lec-pdf-${lectureId}`).value = pdfUrl;
+        }
     } catch (e) {
         showNotification('حدث خطأ أثناء حفظ الجزء: ' + e.message, 'error');
+    }
+}
+
+// ==========================================
+// تعديل الامتحانات وأسئلتها من داخل نافذة الكورس
+// ==========================================
+async function loadExamForEdit(examId) {
+    const container = document.getElementById(`exam-container-${examId}`);
+    container.classList.remove('hidden');
+    container.innerHTML = `<div class="text-center text-xs text-amber-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري تحميل الامتحان...</div>`;
+    
+    try {
+        const { data: exam, error: examErr } = await _supabase.from('exams').select('*').eq('id', examId).single();
+        const { data: questions, error: qErr } = await _supabase.from('questions').select('*, options(*)').eq('exam_id', examId).order('created_at', {ascending: true});
+        
+        if (examErr || qErr) throw new Error('خطأ في جلب بيانات الامتحان والأسئلة');
+        
+        let html = `
+            <div class="space-y-4 bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                <div class="flex justify-between items-center">
+                    <h5 class="text-sm font-bold text-amber-400 flex items-center gap-1.5"><i class="fa-solid fa-pen-to-square"></i> تعديل بيانات الامتحان</h5>
+                    <button onclick="document.getElementById('exam-container-${examId}').classList.add('hidden')" class="text-gray-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i> إغلاق</button>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">اسم الامتحان</label>
+                        <input type="text" id="edit-exam-title-${exam.id}" value="${exam.title}" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 block mb-1">المدة (بالدقائق)</label>
+                        <input type="number" id="edit-exam-duration-${exam.id}" value="${exam.duration_minutes}" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <div class="space-y-4 mt-3">
+        `;
+        
+        questions.forEach((q, qIndex) => {
+            html += `
+                <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-600 shadow-sm">
+                    <label class="text-[10px] text-emerald-400 font-bold block mb-1">السؤال ${qIndex + 1}</label>
+                    <input type="text" data-type="question" data-q-id="${q.id}" value="${q.question_text}" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-xs text-white mb-3 outline-none focus:border-emerald-500" required>
+                    <label class="text-[10px] text-gray-400 block mb-2">الخيارات (حدد الصحيح من الدائرة) - يمكنك ترك الحقول الفارغة لعدم إضافتها</label>
+                    <div class="space-y-2">
+            `;
+            // دعم مرونة الخيارات (أقل حد 2، أقصى حد 4)
+            let opts = q.options || [];
+            for (let i = 0; i < 4; i++) {
+                let opt = opts[i] || { id: `new_${q.id}_${i}`, option_text: '', is_correct: false };
+                html += `
+                    <div class="flex items-center gap-2">
+                        <input type="radio" name="correct_opt_${q.id}" value="${opt.id}" ${opt.is_correct ? 'checked' : ''} class="w-4 h-4 text-emerald-500 bg-slate-900 border-slate-600 focus:ring-emerald-500 cursor-pointer">
+                        <input type="text" data-type="option" data-opt-id="${opt.id}" data-q-id="${q.id}" value="${opt.option_text}" placeholder="الخيار ${i+1} ${i>1?'(اختياري)':''}" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white outline-none focus:border-emerald-500" ${i<=1 && opt.id.startsWith('new_') === false ? 'required' : ''}>
+                    </div>
+                `;
+            }
+            html += `</div></div>`;
+        });
+        
+        html += `
+                </div>
+                <button type="button" onclick="saveExamEdit('${exam.id}')" class="mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ الامتحان والأسئلة بجميع تعديلاتها
+                </button>
+            </div>
+        `;
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = `<div class="text-center text-xs text-red-400 font-bold p-3">فشل تحميل بيانات الامتحان للأسف</div>`;
+    }
+}
+
+async function saveExamEdit(examId) {
+    const title = document.getElementById(`edit-exam-title-${examId}`).value.trim();
+    const duration = document.getElementById(`edit-exam-duration-${examId}`).value;
+    
+    try {
+        showNotification('جاري حفظ التعديلات وحفظ أسئلة الامتحان...', 'info');
+
+        await _supabase.from('exams').update({ title, duration_minutes: duration }).eq('id', examId);
+        
+        const qInputs = document.querySelectorAll(`#exam-container-${examId} input[data-type="question"]`);
+        for (let qInput of qInputs) {
+            const qId = qInput.getAttribute('data-q-id');
+            const qText = qInput.value.trim();
+            if(qText) {
+                await _supabase.from('questions').update({ question_text: qText }).eq('id', qId);
+            }
+            
+            const optInputs = document.querySelectorAll(`#exam-container-${examId} input[data-type="option"][data-q-id="${qId}"]`);
+            const correctRadio = document.querySelector(`#exam-container-${examId} input[name="correct_opt_${qId}"]:checked`);
+            const correctOptId = correctRadio ? correctRadio.value : null;
+
+            for (let optInput of optInputs) {
+                const optId = optInput.getAttribute('data-opt-id');
+                const optText = optInput.value.trim();
+                const isCorrect = (optId === correctOptId);
+                
+                if (optId.startsWith('new_')) {
+                    if (optText) { // إضافة خيار جديد إن أضافه الأدمن وكان فارغاً
+                        await _supabase.from('options').insert({ question_id: qId, option_text: optText, is_correct: isCorrect });
+                    }
+                } else {
+                    if (optText) {
+                        await _supabase.from('options').update({ option_text: optText, is_correct: isCorrect }).eq('id', optId);
+                    } else {
+                        // إذا قام بمسح النص، يتم حذفه من القاعدة
+                        await _supabase.from('options').delete().eq('id', optId);
+                    }
+                }
+            }
+        }
+        showNotification('تم تحديث الامتحان والاختيارات بنجاح! 📝', 'success');
+        document.getElementById(`exam-container-${examId}`).classList.add('hidden');
+    } catch(e) {
+        showNotification('حدث خطأ أثناء حفظ الامتحان: ' + e.message, 'error');
     }
 }
 
