@@ -146,6 +146,41 @@ button, input, select, textarea {
 </div>
 
 <!-- ============================================== -->
+<!-- النافذة المنبثقة لعرض الطلاب المشتركين في كورس -->
+<!-- ============================================== -->
+<div id="course-students-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] my-auto">
+        <div class="bg-slate-900 text-white p-5 flex justify-between items-center border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg font-black shrink-0">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-base font-black text-white">الطلاب المشتركين</h3>
+                    <p id="studentsModalCourseTitle" class="text-xs text-emerald-400 font-bold mt-0.5 truncate"></p>
+                </div>
+            </div>
+            <button onclick="closeCourseStudentsModal()" class="w-8 h-8 bg-slate-800 hover:bg-red-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all text-xs shrink-0">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="p-5 space-y-3 bg-slate-50/50 shrink-0 border-b border-gray-100">
+            <div class="relative">
+                <input type="text" id="studentsModalSearchInput" oninput="filterStudentsModalList(this.value)" placeholder="ابحث بالاسم أو كود الطالب أو رقم الهاتف..."
+                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all pr-10">
+                <i class="fa-solid fa-magnifying-glass absolute top-1/2 -translate-y-1/2 right-3.5 text-gray-400 text-xs"></i>
+            </div>
+            <div class="flex items-center justify-between px-1">
+                <span id="studentsModalCount" class="text-[11px] font-black text-emerald-700">0 مشترك</span>
+            </div>
+        </div>
+
+        <div id="studentsModalList" class="p-4 space-y-2.5 overflow-y-auto"></div>
+    </div>
+</div>
+
+<!-- ============================================== -->
 <!-- النافذة المنبثقة لتعديل الكورس ومحتوياته -->
 <!-- ============================================== -->
 <div id="edit-course-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
@@ -1461,6 +1496,9 @@ async function fetchCoursesList() {
                 <td class="p-4 text-center">
                     <div class="flex items-center justify-center gap-2">
                         <!-- زر تعديل الكورس المضاف حديثاً -->
+                        <button onclick="openCourseStudentsModal('${c.id}', '${(c.title || '').replace(/'/g, "\\'")}')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-emerald-200 active:scale-95">
+                            <i class="fa-solid fa-users"></i> المشتركين
+                        </button>
                         <button onclick="openEditCourseModal('${c.id}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border border-blue-200 active:scale-95">
                             <i class="fa-solid fa-pen-to-square"></i> تعديل
                         </button>
@@ -1479,6 +1517,124 @@ async function fetchCoursesList() {
         console.error(err);
         table.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-red-500 font-bold">حدث خطأ أثناء تحميل الكورسات.</td></tr>`;
     }
+}
+
+// ==========================================
+// نافذة عرض الطلاب المشتركين في كورس معيّن
+// ==========================================
+let currentCourseStudentsData = [];
+
+async function openCourseStudentsModal(courseId, courseTitle) {
+    const modal = document.getElementById('course-students-modal');
+    modal.classList.remove('hidden');
+
+    document.getElementById('studentsModalCourseTitle').innerText = courseTitle || '';
+    document.getElementById('studentsModalSearchInput').value = '';
+    document.getElementById('studentsModalCount').innerText = '...';
+
+    const listEl = document.getElementById('studentsModalList');
+    listEl.innerHTML = `<div class="text-center p-8 text-gray-400 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> جاري جلب قائمة المشتركين...</div>`;
+
+    try {
+        const { data, error } = await _supabase
+            .from('course_subscriptions')
+            .select('id, status, created_at, profiles(id, full_name, student_code, student_phone, stage)')
+            .eq('course_id', courseId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        currentCourseStudentsData = data || [];
+        renderCourseStudentsList(currentCourseStudentsData);
+    } catch (e) {
+        console.error(e);
+        listEl.innerHTML = `<div class="text-center p-8 text-red-500 font-bold">حدث خطأ أثناء تحميل قائمة المشتركين: ${e.message}</div>`;
+        document.getElementById('studentsModalCount').innerText = '0 مشترك';
+    }
+}
+
+function renderCourseStudentsList(rows) {
+    const listEl = document.getElementById('studentsModalList');
+    document.getElementById('studentsModalCount').innerText = `${rows.length} مشترك`;
+
+    if (!rows || rows.length === 0) {
+        listEl.innerHTML = `<div class="text-center p-8 text-gray-400 font-bold">لا يوجد طلاب مشتركين في هذا الكورس حتى الآن.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = rows.map(row => {
+        const p = row.profiles || {};
+        const isActive = row.status !== 'disabled';
+        const initial = (p.full_name || '؟').trim().charAt(0) || '؟';
+
+        return `
+        <div class="flex items-center justify-between gap-3 p-3.5 bg-white border border-gray-100 rounded-2xl hover:border-emerald-200 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs shrink-0">
+                    ${initial}
+                </div>
+                <div class="min-w-0">
+                    <div class="font-black text-slate-900 text-xs truncate">${p.full_name || 'طالب غير معروف'}</div>
+                    <div class="text-[10px] text-gray-400 font-bold flex flex-wrap gap-x-2 mt-0.5">
+                        <span>كود: ${p.student_code || '---'}</span>
+                        <span>${p.student_phone || '---'}</span>
+                        ${p.stage ? `<span>${p.stage}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'}">
+                    ${isActive ? 'مفعل' : 'معطل'}
+                </span>
+                <button onclick="toggleCourseStudentStatus('${row.id}', '${isActive ? 'disabled' : 'active'}')" title="${isActive ? 'تعطيل اشتراك الطالب' : 'إعادة تفعيل اشتراك الطالب'}"
+                        class="bg-slate-50 hover:bg-slate-800 hover:text-white text-slate-600 w-8 h-8 rounded-xl text-[11px] font-black transition-all border border-slate-200 active:scale-95 shrink-0">
+                    <i class="fa-solid ${isActive ? 'fa-ban' : 'fa-circle-check'}"></i>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function filterStudentsModalList(term) {
+    term = (term || '').trim().toLowerCase();
+
+    if (!term) {
+        renderCourseStudentsList(currentCourseStudentsData);
+        return;
+    }
+
+    const filtered = currentCourseStudentsData.filter(row => {
+        const p = row.profiles || {};
+        return (p.full_name || '').toLowerCase().includes(term) ||
+               (p.student_code || '').toLowerCase().includes(term) ||
+               (p.student_phone || '').includes(term);
+    });
+
+    renderCourseStudentsList(filtered);
+}
+
+async function toggleCourseStudentStatus(subscriptionId, newStatus) {
+    try {
+        const { error } = await _supabase
+            .from('course_subscriptions')
+            .update({ status: newStatus })
+            .eq('id', subscriptionId);
+
+        if (error) throw error;
+
+        const row = currentCourseStudentsData.find(r => r.id === subscriptionId);
+        if (row) row.status = newStatus;
+
+        filterStudentsModalList(document.getElementById('studentsModalSearchInput').value);
+        showNotification(newStatus === 'disabled' ? 'تم تعطيل اشتراك الطالب في الكورس' : 'تم إعادة تفعيل اشتراك الطالب', 'success');
+        fetchCoursesList();
+    } catch (e) {
+        showNotification('حدث خطأ أثناء تحديث حالة الاشتراك: ' + e.message, 'error');
+    }
+}
+
+function closeCourseStudentsModal() {
+    document.getElementById('course-students-modal').classList.add('hidden');
 }
 
 // ==========================================
