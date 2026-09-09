@@ -180,6 +180,29 @@ button, input, select, textarea {
     </div>
 </div>
 
+<!-- ============================================================== -->
+<!-- النافذة المنبثقة لتقرير الطالب الشامل داخل كورس واحد بالتحديد -->
+<!-- ============================================================== -->
+<div id="course-student-report-modal" class="fixed inset-0 z-[100000] bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh] my-auto">
+        <div class="bg-slate-900 text-white p-5 flex justify-between items-center border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-lg font-black shrink-0">
+                    <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <div class="min-w-0">
+                    <h3 id="reportModalStudentName" class="text-base font-black text-white truncate">تقرير الطالب في الكورس</h3>
+                    <p id="reportModalCourseTitle" class="text-xs text-blue-400 font-bold mt-0.5 truncate"></p>
+                </div>
+            </div>
+            <button onclick="closeCourseStudentReportModal()" class="w-8 h-8 bg-slate-800 hover:bg-red-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all text-xs shrink-0">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div id="courseReportModalContent" class="p-5 space-y-5 overflow-y-auto bg-slate-50/50 flex-grow"></div>
+    </div>
+</div>
+
 <!-- ============================================== -->
 <!-- النافذة المنبثقة لتعديل الكورس ومحتوياته -->
 <!-- ============================================== -->
@@ -1523,10 +1546,15 @@ async function fetchCoursesList() {
 // نافذة عرض الطلاب المشتركين في كورس معيّن
 // ==========================================
 let currentCourseStudentsData = [];
+let currentReportCourseId = null;
+let currentReportCourseTitle = '';
 
 async function openCourseStudentsModal(courseId, courseTitle) {
     const modal = document.getElementById('course-students-modal');
     modal.classList.remove('hidden');
+
+    currentReportCourseId = courseId;
+    currentReportCourseTitle = courseTitle || '';
 
     document.getElementById('studentsModalCourseTitle').innerText = courseTitle || '';
     document.getElementById('studentsModalSearchInput').value = '';
@@ -1586,6 +1614,10 @@ function renderCourseStudentsList(rows) {
                 <span class="px-2.5 py-1 rounded-lg text-[10px] font-black ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'}">
                     ${isActive ? 'مفعل' : 'معطل'}
                 </span>
+                <button onclick="openCourseStudentReportModal('${p.id}')" title="عرض تقرير الطالب الخاص بهذا الكورس (المحاضرات والدرجات)"
+                        class="bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 w-8 h-8 rounded-xl text-[11px] font-black transition-all border border-blue-200 active:scale-95 shrink-0">
+                    <i class="fa-solid fa-file-lines"></i>
+                </button>
                 <button onclick="toggleCourseStudentStatus('${row.id}', '${isActive ? 'disabled' : 'active'}')" title="${isActive ? 'تعطيل اشتراك الطالب' : 'إعادة تفعيل اشتراك الطالب'}"
                         class="bg-slate-50 hover:bg-slate-800 hover:text-white text-slate-600 w-8 h-8 rounded-xl text-[11px] font-black transition-all border border-slate-200 active:scale-95 shrink-0">
                     <i class="fa-solid ${isActive ? 'fa-ban' : 'fa-circle-check'}"></i>
@@ -1635,6 +1667,108 @@ async function toggleCourseStudentStatus(subscriptionId, newStatus) {
 
 function closeCourseStudentsModal() {
     document.getElementById('course-students-modal').classList.add('hidden');
+}
+
+// ==========================================================
+// تقرير شامل لطالب واحد داخل كورس واحد بالتحديد (محاضرات + درجات)
+// ==========================================================
+async function openCourseStudentReportModal(studentId) {
+    const courseId = currentReportCourseId;
+    const courseTitle = currentReportCourseTitle;
+
+    const modal = document.getElementById('course-student-report-modal');
+    const content = document.getElementById('courseReportModalContent');
+    modal.classList.remove('hidden');
+
+    document.getElementById('reportModalStudentName').innerText = 'جاري تحميل تقرير الطالب...';
+    document.getElementById('reportModalCourseTitle').innerText = courseTitle || '';
+    content.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 gap-3 text-blue-600">
+            <i class="fa-solid fa-circle-notch animate-spin text-3xl"></i>
+            <span class="text-xs font-bold text-gray-500">جاري تجميع تقرير الطالب الخاص بهذا الكورس...</span>
+        </div>
+    `;
+
+    try {
+        const [{ data: profile }, { data: results }] = await Promise.all([
+            _supabase.from('profiles').select('*').eq('id', studentId).single(),
+            _supabase.from('student_results').select('*, exams!inner(title, course_id)').eq('student_id', studentId).eq('exams.course_id', courseId)
+        ]);
+
+        document.getElementById('reportModalStudentName').innerText = profile?.full_name || 'بيانات الطالب';
+        document.getElementById('reportModalCourseTitle').innerText = courseTitle || '';
+
+        const avgScore = results && results.length > 0
+            ? Math.round(results.reduce((sum, r) => sum + (Number(r.score) || 0), 0) / results.length)
+            : null;
+
+        content.innerHTML = `
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3 shadow-sm">
+                <h4 class="text-xs font-black text-slate-900"><i class="fa-solid fa-id-card text-blue-600 ml-1"></i> بيانات الطالب</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <span class="text-[10px] text-gray-400 font-bold block mb-1">كود الطالب</span>
+                        <span class="font-black text-slate-800">${profile?.student_code || '---'}</span>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <span class="text-[10px] text-gray-400 font-bold block mb-1">هاتف الطالب</span>
+                        <span class="font-black text-slate-800" dir="ltr">${profile?.student_phone || '---'}</span>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <span class="text-[10px] text-gray-400 font-bold block mb-1">هاتف ولي الأمر</span>
+                        <span class="font-black text-slate-800" dir="ltr">${profile?.parent_phone || '---'}</span>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <span class="text-[10px] text-gray-400 font-bold block mb-1">المرحلة الدراسية</span>
+                        <span class="font-black text-slate-800">${profile?.stage || '---'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-1">
+                    <span class="text-[10px] text-gray-400 font-bold block">متوسط الدرجات في هذا الكورس</span>
+                    <span class="text-xl font-black text-emerald-600 block">${avgScore !== null ? avgScore + '%' : '---'}</span>
+                    <span class="text-[10px] text-gray-400 font-semibold block">${(results || []).length} امتحان مؤدى</span>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-1">
+                    <span class="text-[10px] text-gray-400 font-bold block">إجمالي نقاط الطالب العامة</span>
+                    <span class="text-xl font-black text-amber-600 block">${profile?.total_points || 0} نقطة</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
+                <h4 class="text-xs font-black text-slate-900"><i class="fa-solid fa-square-poll-vertical text-blue-600 ml-1"></i> نتائج امتحانات هذا الكورس فقط:</h4>
+                <div class="overflow-x-auto w-full">
+                    <table class="w-full text-right text-xs font-semibold whitespace-nowrap">
+                        <thead class="bg-gray-50 text-gray-700">
+                            <tr>
+                                <th class="p-2.5 px-3">الامتحان</th>
+                                <th class="p-2.5 text-center">الدرجة الحاصل عليها</th>
+                                <th class="p-2.5 text-center">تاريخ التقديم</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-gray-600">
+                            ${results && results.length > 0 ? results.map(r => `
+                                <tr>
+                                    <td class="p-2.5 px-3 font-bold">${r.exams?.title || 'امتحان'}</td>
+                                    <td class="p-2.5 text-center font-black text-emerald-600">${r.score || 0}%</td>
+                                    <td class="p-2.5 text-center text-[10px] text-gray-400">${new Date(r.submission_date || r.created_at).toLocaleDateString('ar-EG')}</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="3" class="text-center p-4 text-gray-400">لم يؤد الطالب أي امتحانات في هذا الكورس بعد.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        console.error(err);
+        content.innerHTML = `<div class="p-6 text-center text-red-500 font-bold">حدث خطأ أثناء تحميل تقرير الطالب: ${err.message}</div>`;
+    }
+}
+
+function closeCourseStudentReportModal() {
+    document.getElementById('course-student-report-modal').classList.add('hidden');
 }
 
 // ==========================================
