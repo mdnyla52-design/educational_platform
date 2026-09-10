@@ -574,18 +574,28 @@ class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-
 </div>
 
 <form onsubmit="handleStudentSearch(event)" class="space-y-3 bg-gray-50/70 p-4 sm:p-5 rounded-2xl border border-gray-100">
-<label class="text-xs font-bold text-gray-700 block pr-1">كل الطلاب المسجلين بالمنصة يظهروا تلقائيًا بالأسفل، ويمكنك الفلترة بالاسم أو الكود عند الحاجة</label>
+<label class="text-xs font-bold text-gray-700 block pr-1">كل الطلاب المسجلين بالمنصة يظهروا تلقائيًا بالأسفل، ويمكنك الفلترة بالاسم أو الكود أو المرحلة الدراسية عند الحاجة</label>
 <div class="flex flex-col sm:flex-row gap-3">
 <input type="text" id="studentSearchQuery" placeholder="اختياري: اكتب اسم الطالب أو كوده لتصفية القائمة..."
 class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-<button type="submit" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+<select id="studentStageFilter" onchange="handleStudentSearch(event)"
+class="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-full sm:w-64">
+<option value="">كل المراحل الدراسية</option>
+</select>
+<button type="submit" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
 <i class="fa-solid fa-magnifying-glass text-xs"></i> استعلام
 </button>
-<button type="button" onclick="document.getElementById('studentSearchQuery').value=''; loadAllStudents();" class="bg-white hover:bg-gray-100 active:scale-95 text-slate-700 font-bold px-6 py-3 rounded-xl shadow-sm border border-gray-200 transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+<button type="button" onclick="document.getElementById('studentSearchQuery').value=''; document.getElementById('studentStageFilter').value=''; loadAllStudents();" class="bg-white hover:bg-gray-100 active:scale-95 text-slate-700 font-bold px-6 py-3 rounded-xl shadow-sm border border-gray-200 transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
 <i class="fa-solid fa-rotate-right text-xs"></i> عرض الكل
 </button>
 </div>
 </form>
+
+<!-- إحصائية عدد الطلاب في كل مرحلة دراسية -->
+<div id="stage-breakdown-loader" class="flex items-center gap-2 text-[11px] text-gray-400 font-bold px-1">
+<i class="fa-solid fa-circle-notch animate-spin"></i> جاري حساب عدد الطلاب في كل مرحلة...
+</div>
+<div id="stage-breakdown-chips" class="hidden flex flex-wrap gap-2 px-1"></div>
 
 <div id="student-search-loader" class="hidden flex-col items-center justify-center py-10 gap-3">
 <i class="fa-solid fa-circle-notch animate-spin text-3xl text-emerald-600"></i>
@@ -593,6 +603,10 @@ class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm fo
 </div>
 
 <div id="student-results-area" class="hidden space-y-4 mt-6">
+<div class="flex items-center justify-between flex-wrap gap-2 px-1">
+<h3 class="text-xs font-black text-slate-700">نتيجة الاستعلام</h3>
+<span id="studentsResultsCount" class="text-[11px] sm:text-xs font-black bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100"></span>
+</div>
 <div class="overflow-x-auto w-full rounded-2xl border border-gray-100 shadow-inner">
 <table class="w-full text-right text-xs font-semibold whitespace-nowrap min-w-[600px]">
 <thead class="bg-gray-50 text-gray-700">
@@ -1038,6 +1052,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// المراحل الدراسية المعتمدة في المنصة (مصدر واحد يُستخدم في فلتر البحث وقائمة التعديل بالتقرير)
+const ACADEMIC_STAGES = ['الصف الأول الإعدادي', 'الصف الثاني الإعدادي', 'الصف الثالث الإعدادي', 'الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي'];
+
 // مصفوفة تخزين أجزاء المحاضرة المتتابعة
 let lectureParts = [];
 
@@ -1149,7 +1166,9 @@ function switchPanel(panelId) {
     } else if (panelId === 'admin') {
         fetchAdminsList();
     } else if (panelId === 'student') {
+        populateStageFilterOptions();
         loadAllStudents();
+        loadStudentsStageBreakdown();
         loadPendingSubscriptions();
     } else if (panelId === 'coupon') {
         fetchCouponsList();
@@ -2290,6 +2309,63 @@ async function rejectSubscription(requestId) {
     }
 }
 
+// أقصى عدد صفوف يتم عرضه في جدول النتائج دفعة واحدة (العدّاد الإجمالي دايمًا دقيق حتى لو تجاوز هذا الرقم)
+const STUDENTS_RESULTS_DISPLAY_LIMIT = 500;
+
+// تعبئة قائمة فلتر المرحلة الدراسية مرة واحدة فقط من المصدر المشترك ACADEMIC_STAGES
+function populateStageFilterOptions() {
+    const select = document.getElementById('studentStageFilter');
+    if (!select || select.dataset.populated) return;
+    ACADEMIC_STAGES.forEach(stage => {
+        const opt = document.createElement('option');
+        opt.value = stage;
+        opt.textContent = stage;
+        select.appendChild(opt);
+    });
+    select.dataset.populated = 'true';
+}
+
+// جلب عدد الطلاب في كل مرحلة دراسية دفعة واحدة وعرضه كـ "شرائح" قابلة للنقر فوق جدول البحث
+async function loadStudentsStageBreakdown() {
+    const loaderEl = document.getElementById('stage-breakdown-loader');
+    const chipsEl = document.getElementById('stage-breakdown-chips');
+    if (!loaderEl || !chipsEl) return;
+
+    loaderEl.classList.remove('hidden');
+    chipsEl.classList.add('hidden');
+
+    try {
+        const counts = await Promise.all(
+            ACADEMIC_STAGES.map(stage =>
+                _supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('stage', stage)
+            )
+        );
+
+        chipsEl.innerHTML = ACADEMIC_STAGES.map((stage, i) => `
+            <button type="button" onclick="filterStudentsByStage('${stage.replace(/'/g, "\\'")}')"
+                class="group inline-flex items-center gap-1.5 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-700 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all active:scale-95">
+                <span>${stage}</span>
+                <span class="bg-slate-900 group-hover:bg-emerald-600 text-white rounded-full px-2 py-0.5 text-[10px] font-black">${counts[i]?.count ?? 0}</span>
+            </button>
+        `).join('');
+    } catch (err) {
+        console.error(err);
+        chipsEl.innerHTML = `<span class="text-[11px] text-red-500 font-bold">تعذر حساب أعداد المراحل.</span>`;
+    } finally {
+        loaderEl.classList.add('hidden');
+        chipsEl.classList.remove('hidden');
+    }
+}
+
+// اختصار للنقر على إحدى شرائح المراحل: يضبط الفلتر تلقائيًا وينفذ البحث
+function filterStudentsByStage(stage) {
+    const select = document.getElementById('studentStageFilter');
+    const input = document.getElementById('studentSearchQuery');
+    if (select) select.value = stage;
+    if (input) input.value = '';
+    handleStudentSearch(new Event('submit'));
+}
+
 async function loadAllStudents() {
     const loader = document.getElementById('student-search-loader');
     const area = document.getElementById('student-results-area');
@@ -2297,15 +2373,23 @@ async function loadAllStudents() {
     loader.classList.add('flex');
     area.classList.add('hidden');
 
+    const stage = document.getElementById('studentStageFilter')?.value || '';
+
     try {
-        const { data: students, error } = await _supabase
+        let queryBuilder = _supabase
             .from('profiles')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(STUDENTS_RESULTS_DISPLAY_LIMIT);
+
+        if (stage) {
+            queryBuilder = queryBuilder.eq('stage', stage);
+        }
+
+        const { data: students, count, error } = await queryBuilder;
 
         if (error) throw error;
-        renderStudentsTable(students);
+        renderStudentsTable(students, count, stage);
     } catch (err) {
         console.error(err);
     } finally {
@@ -2315,8 +2399,16 @@ async function loadAllStudents() {
     }
 }
 
-function renderStudentsTable(students) {
+function renderStudentsTable(students, totalCount, stageFilter) {
     const tbody = document.getElementById('students-results-table');
+    const countBadge = document.getElementById('studentsResultsCount');
+
+    if (countBadge) {
+        const total = typeof totalCount === 'number' ? totalCount : (students ? students.length : 0);
+        const stageLabel = stageFilter ? ` في "${stageFilter}"` : '';
+        countBadge.innerText = `${total} طالب${stageLabel}`;
+    }
+
     if (!students || students.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-gray-400 font-bold">لا يوجد طلاب مطابقين للبحث.</td></tr>`;
         return;
@@ -2338,9 +2430,11 @@ function renderStudentsTable(students) {
 }
 
 async function handleStudentSearch(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const query = document.getElementById('studentSearchQuery').value.trim();
-    if (!query) {
+    const stage = document.getElementById('studentStageFilter')?.value || '';
+
+    if (!query && !stage) {
         loadAllStudents();
         return;
     }
@@ -2351,13 +2445,23 @@ async function handleStudentSearch(e) {
     area.classList.add('hidden');
 
     try {
-        const { data: students, error } = await _supabase
+        let queryBuilder = _supabase
             .from('profiles')
-            .select('*')
-            .or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`);
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .limit(STUDENTS_RESULTS_DISPLAY_LIMIT);
+
+        if (stage) {
+            queryBuilder = queryBuilder.eq('stage', stage);
+        }
+        if (query) {
+            queryBuilder = queryBuilder.or(`full_name.ilike.%${query}%,student_code.ilike.%${query}%,student_phone.ilike.%${query}%`);
+        }
+
+        const { data: students, count, error } = await queryBuilder;
 
         if (error) throw error;
-        renderStudentsTable(students);
+        renderStudentsTable(students, count, stage);
     } catch (err) {
         console.error(err);
     } finally {
@@ -2389,7 +2493,7 @@ async function openStudentModal(studentId) {
         document.getElementById('modal-student-subtitle').innerText = `كود الطالب: ${profile?.student_code || '---'} | هاتف: ${profile?.student_phone || '---'} | ولي الأمر: ${profile?.parent_phone || '---'}`;
 
         const currentStage = profile?.stage || '';
-        const standardStages = ['الصف الأول الإعدادي', 'الصف الثاني الإعدادي', 'الصف الثالث الإعدادي', 'الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي'];
+        const standardStages = [...ACADEMIC_STAGES];
         if(currentStage && !standardStages.includes(currentStage)) standardStages.push(currentStage);
         const stageOptions = standardStages.map(s => `<option value="${s}" ${currentStage === s ? 'selected' : ''}>${s}</option>`).join('');
 
