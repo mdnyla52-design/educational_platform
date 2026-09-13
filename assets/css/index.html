@@ -1351,22 +1351,23 @@
         }
 
         function handleMobileParallax() {
+            // تم تعطيل تأثير الـ parallax على المقاسات الأصغر من 1024px (موبايل/تابلت)
+            // السبب: الحساب كان يعتمد على window.scrollY الكلي وليس موضع كل قسم في الشاشة،
+            // فكلما طالت الصفحة (كثرت الكورسات) زادت الإزاحة بلا حدود، مما كان يدفع
+            // بعض العناصر (مثل زرار الاشتراك في آخر الكورسات) خارج حدود الشاشة بشكل دائم.
             const isMobile = window.innerWidth < 1024;
-            if (!isMobile) return;
-            const scrollY = window.scrollY;
-            document.querySelectorAll('.section-parallax').forEach(section => {
-                const speed = parseFloat(section.dataset.scrollSpeed) || 0.5;
-                section.style.transform = `translateY(${scrollY * speed * 0.03}px)`;
-            });
-        }
-
-        window.addEventListener('scroll', handleMobileParallax, { passive: true });
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
+            if (isMobile) {
                 document.querySelectorAll('.section-parallax').forEach(section => {
                     section.style.transform = '';
                 });
+                return;
             }
+        }
+
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.section-parallax').forEach(section => {
+                section.style.transform = '';
+            });
         });
 
         /* --- فلترة الكورسات المرنة والمطورة بالقوائم المنسدلة --- */
