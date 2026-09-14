@@ -727,6 +727,23 @@
                 const totalQuestions = quizData.length;
                 const finalScore = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
+                // تسجيل إجابة كل سؤال على حدة عشان تظهر في صفحة مراجعة الامتحان بعد كده
+                const answersToInsert = quizData.map(q => ({
+                    student_id: currentStudentId,
+                    exam_id: examId,
+                    question_id: q.id,
+                    selected_option_id: q.selectedOptionId
+                }));
+
+                const { error: answersError } = await supabaseClient
+                    .from('student_answers')
+                    .insert(answersToInsert);
+
+                if (answersError) {
+                    console.error("Student Answers Save Error:", answersError);
+                    // مش بنوقف عملية التسليم لو فشل حفظ التفاصيل، الدرجة النهائية أهم حاجة تتحفظ
+                }
+
                 let { error: saveError } = await supabaseClient
                     .from('student_results')
                     .upsert({
@@ -766,7 +783,7 @@
                 if (saveError) throw saveError;
 
                 showCustomModal('success', 'تم حفظ الإجابات بنجاح', `تم إنهاء الامتحان ورصد النتائج!\nالأسئلة الصحيحة: ${correctCount} من ${totalQuestions}\nالنتيجة الإجمالية الكلية: ${finalScore}%`, [
-                    { text: 'العودة للوحة التحكم', callback: () => window.location.href = "student-dashboard.html", primary: true }
+                    { text: 'عرض المراجعة والدرجة', callback: () => window.location.href = `review-exam.html?exam_id=${examId}`, primary: true }
                 ]);
 
             } catch (error) {

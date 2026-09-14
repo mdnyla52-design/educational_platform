@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مراجعة الامتحان</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Amiri&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Cairo', sans-serif; }
+  .dark body { background:#0f172a; }
+</style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 min-h-screen">
+
+  <div class="max-w-3xl mx-auto px-4 py-8">
+
+    <div id="loading" class="text-center py-20 text-slate-500 dark:text-slate-400">
+      جارِ تحميل نتيجة الامتحان...
+    </div>
+
+    <div id="content" class="hidden">
+      <!-- Header / Summary -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 mb-6 text-center">
+        <h1 id="examTitle" class="text-2xl font-bold text-slate-800 dark:text-white mb-2"></h1>
+        <p id="scoreSummary" class="text-lg text-slate-600 dark:text-slate-300"></p>
+        <div class="flex justify-center gap-4 mt-3 text-sm">
+          <span class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+            <span class="w-3 h-3 rounded-full bg-emerald-500"></span> إجابة صحيحة
+          </span>
+          <span class="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+            <span class="w-3 h-3 rounded-full bg-rose-500"></span> إجابة خاطئة
+          </span>
+        </div>
+      </div>
+
+      <!-- Questions -->
+      <div id="questionsContainer" class="space-y-6"></div>
+
+      <!-- زر الانتقال لمستواي التعليمي -->
+      <div class="mt-10 flex justify-center">
+        <!-- استبدل YOUR_LINK_HERE بالرابط الخاص بك -->
+        <a href="student-dashboard.html" class="group relative inline-flex items-center justify-center gap-3 px-8 py-4 text-base font-bold text-emerald-700 bg-white border-2 border-emerald-500 rounded-2xl overflow-hidden shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-emerald-500/40 hover:-translate-y-1 dark:bg-slate-800 dark:text-emerald-400 dark:border-emerald-500 dark:hover:bg-emerald-600 dark:hover:text-white">
+          
+          <!-- تأثير اللمعان الانسيابي -->
+          <div class="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:[transform:skew(-12deg)_translateX(150%)] transition-transform duration-1000 bg-white/20 z-0"></div>
+          
+          <span class="relative z-10">الذهاب إلى مستواي التعليمي</span>
+          
+          <!-- أيقونة السهم -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 relative z-10 transform transition-transform duration-300 group-hover:-translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </a>
+      </div>
+      
+    </div>
+
+    <div id="errorBox" class="hidden text-center py-20 text-rose-500"></div>
+  </div>
+
+<script>
+// ====== إعداد الاتصال بـ Supabase ======
+const SUPABASE_URL = "https://equefefnimfaqkyckbep.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxdWVmZWZuaW1mYXFreWNrYmVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMTczOTcsImV4cCI6MjA5Nzg5MzM5N30.CniHMjUSvB2dLlZ9ykBiiLRa9KsATBsJj6S7uldZbwk";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ====== قراءة exam_id من رابط الصفحة ======
+const params = new URLSearchParams(window.location.search);
+const examId = params.get('exam_id');
+
+const loadingEl = document.getElementById('loading');
+const contentEl = document.getElementById('content');
+const errorEl = document.getElementById('errorBox');
+
+function showError(msg) {
+  loadingEl.classList.add('hidden');
+  errorEl.classList.remove('hidden');
+  errorEl.textContent = msg;
+}
+
+async function loadReview() {
+  if (!examId) {
+    showError('لا يوجد امتحان محدد.');
+    return;
+  }
+
+  // 1) المستخدم الحالي
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+  if (authError || !user) {
+    showError('لازم تسجل دخول عشان تشوف مراجعة الامتحان.');
+    return;
+  }
+
+  // 2) بيانات الامتحان
+  const { data: exam, error: examError } = await supabaseClient
+    .from('exams')
+    .select('id, title')
+    .eq('id', examId)
+    .single();
+
+  if (examError || !exam) {
+    showError('الامتحان غير موجود.');
+    return;
+  }
+
+  // 3) الأسئلة الخاصة بالامتحان
+  const { data: questions, error: qError } = await supabaseClient
+    .from('questions')
+    .select('id, question_text, passage, points, question_type, created_at')
+    .eq('exam_id', examId)
+    .order('created_at', { ascending: true });
+
+  if (qError || !questions || questions.length === 0) {
+    showError('لا توجد أسئلة لهذا الامتحان.');
+    return;
+  }
+
+  const questionIds = questions.map(q => q.id);
+
+  // 4) الاختيارات الخاصة بكل الأسئلة دي
+  const { data: options, error: oError } = await supabaseClient
+    .from('options')
+    .select('id, question_id, option_text, is_correct')
+    .in('question_id', questionIds);
+
+  if (oError) {
+    showError('حصل خطأ في تحميل الاختيارات.');
+    return;
+  }
+
+  // 5) إجابات الطالب (محاولة واحدة بس لكل امتحان)
+  const { data: studentAnswers, error: saError } = await supabaseClient
+    .from('student_answers')
+    .select('question_id, selected_option_id, essay_answer, points_awarded')
+    .eq('exam_id', examId)
+    .eq('student_id', user.id);
+
+  if (saError) {
+    showError('حصل خطأ في تحميل إجاباتك.');
+    return;
+  }
+
+  // ====== تجهيز البيانات للعرض ======
+  const optionsByQuestion = {};
+  options.forEach(opt => {
+    if (!optionsByQuestion[opt.question_id]) optionsByQuestion[opt.question_id] = [];
+    optionsByQuestion[opt.question_id].push(opt);
+  });
+
+  const answerByQuestion = {};
+  studentAnswers.forEach(ans => {
+    answerByQuestion[ans.question_id] = ans;
+  });
+
+  let correctCount = 0;
+  let totalPoints = 0;
+  let earnedPoints = 0;
+
+  const container = document.getElementById('questionsContainer');
+  container.innerHTML = '';
+
+  questions.forEach((q, index) => {
+    const qOptions = optionsByQuestion[q.id] || [];
+    const studentAnswer = answerByQuestion[q.id];
+    const correctOption = qOptions.find(o => o.is_correct);
+
+    totalPoints += q.points || 0;
+
+    const card = document.createElement('div');
+    card.className = 'bg-white dark:bg-slate-800 rounded-2xl shadow p-6';
+
+    let headerHtml = `
+      <div class="flex items-start justify-between mb-3">
+        <h3 class="font-bold text-slate-800 dark:text-white">
+          ${index + 1}. ${q.question_text}
+        </h3>
+      </div>
+    `;
+
+    if (q.passage) {
+      headerHtml += `<p class="text-sm text-slate-500 dark:text-slate-400 mb-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">${q.passage}</p>`;
+    }
+
+    let bodyHtml = '';
+
+    if (q.question_type === 'essay') {
+      const earned = studentAnswer?.points_awarded ?? 0;
+      earnedPoints += earned;
+      bodyHtml = `
+        <div class="space-y-2">
+          <p class="text-sm text-slate-500 dark:text-slate-400">إجابتك:</p>
+          <p class="p-3 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+            ${studentAnswer?.essay_answer || '(لم تتم الإجابة)'}
+          </p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            الدرجة: ${earned} من ${q.points || 0}
+          </p>
+        </div>
+      `;
+    } else {
+      const isCorrect = studentAnswer?.selected_option_id === correctOption?.id;
+      if (isCorrect) { correctCount++; earnedPoints += q.points || 0; }
+
+      bodyHtml = '<div class="space-y-2">';
+      qOptions.forEach(opt => {
+        const isSelected = studentAnswer?.selected_option_id === opt.id;
+        const isTheCorrectOne = opt.is_correct;
+
+        let optClass = 'border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200';
+        let icon = '';
+
+        if (isSelected && isTheCorrectOne) {
+          optClass = 'border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300';
+          icon = '✓';
+        } else if (isSelected && !isTheCorrectOne) {
+          optClass = 'border-2 border-rose-500 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300';
+          icon = '✗';
+        } else if (!isSelected && isTheCorrectOne) {
+          optClass = 'border-2 border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400';
+          icon = '✓';
+        }
+
+        bodyHtml += `
+          <div class="flex items-center justify-between p-3 rounded-lg ${optClass}">
+            <span>${opt.option_text}</span>
+            ${icon ? `<span class="font-bold">${icon}</span>` : ''}
+          </div>
+        `;
+      });
+      bodyHtml += '</div>';
+
+      if (!studentAnswer?.selected_option_id) {
+        bodyHtml += `<p class="text-sm text-amber-600 dark:text-amber-400 mt-2">لم تُجب على هذا السؤال</p>`;
+      }
+    }
+
+    card.innerHTML = headerHtml + bodyHtml;
+    container.appendChild(card);
+  });
+
+  document.getElementById('examTitle').textContent = exam.title;
+  document.getElementById('scoreSummary').textContent =
+    `درجتك: ${earnedPoints} من ${totalPoints} (${correctCount} إجابة صحيحة من ${questions.length})`;
+
+  loadingEl.classList.add('hidden');
+  contentEl.classList.remove('hidden');
+}
+
+loadReview();
+</script>
+</body>
+</html>

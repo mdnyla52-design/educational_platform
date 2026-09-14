@@ -39,15 +39,6 @@
     </script>
 </head>
 <body class="font-cairo bg-gray-50/50 text-gray-800 antialiased relative">
-    <!-- زر تبديل الوضع الليلي/النهاري (موحّد في كل صفحات المنصة) -->
-    <button id="theme-toggle-desktop" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي"
-        class="theme-toggle-track fixed top-3 left-3 sm:top-4 sm:left-4 z-[9999] shadow-lg print:hidden">
-        <span class="theme-toggle-icon"><i class="fa-solid fa-sun"></i></span>
-        <span class="theme-toggle-icon"><i class="fa-solid fa-moon"></i></span>
-        <span class="theme-toggle-knob"><i id="theme-toggle-knob-icon" class="fa-solid fa-sun"></i></span>
-    </button>
-
-
     <style>
         /* Core utilities */
         .hover-lift{transition:transform .28s var(--tw-easing), box-shadow .28s var(--tw-easing);}
@@ -362,9 +353,24 @@
                     </div>
                     <span class="text-base md:text-lg font-black tracking-wide">منصة <span class="text-emerald-300">العلم والإيمان</span></span>
                 </a>
-                <div class="flex items-center gap-3">
-                    <span id="top-bar-stage" class="text-xs md:text-sm font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10"><i class="fa-solid fa-graduation-cap ml-1"></i> جاري التحميل...</span>
-                    <button onclick="location.href='index.html'" class="text-xs md:text-sm font-bold text-emerald-200 hover:text-white transition-colors"> الخروج <i class="fa-solid fa-right-from-bracket mr-1"></i></button>
+                
+                <!-- مجموعة الأزرار الجانبية متضمنة زر الوضع الليلي باحترافية -->
+                <div class="flex items-center gap-3 sm:gap-4">
+                    
+                    <!-- تم نقل زر الوضع الليلي هنا باحترافية لتجنب قطعه من الشاشة -->
+                    <button id="theme-toggle-desktop" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي"
+                        class="theme-toggle-track shadow-md shadow-emerald-950/20 print:hidden shrink-0 hover:scale-105 transition-transform">
+                        <span class="theme-toggle-icon"><i class="fa-solid fa-sun"></i></span>
+                        <span class="theme-toggle-icon"><i class="fa-solid fa-moon"></i></span>
+                        <span class="theme-toggle-knob"><i id="theme-toggle-knob-icon" class="fa-solid fa-sun"></i></span>
+                    </button>
+                    
+                    <!-- فاصل جمالي يظهر في الشاشات الأكبر -->
+                    <div class="w-px h-5 bg-white/20 hidden sm:block"></div>
+
+                    <span id="top-bar-stage" class="text-xs md:text-sm font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10 hidden sm:inline-block"><i class="fa-solid fa-graduation-cap ml-1"></i> جاري التحميل...</span>
+                    
+                    <button onclick="location.href='index.html'" class="text-xs md:text-sm font-bold text-emerald-200 hover:text-white transition-colors whitespace-nowrap"> الخروج <i class="fa-solid fa-right-from-bracket mr-1"></i></button>
                 </div>
             </div>
 
