@@ -1303,16 +1303,64 @@ async function loadDashboardStats() {
 }
 
 // ==========================================
-// منظومة الرفع السحابي (Supabase Storage) للملفات والصور
+// 1. نظام ضغط الصور الذكي (لتقليل الحجم بنسبة تصل لـ 90% قبل الرفع)
+// ==========================================
+async function compressImage(file, maxWidth = 1200, quality = 0.75) {
+    // إذا لم يكن الملف صورة (مثل ملفات PDF)، يتم إرجاعه كما هو لرفعه مباشرة
+    if (!file || !file.type.startsWith('image/')) return file;
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // الحفاظ على الأبعاد المتناسقة مع تصغير الحجم
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // تحويل الصورة إلى JPEG مضغوطة لتوفير مساحة التخزين والباندويث
+                canvas.toBlob((blob) => {
+                    resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    }));
+                }, 'image/jpeg', quality);
+            };
+        };
+    });
+}
+
+// ==========================================
+// 2. منظومة الرفع السحابي (Supabase Storage) الاحترافية للملفات والصور
 // ==========================================
 async function uploadToSupabase(file, folder) {
     if (!file) return null;
-    const fileExt = file.name.split('.').pop();
+    
+    // تمرير الملف على دالة الضغط (الصور ستُضغط، والـ PDF سيمر كما هو)
+    const processedFile = await compressImage(file);
+
+    const fileExt = processedFile.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
     
-    // ملاحظة: تأكد من إنشاء Bucket باسم platform_files داخل Supabase Storage وجعله Public
-    const { data, error } = await _supabase.storage.from('platform_files').upload(filePath, file);
+    // الرفع مع تفعيل التخزين المؤقت (Cache-Control) لسنة كاملة (31536000 ثانية)
+    const { data, error } = await _supabase.storage.from('platform_files').upload(filePath, processedFile, {
+        cacheControl: '31536000',
+        upsert: false
+    });
     
     if (error) {
         console.error('Upload Error:', error);
